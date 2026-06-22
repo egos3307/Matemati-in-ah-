@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  studentCode String? @unique // FMXXX formatında
+  grade     String?  // Sınıf (5, 6, ..., 12)
+  parentName String? // Veli Ad Soyad
+  parentTel  String? // Veli Tel No
+  studentTel String? // Öğrenci Tel No
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lessons   Lesson[] @relation("TeacherLessons")
+  lessonsAsStudent Lesson[] @relation("StudentLessons")
+  homeworks StudentHomework[]
+  trials    Trial[]
+}
+
+model Trial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String?  // LGS, TYT, AYT
+  results   String   // JSON string: { "Türkçe": { "correct": 20, "wrong": 0, "empty": 0, "net": 20 }, ... }
+  totalNet  Float
+  studentId Int
+  student   User     @relation(fields: [studentId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Lesson {
+  id             Int      @id @default(autoincrement())
+  title          String
+  description    String?
+  date           DateTime
+  zoomMeetingId  String?
+  zoomJoinUrl    String?
+  teacherId      Int
+  teacher        User     @relation("TeacherLessons", fields: [teacherId], references: [id])
+  studentId      Int?
+  student        User?    @relation("StudentLessons", fields: [studentId], references: [id])
+  homeworks      Homework[]
+  createdAt      DateTime @default(now())
+}
+
+model Homework {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  deadline    DateTime?
+  lessonId    Int?
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id])
+  students    StudentHomework[]
+  createdAt   DateTime @default(now())
+}
+
+model StudentHomework {
+  id         Int      @id @default(autoincrement())
+  studentId  Int
+  student    User     @relation(fields: [studentId], references: [id])
+  homeworkId Int
+  homework   Homework @relation(fields: [homeworkId], references: [id])
+  status     String   @default("PENDING") // PENDING, COMPLETED
+  submittedAt DateTime?
+}

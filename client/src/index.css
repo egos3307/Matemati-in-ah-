@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ff8c00;
+  --color-background-light: #ffffff;
+  --color-background-dark: #ffffff;
+  --font-display: "Lexend", "sans-serif";
+  --radius-DEFAULT: 1rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background-light font-display text-slate-900;
+  }
+}
