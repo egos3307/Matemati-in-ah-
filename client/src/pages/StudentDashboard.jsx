@@ -30,18 +30,54 @@ const StudentDashboard = () => {
 
   const [activeSubTab, setActiveSubTab] = useState('topics'); 
   const [topicProgress, setTopicProgress] = useState({});
-  const [dailyLog, setDailyLog] = useState({ questions: 0, minutes: 0 });
-  const [dailyLogInput, setDailyLogInput] = useState({ questions: '', minutes: '' });
+  const [dailyLog, setDailyLog] = useState({ questions: 0, minutes: 0, notes: '' });
+  const [dailyLogInput, setDailyLogInput] = useState({ questions: '', minutes: '', notes: '' });
+  
+  // Study Timer (Sayaç) States & Effects
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerIsActive, setTimerIsActive] = useState(false);
+  const [studyHistory, setStudyHistory] = useState([]);
 
   useEffect(() => {
-    fetchLessons();
-    fetchHomeworks();
-    fetchTrials();
-  }, []);
+    let interval = null;
+    if (timerIsActive) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timerIsActive]);
+
+  const formatTime = (totalSecs) => {
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const loadStudyHistory = () => {
+    if (!user) return;
+    const savedLogs = localStorage.getItem(`fulle_logs_${user?.id}`);
+    if (savedLogs) {
+      const logs = JSON.parse(savedLogs);
+      const sortedHistory = Object.keys(logs)
+        .map(date => ({ date, ...logs[date] }))
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setStudyHistory(sortedHistory);
+    } else {
+      setStudyHistory([]);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
     loadSubjects();
+    loadStudyHistory();
+    fetchLessons();
+    fetchHomeworks();
+    fetchTrials();
     const savedProgress = localStorage.getItem(`fulle_progress_${user?.id}`);
     if (savedProgress) {
       setTopicProgress(JSON.parse(savedProgress));
@@ -54,7 +90,8 @@ const StudentDashboard = () => {
         setDailyLog(logs[today]);
         setDailyLogInput({
           questions: logs[today].questions.toString(),
-          minutes: logs[today].minutes.toString()
+          minutes: logs[today].minutes.toString(),
+          notes: logs[today].notes || ''
         });
       }
     }
@@ -73,19 +110,49 @@ const StudentDashboard = () => {
   };
 
   const handleSaveDailyLog = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const today = new Date().toISOString().split('T')[0];
     const savedLogs = localStorage.getItem(`fulle_logs_${user?.id}`) ? JSON.parse(localStorage.getItem(`fulle_logs_${user?.id}`)) : {};
     
     const newLog = {
       questions: parseInt(dailyLogInput.questions) || 0,
-      minutes: parseInt(dailyLogInput.minutes) || 0
+      minutes: parseInt(dailyLogInput.minutes) || 0,
+      notes: dailyLogInput.notes || ''
     };
     
     savedLogs[today] = newLog;
     setDailyLog(newLog);
     localStorage.setItem(`fulle_logs_${user?.id}`, JSON.stringify(savedLogs));
+    loadStudyHistory();
     alert('Günlük çalışma günlüğü başarıyla kaydedildi!');
+  };
+
+  const handleSaveTimerToLog = () => {
+    const elapsedMinutes = Math.round(timerSeconds / 60);
+    if (elapsedMinutes < 1 && timerSeconds > 0) {
+      alert("Çalışma süreniz en az 1 dakika olmalıdır.");
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const savedLogs = localStorage.getItem(`fulle_logs_${user?.id}`) ? JSON.parse(localStorage.getItem(`fulle_logs_${user?.id}`)) : {};
+    const existingLog = savedLogs[today] || { questions: 0, minutes: 0, notes: '' };
+    
+    const newLog = {
+      ...existingLog,
+      minutes: (existingLog.minutes || 0) + (elapsedMinutes || 1)
+    };
+    
+    savedLogs[today] = newLog;
+    setDailyLog(newLog);
+    setDailyLogInput(prev => ({
+      ...prev,
+      minutes: newLog.minutes.toString()
+    }));
+    localStorage.setItem(`fulle_logs_${user?.id}`, JSON.stringify(savedLogs));
+    setTimerSeconds(0);
+    setTimerIsActive(false);
+    loadStudyHistory();
+    alert(`Çalışma süreniz (${elapsedMinutes || 1} dk) başarıyla günlüğe eklendi!`);
   };
 
   const handleCompleteHomework = async (homeworkId) => {
@@ -325,22 +392,182 @@ const StudentDashboard = () => {
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col gap-2">
               <h2 className="text-3xl font-black text-slate-900 capitalize">Selam, {user?.name.split(' ')[0]}!</h2>
-              <p className="text-slate-500 font-medium">{user?.grade}. Sınıf öğrencisi</p>
+              <p className="text-slate-500 font-medium">{user?.grade}. Sınıf öğrencisi • Bugün çalışmaya hazır mısın?</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-6 bg-primary/10 rounded-3xl border border-primary/5">
-                <span className="material-symbols-outlined text-primary text-4xl mb-2">trending_up</span>
-                <p className="text-sm font-bold text-slate-500">Ortalama Net</p>
-                <h3 className="text-xl font-black text-slate-900">
+            
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-5 bg-primary/10 rounded-3xl border border-primary/5 shadow-sm">
+                <span className="material-symbols-outlined text-primary text-3xl mb-1.5">trending_up</span>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Ortalama Net</p>
+                <h3 className="text-xl font-black text-slate-900 mt-1">
                   {trials.length > 0 ? (trials.reduce((acc, curr) => acc + curr.totalNet, 0) / trials.length).toFixed(2) : "0.00"}
                 </h3>
               </div>
-              <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                <span className="material-symbols-outlined text-blue-500 text-4xl mb-2">assignment_turned_in</span>
-                <p className="text-sm font-bold text-slate-500">Çözülen Deneme</p>
-                <h3 className="text-xl font-black text-slate-900">{trials.length}</h3>
+              <div className="p-5 bg-blue-50 rounded-3xl border border-blue-100 shadow-sm">
+                <span className="material-symbols-outlined text-blue-500 text-3xl mb-1.5">assignment_turned_in</span>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Çözülen Deneme</p>
+                <h3 className="text-xl font-black text-slate-900 mt-1">{trials.length}</h3>
+              </div>
+              <div className="p-5 bg-emerald-50 rounded-3xl border border-emerald-100 shadow-sm">
+                <span className="material-symbols-outlined text-emerald-600 text-3xl mb-1.5">timer</span>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Bugünkü Çalışma</p>
+                <h3 className="text-xl font-black text-slate-900 mt-1">{dailyLog.minutes || 0} dk</h3>
+              </div>
+              <div className="p-5 bg-amber-50 rounded-3xl border border-amber-100 shadow-sm">
+                <span className="material-symbols-outlined text-amber-500 text-3xl mb-1.5">quiz</span>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Bugün Çözülen Soru</p>
+                <h3 className="text-xl font-black text-slate-900 mt-1">{dailyLog.questions || 0} Soru</h3>
               </div>
             </div>
+
+            {/* Dashboard Workspace */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              {/* Left Column: Study Timer & Log Form */}
+              <div className="md:col-span-7 space-y-6">
+                
+                {/* Visual Study Timer Widget */}
+                <div className="p-6 bg-slate-900 text-white rounded-3xl shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-primary/20 text-primary text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-bl-xl border-l border-b border-primary/10">
+                    Çalışma Odası
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Çalışma Süresi Sayacı</span>
+                  <div className="text-4xl md:text-5xl font-black font-mono tracking-wider text-primary mb-6">
+                    {formatTime(timerSeconds)}
+                  </div>
+                  <div className="flex gap-3">
+                    {!timerIsActive ? (
+                      <button 
+                        onClick={() => setTimerIsActive(true)}
+                        className="bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl text-xs font-black shadow-lg shadow-primary/20 flex items-center gap-1.5 transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider"
+                      >
+                        <span className="material-symbols-outlined text-sm">play_arrow</span> Başlat
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => setTimerIsActive(false)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-2xl text-xs font-black shadow-lg shadow-amber-500/20 flex items-center gap-1.5 transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider"
+                      >
+                        <span className="material-symbols-outlined text-sm">pause</span> Durdur
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => { setTimerSeconds(0); setTimerIsActive(false); }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-3 rounded-2xl text-xs font-bold border border-slate-700/50 flex items-center gap-1.5 transition-all transform active:scale-95 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">restart_alt</span> Sıfırla
+                    </button>
+                    {timerSeconds > 0 && (
+                      <button 
+                        onClick={handleSaveTimerToLog}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-2xl text-xs font-black shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition-all transform active:scale-95 cursor-pointer uppercase tracking-wider"
+                      >
+                        <span className="material-symbols-outlined text-sm">done</span> Süreyi Kaydet
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Today's Study Log Form */}
+                <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-5">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <span className="material-symbols-outlined text-primary text-xl">edit_calendar</span>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">Bugün Ne Çalıştım?</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Günlük çalışma verilerini güncelleyin</p>
+                    </div>
+                  </div>
+                  <form onSubmit={handleSaveDailyLog} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Çözülen Soru</label>
+                        <input 
+                          type="number" 
+                          placeholder="Örn: 40 Soru"
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold outline-none focus:border-primary/40 text-xs"
+                          value={dailyLogInput.questions}
+                          onChange={(e) => setDailyLogInput({...dailyLogInput, questions: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Çalışılan Süre (dk)</label>
+                        <input 
+                          type="number" 
+                          placeholder="Örn: 90 dk"
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold outline-none focus:border-primary/40 text-xs"
+                          value={dailyLogInput.minutes}
+                          onChange={(e) => setDailyLogInput({...dailyLogInput, minutes: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bugün Ne Çalıştım? (Notlar / Detaylar)</label>
+                      <textarea 
+                        placeholder="Örn: Rasyonel Sayılar soru çözümü ve YKS Matematik konu tekrarı yaptım."
+                        rows={2}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-slate-900 font-medium outline-none focus:border-primary/40 text-xs resize-none"
+                        value={dailyLogInput.notes}
+                        onChange={(e) => setDailyLogInput({...dailyLogInput, notes: e.target.value})}
+                      />
+                    </div>
+                    <button type="submit" className="w-full py-3.5 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.01] transition-all text-xs cursor-pointer uppercase tracking-wider">
+                      Çalışmayı Kaydet
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+
+              {/* Right Column: History Timeline */}
+              <div className="md:col-span-5 space-y-6">
+                
+                {/* Study History Card */}
+                <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-5 h-full flex flex-col">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <span className="material-symbols-outlined text-primary text-xl">history</span>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">Çalışma Günlüğüm</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Geçmiş çalışma geçmişiniz</p>
+                    </div>
+                  </div>
+                  
+                  {/* Timeline list */}
+                  <div className="space-y-4 overflow-y-auto max-h-[360px] flex-1 pr-1">
+                    {studyHistory.length === 0 ? (
+                      <div className="text-center py-10 flex flex-col items-center justify-center">
+                        <span className="material-symbols-outlined text-slate-300 text-4xl mb-2">calendar_today</span>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Henüz çalışma kaydı eklenmedi.</p>
+                      </div>
+                    ) : (
+                      studyHistory.map(log => (
+                        <div key={log.date} className="p-4 bg-slate-50/60 rounded-2xl border border-slate-100 space-y-2 relative group hover:bg-slate-100/50 transition-colors">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                              {new Date(log.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}
+                            </span>
+                            <div className="flex gap-2 text-[10px] font-black text-slate-500">
+                              <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">timer</span> {log.minutes} dk</span>
+                              <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">quiz</span> {log.questions} S</span>
+                            </div>
+                          </div>
+                          {log.notes ? (
+                            <p className="text-[11px] text-slate-600 font-medium leading-relaxed italic pr-2">
+                              "{log.notes}"
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider italic">Not eklenmemiş.</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -513,7 +740,17 @@ const StudentDashboard = () => {
                         required
                       />
                     </div>
-                    <button type="submit" className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all text-sm cursor-pointer">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bugün Ne Çalıştım? (Notlar / Detaylar)</label>
+                      <textarea 
+                        placeholder="Örn: Rasyonel Sayılar soru çözümü ve YKS Matematik konu tekrarı yaptım."
+                        rows={3}
+                        className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3 text-slate-900 font-medium outline-none focus:ring-2 focus:ring-primary/20 text-sm resize-none"
+                        value={dailyLogInput.notes}
+                        onChange={(e) => setDailyLogInput({...dailyLogInput, notes: e.target.value})}
+                      />
+                    </div>
+                    <button type="submit" className="w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all text-sm cursor-pointer uppercase tracking-wider">
                       Günlüğü Kaydet
                     </button>
                   </form>
