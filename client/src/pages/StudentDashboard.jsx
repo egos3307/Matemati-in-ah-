@@ -38,6 +38,13 @@ const StudentDashboard = () => {
   const [timerIsActive, setTimerIsActive] = useState(false);
   const [studyHistory, setStudyHistory] = useState([]);
 
+  // Motivational Profile & Goals (Hedefler) States
+  const [profileBanner, setProfileBanner] = useState('');
+  const [profileMotto, setProfileMotto] = useState('Matematikte zirveye ulaşmak için her gün bir adım daha!');
+  const [goals, setGoals] = useState([]);
+  const [newGoalInput, setNewGoalInput] = useState('');
+  const [isEditingMotto, setIsEditingMotto] = useState(false);
+
   useEffect(() => {
     let interval = null;
     if (timerIsActive) {
@@ -78,6 +85,15 @@ const StudentDashboard = () => {
     fetchLessons();
     fetchHomeworks();
     fetchTrials();
+
+    // Load profile customizations & goals
+    const savedBanner = localStorage.getItem(`fulle_profile_banner_${user?.id}`);
+    if (savedBanner) setProfileBanner(savedBanner);
+    const savedMotto = localStorage.getItem(`fulle_profile_motto_${user?.id}`);
+    if (savedMotto) setProfileMotto(savedMotto);
+    const savedGoals = localStorage.getItem(`fulle_goals_${user?.id}`);
+    if (savedGoals) setGoals(JSON.parse(savedGoals));
+
     const savedProgress = localStorage.getItem(`fulle_progress_${user?.id}`);
     if (savedProgress) {
       setTopicProgress(JSON.parse(savedProgress));
@@ -96,6 +112,43 @@ const StudentDashboard = () => {
       }
     }
   }, [user]);
+
+  const handleAddGoal = (e) => {
+    if (e) e.preventDefault();
+    if (!newGoalInput.trim()) return;
+    const updatedGoals = [...goals, { id: Date.now(), text: newGoalInput.trim(), completed: false }];
+    setGoals(updatedGoals);
+    localStorage.setItem(`fulle_goals_${user?.id}`, JSON.stringify(updatedGoals));
+    setNewGoalInput('');
+  };
+
+  const handleToggleGoal = (goalId) => {
+    const updatedGoals = goals.map(g => g.id === goalId ? { ...g, completed: !g.completed } : g);
+    setGoals(updatedGoals);
+    localStorage.setItem(`fulle_goals_${user?.id}`, JSON.stringify(updatedGoals));
+  };
+
+  const handleDeleteGoal = (goalId) => {
+    const updatedGoals = goals.filter(g => g.id !== goalId);
+    setGoals(updatedGoals);
+    localStorage.setItem(`fulle_goals_${user?.id}`, JSON.stringify(updatedGoals));
+  };
+
+  const handleBannerUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setProfileBanner(event.target.result);
+      localStorage.setItem(`fulle_profile_banner_${user?.id}`, event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveMotto = () => {
+    localStorage.setItem(`fulle_profile_motto_${user?.id}`, profileMotto);
+    setIsEditingMotto(false);
+  };
 
   const handleToggleTopic = (topic, type) => {
     const updated = {
@@ -390,9 +443,148 @@ const StudentDashboard = () => {
         {/* PANEL */}
         {activeTab === 'panel' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col gap-2">
-              <h2 className="text-3xl font-black text-slate-900 capitalize">Selam, {user?.name.split(' ')[0]}!</h2>
-              <p className="text-slate-500 font-medium">{user?.grade}. Sınıf öğrencisi • Bugün çalışmaya hazır mısın?</p>
+            
+            {/* MOTIVATIONAL COVER BANNER (FOTO VE YAZI YERI) */}
+            <div className="relative h-48 md:h-56 w-full rounded-3xl overflow-hidden shadow-md border border-slate-100 group">
+              {/* Banner Image or Default Mathematical Gradient */}
+              {profileBanner ? (
+                <img src={profileBanner} alt="Kişisel Banner" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-slate-900 via-indigo-950 to-primary flex items-center justify-center relative">
+                  {/* Subtle math decorations */}
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                  <span className="text-[120px] font-black text-white/5 absolute -bottom-10 -right-10 pointer-events-none select-none">∑</span>
+                  <span className="text-[90px] font-black text-white/5 absolute -top-5 -left-5 pointer-events-none select-none">π</span>
+                </div>
+              )}
+              
+              {/* Banner Overlay for Text & Editing */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 text-white">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                  <div className="space-y-2 max-w-xl">
+                    <span className="text-[9px] font-black text-primary bg-primary/20 border border-primary/20 px-2.5 py-1 rounded-md uppercase tracking-widest inline-block">
+                      Bugünkü Motivasyonum & Hedefim
+                    </span>
+                    {isEditingMotto ? (
+                      <div className="flex gap-2 items-center">
+                        <input 
+                          type="text"
+                          className="bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-primary w-full md:w-80 font-medium"
+                          value={profileMotto}
+                          onChange={(e) => setProfileMotto(e.target.value)}
+                        />
+                        <button 
+                          onClick={handleSaveMotto}
+                          className="bg-primary text-white p-2 rounded-xl text-xs font-black shadow-md hover:scale-105 transition-all flex items-center justify-center cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">save</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <h2 
+                        onClick={() => setIsEditingMotto(true)}
+                        className="text-lg md:text-xl font-bold tracking-tight leading-snug cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5 group/motto"
+                      >
+                        "{profileMotto}"
+                        <span className="material-symbols-outlined text-xs text-slate-400 opacity-0 group-hover/motto:opacity-100 transition-opacity">edit</span>
+                      </h2>
+                    )}
+                    <p className="text-[11px] text-slate-300 font-bold">
+                      {user?.name} • {user?.grade}. Sınıf Öğrencisi
+                    </p>
+                  </div>
+
+                  {/* Banner Photo Upload Button */}
+                  <label className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer self-start md:self-end hover:scale-105 transition-all shadow-lg select-none">
+                    <span className="material-symbols-outlined text-sm">photo_camera</span>
+                    Fotoğraf Yükle
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleBannerUpload}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* HEDEFLERİM (PERSONAL GOALS TRACKER) */}
+            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/50">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-2xl">flag</span>
+                  <div>
+                    <h4 className="font-black text-slate-900 text-sm">Kişisel Hedeflerim</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Kendi hedeflerini ekle ve tamamla</p>
+                  </div>
+                </div>
+                {goals.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Tamamlanma Oranı:</span>
+                    <span className="text-xs font-black text-primary">
+                      {Math.round((goals.filter(g => g.completed).length / goals.length) * 100)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Goal Progress Bar */}
+              {goals.length > 0 && (
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-500" 
+                    style={{ width: `${(goals.filter(g => g.completed).length / goals.length) * 100}%` }}
+                  ></div>
+                </div>
+              )}
+
+              {/* Input for new goals */}
+              <form onSubmit={handleAddGoal} className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Örn: Bugün 80 Soru çözülecek, Matematikten 35 net yapmak vb."
+                  className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 font-bold outline-none focus:border-primary/40 text-xs"
+                  value={newGoalInput}
+                  onChange={(e) => setNewGoalInput(e.target.value)}
+                  required
+                />
+                <button type="submit" className="bg-primary hover:bg-primary/95 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-md flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                  <span className="material-symbols-outlined text-sm">add</span> Hedef Ekle
+                </button>
+              </form>
+
+              {/* Goals list */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[160px] overflow-y-auto pr-1">
+                {goals.length === 0 ? (
+                  <div className="col-span-full text-center py-6 text-slate-400 flex flex-col items-center justify-center">
+                    <span className="material-symbols-outlined text-slate-300 text-3xl mb-1">tour</span>
+                    <p className="text-[10px] font-bold uppercase tracking-wider">Henüz hedef eklemedin. Hemen yukarıdan ekle!</p>
+                  </div>
+                ) : (
+                  goals.map(g => (
+                    <div key={g.id} className={`p-3.5 bg-white rounded-2xl border flex items-center justify-between gap-3 shadow-sm transition-all ${g.completed ? 'border-green-100 bg-green-50/20 opacity-80' : 'border-slate-100 hover:border-slate-200'}`}>
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <input 
+                          type="checkbox" 
+                          checked={g.completed}
+                          onChange={() => handleToggleGoal(g.id)}
+                          className="h-4 w-4 rounded-md border-slate-300 text-primary focus:ring-primary/20 accent-primary cursor-pointer"
+                        />
+                        <span className={`text-xs font-bold truncate ${g.completed ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                          {g.text}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteGoal(g.id)}
+                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             
             {/* Quick Stats Grid */}
