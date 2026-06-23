@@ -657,8 +657,11 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Yapay zeka anahtarı (GEMINI_API_KEY) tanımlanmamış. Lütfen yönetici ile iletişime geçin.' });
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GEMINI_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
     }
+
+    // Log API Key prefix for debugging purposes (never log full key)
+    console.log(`Using GEMINI_API_KEY prefix: ${apiKey.substring(0, 6)}...`);
 
     const parts = [];
     
@@ -688,8 +691,8 @@ app.post('/api/ai/ask', auth, async (req, res) => {
       parts.push({ text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?" });
     }
 
-    // Call Google Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // Call Google Gemini API (v1beta is recommended for MakerSuite/AI Studio keys)
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -702,7 +705,19 @@ app.post('/api/ai/ask', auth, async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Gemini API Error details:', errText);
-      return res.status(500).json({ error: 'Yapay zeka servisi yanıt vermedi.' });
+      
+      let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
+      try {
+        const parsedErr = JSON.parse(errText);
+        if (parsedErr.error?.message) {
+          errorMsg = `Gemini API Hatası: ${parsedErr.error.message}`;
+          if (parsedErr.error.message.includes('not found') || parsedErr.error.message.includes('ModelService')) {
+            errorMsg += ' (İpucu: API anahtarınızda Generative Language API etkinleştirilmemiş veya yanlış konsoldan oluşturulmuş olabilir. Google AI Studio üzerinden yeni bir anahtar almayı deneyin.)';
+          }
+        }
+      } catch (e) {}
+      
+      return res.status(response.status).json({ error: errorMsg });
     }
 
     const data = await response.json();
