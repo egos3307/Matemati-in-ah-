@@ -118,7 +118,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.get('/', (req, res) => {
-  res.send('Fullematematiği API is running...');
+  res.send('Fullematematik API is running...');
 });
 
 app.get('/api/debug', async (req, res) => {

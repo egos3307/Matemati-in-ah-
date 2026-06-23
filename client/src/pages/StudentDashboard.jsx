@@ -312,7 +312,7 @@ const StudentDashboard = () => {
       <div className="flex items-center justify-between px-6 py-4 border-b border-primary/10 md:hidden bg-white sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-          <h1 className="text-lg font-black text-slate-900">Fulle Matematik</h1>
+          <h1 className="text-lg font-black text-slate-900">Fullematematik</h1>
         </div>
         <button onClick={logout} className="p-2 text-slate-400">
           <span className="material-symbols-outlined">logout</span>

@@ -70,7 +70,7 @@ const ZoomMeeting = ({ meetingNumber, meetingPassword, role, userName, userEmail
           success: () => {
             ZoomMtg.join({
               meetingNumber: meetingNumber,
-              userName: userName || 'Fulle Matematik Öğrencisi',
+              userName: userName || 'Fullematematik Öğrencisi',
               signature: signature,
               sdkKey: sdkKey,
               passWord: meetingPassword || '',

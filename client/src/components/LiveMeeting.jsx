@@ -173,7 +173,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
         >
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 flex items-center justify-center">
-              <img src="/logo.png" alt="Fulle Matematiği Logo" className="h-full w-full object-contain" />
+              <img src="/logo.png" alt="Fullematematik Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <h4 className="font-bold text-xs md:text-sm text-slate-900">Canlı Ders Odası</h4>
@@ -259,7 +259,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
           {/* Pulsing visual indicator */}
           <div className="absolute inset-0 rounded-full border border-primary animate-ping opacity-75"></div>
           {/* Logo inside bubble */}
-          <img src="/logo.png" alt="Fulle Matematiği Logo" className="w-9 h-9 object-contain z-10" />
+          <img src="/logo.png" alt="Fullematematik Logo" className="w-9 h-9 object-contain z-10" />
           {/* Tooltip */}
           <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-white text-slate-800 text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-200">
             Derse Geri Dön ({userName})

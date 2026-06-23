@@ -74,7 +74,7 @@ const Home = () => {
         {/* Features Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="ozellikler">
           <div className="mb-16 flex flex-col items-center text-center">
-            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Neden Fulle Matematiği?</h2>
+            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Neden Fullematematik?</h2>
             <p className="max-w-2xl text-lg text-slate-600">
               Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
             </p>
@@ -273,8 +273,8 @@ const Home = () => {
           <div className="grid gap-12 border-b border-slate-100 pb-12 md:grid-cols-4">
             <div className="col-span-2 flex flex-col gap-6">
               <div className="flex items-center gap-3 text-slate-900">
-                <img src="/logo.png" alt="Fulle Matematiği Logo" className="h-10 w-10 object-contain" />
-                <h2 className="text-xl font-bold tracking-tight">Fulle Matematiği</h2>
+                <img src="/logo.png" alt="Fullematematik Logo" className="h-10 w-10 object-contain" />
+                <h2 className="text-xl font-bold tracking-tight">Fullematematik</h2>
               </div>
               <p className="max-w-md leading-relaxed">
                 Türkiye'nin en interaktif matematik platformu olarak, öğrencilerin hedeflerine ulaşmasında en büyük destekçisiyiz. Kaliteli içerik ve uzman kadromuzla yanınızdayız.
@@ -313,7 +313,7 @@ const Home = () => {
             </div>
           </div>
           <div className="flex flex-col items-center justify-between gap-6 pt-12 md:flex-row">
-            <p className="text-sm">© 2024 Fulle Matematiği. Tüm hakları saklıdır.</p>
+            <p className="text-sm">© 2024 Fullematematik. Tüm hakları saklıdır.</p>
             <div className="flex gap-8 text-sm">
               <a className="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
               <a className="hover:text-primary transition-colors" href="#">Kullanım Şartları</a>

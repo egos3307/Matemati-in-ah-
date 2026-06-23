@@ -15,8 +15,8 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/80 backdrop-blur-md dark:bg-background-dark/80">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
         <Link to="/" className="flex items-center gap-3">
-          <img src="/logo.png" alt="Fulle Matematiği Logo" className="h-10 w-10 object-contain" />
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">Fulle Matematiği</h2>
+          <img src="/logo.png" alt="Fullematematik Logo" className="h-10 w-10 object-contain" />
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Fullematematik</h2>
         </Link>
         <nav className="hidden flex-1 justify-center gap-10 md:flex">
           <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/">Ana Sayfa</Link>
