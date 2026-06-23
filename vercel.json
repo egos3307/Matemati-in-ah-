@@ -2,11 +2,6 @@
   "version": 2,
   "buildCommand": "cd server && npm install && npx prisma generate && cd ../client && npm install && npm run build",
   "outputDirectory": "client/dist",
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "server/dev.db"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",

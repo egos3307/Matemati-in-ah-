@@ -46,36 +46,7 @@ const path = require('path');
 const fs = require('fs');
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-// Dynamically set database URL to absolute path of server/dev.db for local & Vercel serverless consistency
-let dbPath = path.resolve(__dirname, 'dev.db');
-if (!fs.existsSync(dbPath)) {
-  const cwdServerDb = path.join(process.cwd(), 'server', 'dev.db');
-  if (fs.existsSync(cwdServerDb)) {
-    dbPath = cwdServerDb;
-  } else {
-    const cwdDb = path.join(process.cwd(), 'dev.db');
-    if (fs.existsSync(cwdDb)) {
-      dbPath = cwdDb;
-    }
-  }
-}
-
-// In Vercel serverless functions, copy SQLite database to /tmp so it can be opened in read-write mode
-if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-  try {
-    const tmpDbPath = path.join('/tmp', 'dev.db');
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, tmpDbPath);
-      fs.chmodSync(tmpDbPath, 0o666); // Grant write permissions explicitly
-      dbPath = tmpDbPath;
-      console.log(`Database successfully copied and made writable at: ${dbPath}`);
-    }
-  } catch (err) {
-    console.error('Failed to copy database to /tmp:', err.message);
-  }
-}
-
-process.env.DATABASE_URL = `file:${dbPath}`;
+// Database is loaded directly via Prisma using DATABASE_URL environment variable
 
 const app = express();
 const prisma = new PrismaClient();
