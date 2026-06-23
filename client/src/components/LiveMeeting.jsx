@@ -6,6 +6,64 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // View modes: 'fullscreen', 'floating', 'minimized'
+  const [viewMode, setViewMode] = useState('fullscreen');
+  const [position, setPosition] = useState({ x: window.innerWidth - 520, y: window.innerHeight - 440 });
+  const [size, setSize] = useState({ width: 480, height: 360 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  // Update default position if window resizes
+  useEffect(() => {
+    const handleResize = () => {
+      if (viewMode === 'fullscreen') {
+        setPosition({ x: window.innerWidth - size.width - 24, y: window.innerHeight - size.height - 24 });
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode, size]);
+
+  // Dragging logic
+  const handleMouseDown = (e) => {
+    if (e.button !== 0 || e.target.closest('button') || e.target.closest('.no-drag')) return;
+    setIsDragging(true);
+    dragStart.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      let newX = e.clientX - dragStart.current.x;
+      let newY = e.clientY - dragStart.current.y;
+
+      // Keep within viewport boundaries
+      const padding = 10;
+      newX = Math.max(padding, Math.min(window.innerWidth - size.width - padding, newX));
+      newY = Math.max(padding, Math.min(window.innerHeight - size.height - padding, newY));
+
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, size]);
+
+  // Initialize Jitsi Meet API
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -34,12 +92,12 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
         configOverwrite: {
           startWithAudioMuted: false,
           startWithVideoMuted: false,
-          prejoinPageEnabled: false, // Skip prejoin page for direct entrance
-          disableDeepLinking: true, // Avoid app install prompts on mobile
+          prejoinPageEnabled: false, 
+          disableDeepLinking: true, 
           enableWelcomePage: false,
           hideConferenceTimer: false,
           p2p: {
-            enabled: true // Peer-to-peer for ultra low latency in 1-to-1 calls
+            enabled: true 
           },
           disableThirdPartyRequests: true,
           toolbarButtons: [
@@ -82,57 +140,136 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
   }, [lessonId, userName, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-slate-950 z-[999] flex flex-col font-sans text-slate-100">
-      {/* Header */}
-      <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-white/5 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-xl">video_camera_front</span>
-          </div>
-          <div>
-            <h4 className="font-bold text-sm md:text-base">Canlı Matematik Sınıfı</h4>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
-            </p>
-          </div>
-        </div>
-        <button 
-          onClick={onClose} 
-          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-950/20"
+    <>
+      {/* Main Meeting Container (Preserved in DOM to keep connection alive when minimized) */}
+      <div 
+        className={`fixed z-[999] flex flex-col font-sans text-slate-100 bg-slate-950 transition-all duration-200 border border-slate-800/80 shadow-2xl ${
+          viewMode === 'fullscreen' 
+            ? 'inset-0' 
+            : viewMode === 'floating' 
+              ? 'rounded-2xl overflow-hidden' 
+              : 'pointer-events-none opacity-0 w-0 h-0 overflow-hidden'
+        }`}
+        style={
+          viewMode === 'floating'
+            ? {
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                width: `${size.width}px`,
+                height: `${size.height}px`,
+                resize: 'both',
+                minWidth: '320px',
+                minHeight: '240px',
+              }
+            : {}
+        }
+      >
+        {/* Header Bar */}
+        <div 
+          onMouseDown={viewMode === 'floating' ? handleMouseDown : undefined}
+          className={`bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-white/5 shadow-md select-none ${
+            viewMode === 'floating' ? 'cursor-move' : ''
+          }`}
         >
-          <span className="material-symbols-outlined text-sm">call_end</span>
-          Sınıftan Ayrıl
-        </button>
-      </div>
-
-      {/* Main Jitsi Container - Styled with absolute inset to prevent collapsing */}
-      <div className="flex-1 bg-slate-950 relative">
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950 z-10">
-            <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">Sınıf Hazırlanıyor...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-950 text-center px-6 z-10">
-            <div className="w-16 h-16 rounded-full bg-red-950/30 border border-red-500/20 text-red-500 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl">error</span>
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 bg-primary/20 rounded-lg flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-base">video_camera_front</span>
             </div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{error}</p>
+            <div>
+              <h4 className="font-bold text-xs md:text-sm">Canlı Matematik Sınıfı</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
+              </p>
+            </div>
+          </div>
+
+          {/* Window Control Buttons */}
+          <div className="flex items-center gap-1.5 no-drag">
+            {viewMode === 'fullscreen' ? (
+              <button 
+                onClick={() => setViewMode('floating')}
+                title="Pencere Moduna Geç"
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">picture_in_picture_alt</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => setViewMode('fullscreen')}
+                title="Tam Ekrana Geç"
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">fullscreen</span>
+              </button>
+            )}
+
+            <button 
+              onClick={() => setViewMode('minimized')}
+              title="Aşağı İndir (Küçült)"
+              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">remove</span>
+            </button>
+
             <button 
               onClick={onClose} 
-              className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+              title="Sınıftan Ayrıl"
+              className="ml-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-lg shadow-red-950/20"
             >
-              Geri Dön
+              <span className="material-symbols-outlined text-xs">call_end</span>
+              Ayrıl
             </button>
           </div>
-        )}
+        </div>
 
-        <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+        {/* Main Jitsi Area */}
+        <div className="flex-1 bg-slate-950 relative">
+          {loading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 z-10">
+              <div className="w-8 h-8 rounded-full border-3 border-primary border-t-transparent animate-spin"></div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Sınıf Hazırlanıyor...</p>
+            </div>
+          )}
+          
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 text-center px-4 z-10">
+              <div className="w-12 h-12 rounded-full bg-red-950/30 border border-red-500/20 text-red-500 flex items-center justify-center">
+                <span className="material-symbols-outlined text-2xl">error</span>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{error}</p>
+              <button 
+                onClick={onClose} 
+                className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              >
+                Geri Dön
+              </button>
+            </div>
+          )}
+
+          <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+        </div>
       </div>
-    </div>
+
+      {/* Minimized Floating Action Button (Bubble) */}
+      {viewMode === 'minimized' && (
+        <div 
+          onClick={() => setViewMode('floating')}
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-2xl hover:scale-105 transition-all z-[9999] group border border-white/10"
+        >
+          {/* Pulsing visual indicator */}
+          <div className="absolute inset-0 rounded-full border border-primary animate-ping opacity-75"></div>
+          {/* Avatar/Initial and Mic/Video status display */}
+          <span className="material-symbols-outlined text-white text-2xl z-10">video_call</span>
+          {/* Tooltip */}
+          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-800">
+            Derse Geri Dön ({userName})
+          </div>
+        </div>
+      )}
+    </>
   );
 };
+
+export default LiveMeeting;
 
 export default LiveMeeting;
