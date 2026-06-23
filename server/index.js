@@ -43,10 +43,23 @@ async function createDailyRoom() {
 }
 
 const path = require('path');
+const fs = require('fs');
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // Dynamically set database URL to absolute path of server/dev.db for local & Vercel serverless consistency
-process.env.DATABASE_URL = `file:${path.resolve(__dirname, 'dev.db')}`;
+let dbPath = path.resolve(__dirname, 'dev.db');
+if (!fs.existsSync(dbPath)) {
+  const cwdServerDb = path.join(process.cwd(), 'server', 'dev.db');
+  if (fs.existsSync(cwdServerDb)) {
+    dbPath = cwdServerDb;
+  } else {
+    const cwdDb = path.join(process.cwd(), 'dev.db');
+    if (fs.existsSync(cwdDb)) {
+      dbPath = cwdDb;
+    }
+  }
+}
+process.env.DATABASE_URL = `file:${dbPath}`;
 
 const app = express();
 const prisma = new PrismaClient();

@@ -27,7 +27,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      const msg = err.response?.data?.message || 'Giriş başarısız. Sunucu bağlantısını kontrol edin.';
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Giriş başarısız. Sunucu bağlantısını kontrol edin.';
       setError(msg);
     }
   };

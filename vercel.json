@@ -4,7 +4,10 @@
   "outputDirectory": "client/dist",
   "functions": {
     "api/index.js": {
-      "includeFiles": "server/dev.db"
+      "includeFiles": [
+        "server/dev.db",
+        "server/prisma/schema.prisma"
+      ]
     }
   },
   "rewrites": [
