@@ -305,7 +305,8 @@ const TeacherDashboard = () => {
       fetchBlogs();
       alert('Blog yazısı başarıyla yayınlandı!');
     } catch (err) {
-      alert('Blog yazısı yayınlanırken hata oluştu.');
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+      alert(`Blog yazısı yayınlanırken hata oluştu: ${errMsg}`);
     }
   };
 

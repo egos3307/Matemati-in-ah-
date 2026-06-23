@@ -487,13 +487,15 @@ app.get('/api/teacher/student/:id/trials', auth, checkRole('TEACHER'), async (re
 
 // Blog Routes
 function slugify(text) {
+  if (!text) return '';
   const trMap = {
     'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'I': 'I', 'İ': 'i', 'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U'
   };
+  let str = text.toString();
   for (let key in trMap) {
-    text = text.replace(new RegExp(key, 'g'), trMap[key]);
+    str = str.replace(new RegExp(key, 'g'), trMap[key]);
   }
-  return text.toString().toLowerCase()
+  return str.toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]+/g, '')
     .replace(/\-\-+/g, '-')
@@ -509,6 +511,7 @@ app.get('/api/blog', async (req, res) => {
     });
     res.json(posts);
   } catch (err) {
+    console.error('Error fetching blogs:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -525,14 +528,23 @@ app.get('/api/blog/:slug', async (req, res) => {
     }
     res.json(post);
   } catch (err) {
+    console.error('Error fetching blog post:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
   const { title, content, excerpt, coverImage } = req.body;
+  
+  if (!title || !content) {
+    return res.status(400).json({ error: 'Başlık ve içerik alanları zorunludur.' });
+  }
+
   try {
     let slug = slugify(title);
+    if (!slug) {
+      slug = `post-${Date.now()}`;
+    }
     let finalSlug = slug;
     let counter = 1;
     let exists = true;
@@ -558,6 +570,7 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
     });
     res.json(post);
   } catch (err) {
+    console.error('Error creating blog post:', err);
     res.status(500).json({ error: err.message });
   }
 });
