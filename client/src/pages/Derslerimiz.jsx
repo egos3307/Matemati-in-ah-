@@ -1,0 +1,165 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const Derslerimiz = () => {
+  const [camps, setCamps] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCamps = async () => {
+      try {
+        const res = await axios.get('/api/camps');
+        const parsedCamps = res.data.map(camp => ({
+          ...camp,
+          details: typeof camp.details === 'string' ? JSON.parse(camp.details) : camp.details,
+          highlights: typeof camp.highlights === 'string' ? JSON.parse(camp.highlights) : camp.highlights
+        }));
+        setCamps(parsedCamps);
+      } catch (err) {
+        console.error('Error fetching camps:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCamps();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center py-24 text-slate-400 font-bold uppercase tracking-wider gap-4">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+        <span>Kamplar Yükleniyor...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
+      {/* Header Section */}
+      <div className="bg-white py-16 text-center border-b border-primary/10 shadow-sm">
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary mb-4">
+            <span className="material-symbols-outlined text-sm">school</span>
+            <span>Eğitim Kamplarımız</span>
+          </span>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+            Sınavlara Bizimle <span className="text-primary">Hazırlanın</span>
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
+            Afişlerdeki detaylı bilgilere göre hazırlanmış, hedeflerinize ulaşmanızı kolaylaştıracak güncel matematik kamplarımızı keşfedin.
+          </p>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+        <div className="grid gap-8 lg:grid-cols-2">
+          {camps.map((camp) => (
+            <div 
+              key={camp.id} 
+              className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            >
+              {/* Card Header */}
+              <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
+                <img 
+                  src={camp.image} 
+                  alt={camp.title} 
+                  className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent flex flex-col justify-end p-6">
+                  <span className="w-fit rounded-full bg-primary px-3 py-1 text-xs font-bold text-white uppercase tracking-wider mb-2">
+                    {camp.badge}
+                  </span>
+                  <h2 className="text-xl font-bold text-white md:text-2xl">{camp.title}</h2>
+                  <p className="text-sm text-slate-200 mt-1">{camp.subtitle}</p>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="flex flex-1 flex-col p-6 md:p-8">
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-6">
+                  {camp.details.map((detail, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <span className="material-symbols-outlined text-primary mt-0.5">
+                        {detail.icon}
+                      </span>
+                      <div>
+                        <p className="text-xs font-medium text-slate-400">{detail.label}</p>
+                        <p className="text-sm font-bold text-slate-800">{detail.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Description */}
+                <div className="my-6">
+                  <h4 className="text-sm font-bold text-slate-900 mb-2">Kamp Detayları</h4>
+                  <p className="text-sm leading-relaxed text-slate-600">{camp.description}</p>
+                </div>
+
+                {/* Highlights List */}
+                <div className="mb-8 flex-1">
+                  <h4 className="text-sm font-bold text-slate-900 mb-3">Neler Kazanacaksınız?</h4>
+                  <ul className="flex flex-col gap-2.5">
+                    {camp.highlights.map((highlight, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-600">
+                        <span className="material-symbols-outlined text-primary text-base mt-0.5 fill-1">
+                          check_circle
+                        </span>
+                        <span>{highlight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex">
+                  <a
+                    href={camp.whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/95 hover:shadow-xl"
+                  >
+                    <span className="material-symbols-outlined">chat</span>
+                    WhatsApp ile Bilgi & Kayıt
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* General Contact Info Banner */}
+        <div className="mt-16 rounded-2xl border border-primary/20 bg-primary/5 p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xl font-bold text-slate-900">Kayıtlar ve Detaylı Bilgi</h3>
+            <p className="text-slate-600 text-sm max-w-xl">
+              Kamplarımıza kayıt olmak, aklınızdaki soruları sormak veya seviyenize en uygun paketi seçmek için bizimle doğrudan iletişime geçebilirsiniz.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <a 
+              href="tel:+905350598950" 
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+            >
+              <span className="material-symbols-outlined text-lg">call</span>
+              0535 059 89 50
+            </a>
+            <a 
+              href="https://instagram.com/fullematematigi" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 px-6 text-sm font-bold text-slate-900 hover:bg-slate-900 hover:text-white transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">camera_alt</span>
+              @fullematematigi DM
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Derslerimiz;

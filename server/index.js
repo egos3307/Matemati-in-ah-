@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { auth, checkRole } = require('./middleware/auth');
+const crypto = require('crypto');
 
 async function createDailyRoom() {
   const apiKey = process.env.DAILY_API_KEY;
@@ -45,6 +46,67 @@ dotenv.config();
 
 const app = express();
 const prisma = new PrismaClient();
+
+// Seed camps if none exist
+async function seedCamps() {
+  try {
+    const count = await prisma.camp.count();
+    if (count === 0) {
+      console.log('Seeding initial 2 camps/courses...');
+      await prisma.camp.createMany({
+        data: [
+          {
+            badge: '5, 6, 7 ve 8. Sınıflar',
+            title: 'Ortaokul Yeni Nesil Soru Çözüm Kampı',
+            subtitle: 'LGS ve Okul Sınavları İçin Sağlam Altyapı',
+            image: '/IMG_3001.jpeg',
+            details: JSON.stringify([
+              { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 6 Eylül' },
+              { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 4 Ders' },
+              { icon: 'filter_list', label: 'Toplam', value: '18 Canlı Ders' },
+              { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
+            ]),
+            description: 'Ders kayıtları Google Drive üzerinden paylaşılacak ve öğrenciler istedikleri zaman tekrar izleyebilecektir. Ders notları ve ödevlendirme desteği mevcuttur.',
+            highlights: JSON.stringify([
+              'Yeni nesil soru mantığını öğren',
+              'Matematiksel okuma ve yorumlama becerini geliştir',
+              'Temel eksiklerini tamamla',
+              'Çözümlü örneklerle soru çözüm tekniklerini öğren',
+              'LGS ve okul sınavları için sağlam altyapı oluştur'
+            ]),
+            whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+          },
+          {
+            badge: 'Lisans & Ön Lisans Adayları',
+            title: 'KPSS Lisans & Ön Lisans Matematik Kampı',
+            subtitle: 'Matematikte Eksiklerini Kapat, Netlerini Zirveye Taşı!',
+            image: '/IMG_2999.jpeg',
+            details: JSON.stringify([
+              { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 4 Eylül (Lisans Bitiş)' },
+              { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 6 Ders (Dersler 40 dk)' },
+              { icon: 'filter_list', label: 'Toplam', value: '54 Canlı Ders' },
+              { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
+            ]),
+            description: 'Kaçırılan dersler için Google Drive üzerinden kayıt erişimi sağlanır. KPSS Lisans ve Ön Lisans Matematik konularının tamamı, konu anlatımları, çözümlü ders notları (PDF), çıkmış soruların detaylı çözümleri ve 35+ çözümlü PDF soru havuzunu içerir.',
+            highlights: JSON.stringify([
+              'Tüm KPSS Lisans ve Ön Lisans matematik konuları',
+              'Detaylı konu anlatımları ve çıkmış soruların pratik çözümleri',
+              'Özel çözümlü ders notları (PDF) ve 35+ çözümlü PDF soruları',
+              'Kaçırılan dersleri dilediğiniz zaman tekrar izleme imkanı',
+              'Sınava sağlam ve eksiksiz bir hazırlık süreci'
+            ]),
+            whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+          }
+        ]
+      });
+      console.log('Seeding initial camps completed.');
+    }
+  } catch (err) {
+    console.error('Error seeding camps:', err);
+  }
+}
+seedCamps();
+
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
@@ -185,6 +247,20 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
   }
 });
 
+app.put('/api/teacher/lessons/:id/recording', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { recordingUrl } = req.body;
+  try {
+    const updated = await prisma.lesson.update({
+      where: { id },
+      data: { recordingUrl: recordingUrl || null }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     const students = await prisma.user.findMany({ where: { role: 'STUDENT' } });
@@ -227,6 +303,28 @@ app.get('/api/student/lessons', auth, checkRole('STUDENT'), async (req, res) => 
       include: { teacher: { select: { name: true } } }
     });
     res.json(lessons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+    if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
+      return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
+    }
+    const updated = await prisma.lesson.update({
+      where: { id },
+      data: { recordingRequested: true }
+    });
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -310,6 +408,186 @@ app.get('/api/teacher/student/:id/trials', auth, checkRole('TEACHER'), async (re
       results: JSON.parse(t.results)
     }));
     res.json(parsedTrials);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Blog Routes
+function slugify(text) {
+  const trMap = {
+    'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'I': 'I', 'İ': 'i', 'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U'
+  };
+  for (let key in trMap) {
+    text = text.replace(new RegExp(key, 'g'), trMap[key]);
+  }
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+app.get('/api/blog', async (req, res) => {
+  try {
+    const posts = await prisma.blogPost.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { name: true } } }
+    });
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/blog/:slug', async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const post = await prisma.blogPost.findUnique({
+      where: { slug },
+      include: { author: { select: { name: true } } }
+    });
+    if (!post) {
+      return res.status(404).json({ message: 'Yazı bulunamadı' });
+    }
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
+  const { title, content, excerpt, coverImage } = req.body;
+  try {
+    let slug = slugify(title);
+    let finalSlug = slug;
+    let counter = 1;
+    let exists = true;
+    while (exists) {
+      const existing = await prisma.blogPost.findUnique({ where: { slug: finalSlug } });
+      if (existing) {
+        finalSlug = `${slug}-${counter}`;
+        counter++;
+      } else {
+        exists = false;
+      }
+    }
+
+    const post = await prisma.blogPost.create({
+      data: {
+        title,
+        content,
+        excerpt: excerpt || content.substring(0, 150) + '...',
+        coverImage: coverImage || null,
+        slug: finalSlug,
+        authorId: req.user.id
+      }
+    });
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/blog/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.blogPost.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Camp / Course Routes
+app.get('/api/camps', async (req, res) => {
+  try {
+    const camps = await prisma.camp.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(camps);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
+  const { badge, title, subtitle, image, details, description, highlights, whatsappLink } = req.body;
+  try {
+    const camp = await prisma.camp.create({
+      data: {
+        badge,
+        title,
+        subtitle,
+        image,
+        details: typeof details === 'string' ? details : JSON.stringify(details),
+        description,
+        highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
+        whatsappLink
+      }
+    });
+    res.json(camp);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.camp.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Zoom SDK Signature Endpoint
+app.post('/api/zoom/signature', auth, async (req, res) => {
+  const { meetingNumber, role } = req.body;
+  const sdkKey = process.env.ZOOM_SDK_KEY || 'YOUR_SDK_KEY';
+  const sdkSecret = process.env.ZOOM_SDK_SECRET || 'YOUR_SDK_SECRET';
+
+  if (!meetingNumber) {
+    return res.status(400).json({ error: 'Toplantı numarası gereklidir.' });
+  }
+
+  try {
+    // role: 1 for host (teacher), 0 for participant (student)
+    const zoomRole = role === 'TEACHER' ? 1 : 0;
+    
+    const iat = Math.round(new Date().getTime() / 1000) - 30;
+    const exp = iat + 60 * 60 * 2; // 2 hours expiration
+
+    const oHeader = { alg: 'HS256', typ: 'JWT' };
+    const oPayload = {
+      sdkKey: sdkKey,
+      mn: parseInt(meetingNumber),
+      role: zoomRole,
+      iat: iat,
+      exp: exp,
+      appKey: sdkKey,
+      tokenExp: exp
+    };
+
+    const sHeader = Buffer.from(JSON.stringify(oHeader)).toString('base64').replace(/=/g, '');
+    const sPayload = Buffer.from(JSON.stringify(oPayload)).toString('base64').replace(/=/g, '');
+
+    const signature = crypto
+      .createHmac('sha256', sdkSecret)
+      .update(sHeader + '.' + sPayload)
+      .digest('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+    const generatedSignature = `${sHeader}.${sPayload}.${signature}`;
+    
+    res.json({
+      signature: generatedSignature,
+      sdkKey: sdkKey
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

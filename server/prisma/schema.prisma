@@ -30,6 +30,7 @@ model User {
   lessonsAsStudent Lesson[] @relation("StudentLessons")
   homeworks StudentHomework[]
   trials    Trial[]
+  blogPosts BlogPost[]
 }
 
 model Trial {
@@ -50,6 +51,8 @@ model Lesson {
   date           DateTime
   zoomMeetingId  String?
   zoomJoinUrl    String?
+  recordingUrl   String?
+  recordingRequested Boolean @default(false)
   teacherId      Int
   teacher        User     @relation("TeacherLessons", fields: [teacherId], references: [id])
   studentId      Int?
@@ -77,4 +80,31 @@ model StudentHomework {
   homework   Homework @relation(fields: [homeworkId], references: [id])
   status     String   @default("PENDING") // PENDING, COMPLETED
   submittedAt DateTime?
+}
+
+model BlogPost {
+  id         Int      @id @default(autoincrement())
+  title      String
+  slug       String   @unique
+  content    String
+  excerpt    String
+  coverImage String?
+  authorId   Int
+  author     User     @relation(fields: [authorId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Camp {
+  id           Int      @id @default(autoincrement())
+  badge        String
+  title        String
+  subtitle     String
+  image        String
+  details      String   // JSON string: [{ icon, label, value }]
+  description  String
+  highlights   String   // JSON string: string[]
+  whatsappLink String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

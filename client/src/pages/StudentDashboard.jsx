@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import LiveMeeting from '../components/LiveMeeting';
+import ZoomMeeting from '../components/ZoomMeeting';
+
+const parseZoomUrl = (url) => {
+  if (!url) return { meetingNumber: '', password: '' };
+  const numberMatch = url.match(/\/j\/(\d+)/) || url.match(/\/s\/(\d+)/) || url.match(/\b\d{9,11}\b/);
+  const meetingNumber = numberMatch ? numberMatch[1] || numberMatch[0] : '';
+  const pwdMatch = url.match(/pwd=([^&]+)/) || url.match(/[\?&]pwd=(\w+)/);
+  const password = pwdMatch ? pwdMatch[1] : '';
+  return { meetingNumber, password };
+};
 
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('panel'); 
@@ -153,6 +163,17 @@ const StudentDashboard = () => {
       setLessons(res.data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRequestRecording = async (lessonId) => {
+    try {
+      await axios.put(`/api/student/lessons/${lessonId}/request-recording`);
+      fetchLessons();
+      alert('Ders kaydı başarıyla talep edildi. Öğretmeniniz ders kaydını eklediğinde buradan izleyebilirsiniz.');
+    } catch (err) {
+      console.error('Error requesting recording:', err);
+      alert('Ders kaydı talep edilirken bir hata oluştu.');
     }
   };
 
@@ -737,20 +758,56 @@ const StudentDashboard = () => {
           <div className="space-y-6">
             <h2 className="text-2xl font-black text-slate-900">Derslerin</h2>
             <div className="space-y-4">
-              {lessons.map(lesson => (
-                <div key={lesson.id} className="p-6 bg-white rounded-3xl border border-primary/10 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-slate-900">{lesson.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">{new Date(lesson.date).toLocaleString('tr-TR')}</p>
+              {lessons.map(lesson => {
+                const isPast = new Date(lesson.date).getTime() + 7200000 < Date.now();
+                return (
+                  <div key={lesson.id} className="p-6 bg-white rounded-3xl border border-primary/10 flex items-center justify-between shadow-sm">
+                    <div>
+                      <h4 className="font-bold text-slate-900">{lesson.title}</h4>
+                      <p className="text-xs text-slate-500 mt-1">{new Date(lesson.date).toLocaleString('tr-TR')}</p>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      {isPast ? (
+                        <>
+                          {lesson.recordingRequested ? (
+                            lesson.recordingUrl ? (
+                              <a 
+                                href={lesson.recordingUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-base">play_circle</span>
+                                Kaydı İzle
+                              </a>
+                            ) : (
+                              <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                                Kayıt Talep Edildi
+                              </span>
+                            )
+                          ) : (
+                            <button 
+                              onClick={() => handleRequestRecording(lesson.id)} 
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm border border-slate-200 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-base">video_library</span>
+                              Kayıt Talep Et
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button 
+                          onClick={() => setActiveMeeting(lesson)} 
+                          className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer shadow-sm hover:bg-primary/95 transition-all"
+                        >
+                          Katıl
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => setActiveMeeting(lesson)} 
-                    className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
-                  >
-                    Katıl
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -781,12 +838,28 @@ const StudentDashboard = () => {
       </nav>
       {/* Live Class Overlay / Modal */}
       {activeMeeting && (
-        <LiveMeeting
-          lessonId={activeMeeting.id}
-          role="STUDENT"
-          userName={user?.name || 'Öğrenci'}
-          onClose={() => setActiveMeeting(null)}
-        />
+        activeMeeting.zoomJoinUrl && activeMeeting.zoomJoinUrl.includes('zoom.us') ? (
+          (() => {
+            const { meetingNumber, password } = parseZoomUrl(activeMeeting.zoomJoinUrl);
+            return (
+              <ZoomMeeting
+                meetingNumber={meetingNumber}
+                meetingPassword={password}
+                role="STUDENT"
+                userName={user?.name || 'Öğrenci'}
+                userEmail={user?.email || 'info@fullematematik.com'}
+                onClose={() => setActiveMeeting(null)}
+              />
+            );
+          })()
+        ) : (
+          <LiveMeeting
+            lessonId={activeMeeting.id}
+            role="STUDENT"
+            userName={user?.name || 'Öğrenci'}
+            onClose={() => setActiveMeeting(null)}
+          />
+        )
       )}
     </div>
   );

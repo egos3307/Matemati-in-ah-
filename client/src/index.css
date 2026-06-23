@@ -15,3 +15,38 @@
     @apply bg-background-light font-display text-slate-900;
   }
 }
+
+@layer utilities {
+  .prose {
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-black text-slate-900 tracking-tight mt-8 mb-4 block;
+    }
+    h1 { @apply text-3xl; }
+    h2 { @apply text-2xl border-b border-slate-100 pb-2; }
+    h3 { @apply text-xl; }
+    
+    p {
+      @apply mb-4 leading-relaxed text-slate-600 block;
+    }
+    
+    ul {
+      @apply list-disc list-inside mb-4 space-y-2 text-slate-600 pl-4 block;
+    }
+    
+    ol {
+      @apply list-decimal list-inside mb-4 space-y-2 text-slate-600 pl-4 block;
+    }
+    
+    a {
+      @apply text-primary font-bold hover:underline;
+    }
+    
+    blockquote {
+      @apply border-l-4 border-primary pl-4 italic text-slate-500 my-6 block bg-slate-50 py-2 pr-4 rounded-r-xl;
+    }
+    
+    img {
+      @apply mx-auto max-w-full h-auto rounded-2xl shadow-md my-6 block;
+    }
+  }
+}

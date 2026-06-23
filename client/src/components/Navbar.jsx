@@ -20,7 +20,8 @@ const Navbar = () => {
         </Link>
         <nav className="hidden flex-1 justify-center gap-10 md:flex">
           <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/">Ana Sayfa</Link>
-          <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/hakkimizda">Hakkımızda</Link>
+          <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/derslerimiz">Derslerimiz</Link>
+          <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/blog">Blog</Link>
           <Link className="text-sm font-semibold text-slate-600 transition-colors hover:text-primary" to="/iletisim">İletişim</Link>
         </nav>
         <div className="flex items-center gap-4">
