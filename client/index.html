@@ -17,6 +17,31 @@
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
     </style>
+    <!-- Prevent Google Translate from corrupting Material Symbols ligatures -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const addNoTranslate = (el) => {
+          if (el.classList && el.classList.contains("material-symbols-outlined") && !el.classList.contains("notranslate")) {
+            el.classList.add("notranslate");
+            el.setAttribute("translate", "no");
+          }
+        };
+        document.querySelectorAll(".material-symbols-outlined").forEach(addNoTranslate);
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.classList && node.classList.contains("material-symbols-outlined")) {
+                  addNoTranslate(node);
+                }
+                node.querySelectorAll(".material-symbols-outlined").forEach(addNoTranslate);
+              }
+            }
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
     <!-- Jitsi Meet IFrame API -->
     <script src="/external_api.js"></script>
   </head>
