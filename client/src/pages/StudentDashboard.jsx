@@ -13,6 +13,39 @@ const parseZoomUrl = (url) => {
   return { meetingNumber, password };
 };
 
+const compressImage = (file, callback) => {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      callback(compressedDataUrl);
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('panel'); 
   const [lessons, setLessons] = useState([]);
@@ -138,12 +171,10 @@ const StudentDashboard = () => {
   const handleBannerUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setProfileBanner(event.target.result);
-      localStorage.setItem(`fulle_profile_banner_${user?.id}`, event.target.result);
-    };
-    reader.readAsDataURL(file);
+    compressImage(file, (compressedBase64) => {
+      setProfileBanner(compressedBase64);
+      localStorage.setItem(`fulle_profile_banner_${user?.id}`, compressedBase64);
+    });
   };
 
   const handleSaveMotto = () => {
@@ -397,7 +428,8 @@ const StudentDashboard = () => {
       });
       setAiChat(prev => [...prev, { role: 'ai', content: res.data.answer }]);
     } catch (err) {
-      setAiChat(prev => [...prev, { role: 'ai', content: 'Hata oluştu. Lütfen tekrar deneyin.' }]);
+      const errMsg = err.response?.data?.error || err.response?.data?.message || 'Hata oluştu. Lütfen tekrar deneyin.';
+      setAiChat(prev => [...prev, { role: 'ai', content: errMsg }]);
     } finally {
       setLoadingAi(false);
     }
@@ -1222,9 +1254,9 @@ const StudentDashboard = () => {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => setAiImage(event.target.result);
-                    reader.readAsDataURL(file);
+                    compressImage(file, (compressedBase64) => {
+                      setAiImage(compressedBase64);
+                    });
                   }}
                 />
               </label>
@@ -1324,7 +1356,7 @@ const StudentDashboard = () => {
         </button>
         <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center gap-1 ${activeTab === 'ai' ? 'text-primary scale-110' : 'text-slate-400'}`}>
           <span className="material-symbols-outlined">smart_toy</span>
-          <span className="text-[10px] font-bold">Zeka</span>
+          <span className="text-[10px] font-bold">Fulle AI</span>
         </button>
       </nav>
       {/* Live Class Overlay / Modal */}
