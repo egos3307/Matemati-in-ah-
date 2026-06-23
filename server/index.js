@@ -66,8 +66,9 @@ if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
     const tmpDbPath = path.join('/tmp', 'dev.db');
     if (fs.existsSync(dbPath)) {
       fs.copyFileSync(dbPath, tmpDbPath);
+      fs.chmodSync(tmpDbPath, 0o666); // Grant write permissions explicitly
       dbPath = tmpDbPath;
-      console.log(`Database successfully copied to writable path: ${dbPath}`);
+      console.log(`Database successfully copied and made writable at: ${dbPath}`);
     }
   } catch (err) {
     console.error('Failed to copy database to /tmp:', err.message);
