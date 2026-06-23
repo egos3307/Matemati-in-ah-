@@ -1,6 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const FALLBACK_CAMPS = [
+  {
+    id: 'fallback-1',
+    badge: '5, 6, 7 ve 8. Sınıflar',
+    title: 'Ortaokul Yeni Nesil Soru Çözüm Kampı',
+    subtitle: 'LGS ve Okul Sınavları İçin Sağlam Altyapı',
+    image: '/IMG_3001.jpeg',
+    details: [
+      { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 6 Eylül' },
+      { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 4 Ders' },
+      { icon: 'filter_list', label: 'Toplam', value: '18 Canlı Ders' },
+      { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
+    ],
+    description: 'Ders kayıtları Google Drive üzerinden paylaşılacak ve öğrenciler istedikleri zaman tekrar izleyebilecektir. Ders notları ve ödevlendirme desteği mevcuttur.',
+    highlights: [
+      'Yeni nesil soru mantığını öğren',
+      'Matematiksel okuma ve yorumlama becerini geliştir',
+      'Temel eksiklerini tamamla',
+      'Çözümlü örneklerle soru çözüm tekniklerini öğren',
+      'LGS ve okul sınavları için sağlam altyapı oluştur'
+    ],
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+  },
+  {
+    id: 'fallback-2',
+    badge: 'Lisans & Ön Lisans Adayları',
+    title: 'KPSS Lisans & Ön Lisans Matematik Kampı',
+    subtitle: 'Matematikte Eksiklerini Kapat, Netlerini Zirveye Taşı!',
+    image: '/IMG_2999.jpeg',
+    details: [
+      { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 4 Eylül (Lisans Bitiş)' },
+      { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 6 Ders (Dersler 40 dk)' },
+      { icon: 'filter_list', label: 'Toplam', value: '54 Canlı Ders' },
+      { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
+    ],
+    description: 'Kaçırılan dersler için Google Drive üzerinden kayıt erişimi sağlanır. KPSS Lisans ve Ön Lisans Matematik konularının tamamı, konu anlatımları, çözümlü ders notları (PDF), çıkmış soruların detaylı çözümleri ve 35+ çözümlü PDF soru havuzunu içerir.',
+    highlights: [
+      'Tüm KPSS Lisans ve Ön Lisans matematik konuları',
+      'Detaylı konu anlatımları ve çıkmış soruların pratik çözümleri',
+      'Özel çözümlü ders notları (PDF) ve 35+ çözümlü PDF soruları',
+      'Kaçırılan dersleri dilediğiniz zaman tekrar izleme imkanı',
+      'Sınava sağlam ve eksiksiz bir hazırlık süreci'
+    ],
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+  }
+];
+
 const Derslerimiz = () => {
   const [camps, setCamps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,14 +56,19 @@ const Derslerimiz = () => {
     const fetchCamps = async () => {
       try {
         const res = await axios.get('/api/camps');
-        const parsedCamps = res.data.map(camp => ({
-          ...camp,
-          details: typeof camp.details === 'string' ? JSON.parse(camp.details) : camp.details,
-          highlights: typeof camp.highlights === 'string' ? JSON.parse(camp.highlights) : camp.highlights
-        }));
-        setCamps(parsedCamps);
+        if (res.data && res.data.length > 0) {
+          const parsedCamps = res.data.map(camp => ({
+            ...camp,
+            details: typeof camp.details === 'string' ? JSON.parse(camp.details) : camp.details,
+            highlights: typeof camp.highlights === 'string' ? JSON.parse(camp.highlights) : camp.highlights
+          }));
+          setCamps(parsedCamps);
+        } else {
+          setCamps(FALLBACK_CAMPS);
+        }
       } catch (err) {
-        console.error('Error fetching camps:', err);
+        console.error('Error fetching camps, loading fallback static camps:', err);
+        setCamps(FALLBACK_CAMPS);
       } finally {
         setLoading(false);
       }
