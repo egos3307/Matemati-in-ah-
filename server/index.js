@@ -147,6 +147,45 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Fullematematiği API is running...');
 });
+
+app.get('/api/debug', async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  const debugInfo = {
+    cwd: process.cwd(),
+    dirname: __dirname,
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: process.env.VERCEL,
+      DATABASE_URL: process.env.DATABASE_URL
+    },
+    exists: {
+      dirname_devDb: fs.existsSync(path.resolve(__dirname, 'dev.db')),
+      cwd_server_devDb: fs.existsSync(path.join(process.cwd(), 'server', 'dev.db')),
+      cwd_devDb: fs.existsSync(path.join(process.cwd(), 'dev.db')),
+      tmp_devDb: fs.existsSync('/tmp/dev.db'),
+      prisma_schema: fs.existsSync(path.join(process.cwd(), 'server', 'prisma', 'schema.prisma')),
+      cwd_files: [],
+      dirname_files: []
+    }
+  };
+
+  try {
+    debugInfo.exists.cwd_files = fs.readdirSync(process.cwd());
+  } catch (e) {
+    debugInfo.exists.cwd_files = [e.message];
+  }
+
+  try {
+    debugInfo.exists.dirname_files = fs.readdirSync(__dirname);
+  } catch (e) {
+    debugInfo.exists.dirname_files = [e.message];
+  }
+
+  res.json(debugInfo);
+});
+
 // Auth Routes
 app.post('/api/auth/login', async (req, res) => {
   const { email, password, studentCode, loginType } = req.body;
