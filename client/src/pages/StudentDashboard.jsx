@@ -44,6 +44,7 @@ const StudentDashboard = () => {
   const [goals, setGoals] = useState([]);
   const [newGoalInput, setNewGoalInput] = useState('');
   const [isEditingMotto, setIsEditingMotto] = useState(false);
+  const [aiImage, setAiImage] = useState('');
 
   useEffect(() => {
     let interval = null;
@@ -373,16 +374,30 @@ const StudentDashboard = () => {
 
   const handleAiAsk = async (e) => {
     e.preventDefault();
-    if (!aiQuestion.trim()) return;
-    const userMessage = { role: 'user', content: aiQuestion };
+    if (!aiQuestion.trim() && !aiImage) return;
+    
+    const userMessage = { 
+      role: 'user', 
+      content: aiQuestion,
+      image: aiImage 
+    };
+    
     setAiChat(prev => [...prev, userMessage]);
+    const questionText = aiQuestion;
+    const selectedImage = aiImage;
+    
     setAiQuestion('');
+    setAiImage('');
     setLoadingAi(true);
+    
     try {
-      const res = await axios.post('/api/ai/ask', { question: aiQuestion });
+      const res = await axios.post('/api/ai/ask', { 
+        question: questionText, 
+        image: selectedImage 
+      });
       setAiChat(prev => [...prev, { role: 'ai', content: res.data.answer }]);
     } catch (err) {
-      setAiChat(prev => [...prev, { role: 'ai', content: 'Hata oluştu.' }]);
+      setAiChat(prev => [...prev, { role: 'ai', content: 'Hata oluştu. Lütfen tekrar deneyin.' }]);
     } finally {
       setLoadingAi(false);
     }
@@ -1165,20 +1180,66 @@ const StudentDashboard = () => {
                     <span className="material-symbols-outlined text-5xl">smart_toy</span>
                   </div>
                   <h3 className="text-xl font-black text-slate-900">Matematik Asistanın!</h3>
-                  <p className="text-sm text-slate-500">Sınıf seviyene uygun tüm soruları sorabilirsin.</p>
+                  <p className="text-sm text-slate-500">Fotoğraf yükleyerek veya yazarak matematik sorularını sorabilirsin.</p>
                 </div>
               )}
               {aiChat.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white rounded-br-none' : 'bg-slate-100 text-slate-800 rounded-bl-none'}`}>
-                    {msg.content}
+                  <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-primary text-white rounded-br-none shadow-md shadow-primary/10' : 'bg-slate-100 text-slate-800 rounded-bl-none'}`}>
+                    {msg.image && (
+                      <img src={msg.image} alt="Gönderilen Görsel" className="max-w-full max-h-[220px] rounded-lg mb-2 object-contain block border border-white/10" />
+                    )}
+                    {msg.content && (
+                      <p className="whitespace-pre-wrap text-xs md:text-sm font-medium leading-relaxed">{msg.content}</p>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
-            <form onSubmit={handleAiAsk} className="relative mt-4">
-              <input value={aiQuestion} onChange={(e) => setAiQuestion(e.target.value)} placeholder="Sorunu sor..." className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-6 pr-16 outline-none"/>
-              <button type="submit" className="absolute right-2 top-2 h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg"><span className="material-symbols-outlined">send</span></button>
+
+            {/* Selected Image Preview */}
+            {aiImage && (
+              <div className="relative inline-block mb-3 self-start p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                <img src={aiImage} alt="Seçilen Soru" className="h-16 w-16 object-contain rounded-xl" />
+                <button 
+                  type="button" 
+                  onClick={() => setAiImage('')}
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-md cursor-pointer hover:bg-red-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleAiAsk} className="relative mt-2 flex items-center gap-2">
+              <div className="relative flex-1">
+                <input 
+                  value={aiQuestion} 
+                  onChange={(e) => setAiQuestion(e.target.value)} 
+                  placeholder="Sorunu yaz veya soru fotoğrafı yükle..." 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-6 pr-24 outline-none text-xs font-bold"
+                />
+                
+                {/* Photo Attach Button */}
+                <label className="absolute right-12 top-2 h-10 w-10 text-slate-400 hover:text-primary transition-colors flex items-center justify-center cursor-pointer select-none">
+                  <span className="material-symbols-outlined text-xl">image</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => setAiImage(event.target.result);
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+
+                {/* Send Button */}
+                <button type="submit" className="absolute right-2 top-2 h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg"><span className="material-symbols-outlined">send</span></button>
+              </div>
             </form>
           </div>
         )}

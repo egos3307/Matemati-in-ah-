@@ -650,10 +650,68 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
   }
 });
 
-// Mock AI endpoint
+// Real Gemini Multimodal AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
-  const { question } = req.body;
-  res.json({ answer: `Bu harika bir soru! "${question}" hakkında çalışmaya devam etmelisin. Yakında gerçek AI desteği eklenecek.` });
+  const { question, image } = req.body;
+  
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GEMINI_API_KEY) tanımlanmamış. Lütfen yönetici ile iletişime geçin.' });
+    }
+
+    const parts = [];
+    
+    // System instruction part
+    parts.push({
+      text: "Sen Fullematematik Asistanı adında uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver."
+    });
+
+    if (image) {
+      // Decode image base64
+      const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        const mimeType = match[1];
+        const base64Data = match[2];
+        parts.push({
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data
+          }
+        });
+      }
+    }
+
+    if (question && question.trim()) {
+      parts.push({ text: question });
+    } else {
+      parts.push({ text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?" });
+    }
+
+    // Call Google Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts }]
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini API Error details:', errText);
+      return res.status(500).json({ error: 'Yapay zeka servisi yanıt vermedi.' });
+    }
+
+    const data = await response.json();
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Cevap üretilemedi.';
+    res.json({ answer });
+  } catch (err) {
+    console.error('AI ask error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 if (require.main === module) {
