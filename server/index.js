@@ -650,70 +650,79 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
   }
 });
 
-// Real Gemini Multimodal AI endpoint
+// Real Groq Multimodal AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
   
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Yapay zeka anahtarı (GEMINI_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
     }
 
     // Log API Key prefix for debugging purposes (never log full key)
-    console.log(`Using GEMINI_API_KEY prefix: ${apiKey.substring(0, 6)}...`);
+    console.log(`Using GROQ_API_KEY prefix: ${apiKey.substring(0, 6)}...`);
 
-    const parts = [];
+    const messages = [
+      {
+        role: "system",
+        content: "Sen Fullematematik Asistanı adında uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver."
+      }
+    ];
+
+    const userContent = [];
     
-    // System instruction part
-    parts.push({
-      text: "Sen Fullematematik Asistanı adında uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver."
-    });
-
     if (image) {
       // Decode image base64
-      const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        const mimeType = match[1];
-        const base64Data = match[2];
-        parts.push({
-          inlineData: {
-            mimeType: mimeType,
-            data: base64Data
-          }
-        });
-      }
+      // Groq expects image in content list with type: "image_url"
+      userContent.push({
+        type: "image_url",
+        image_url: {
+          url: image
+        }
+      });
     }
 
     if (question && question.trim()) {
-      parts.push({ text: question });
-    } else {
-      parts.push({ text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?" });
+      userContent.push({
+        type: "text",
+        text: question
+      });
+    } else if (!image) {
+      userContent.push({
+        type: "text",
+        text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?"
+      });
     }
 
-    // Call Google Gemini API (v1beta is recommended for MakerSuite/AI Studio keys)
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    messages.push({
+      role: "user",
+      content: userContent
+    });
+
+    // Call Groq API
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        contents: [{ parts }]
+        model: 'llama-3.2-11b-vision-preview',
+        messages: messages,
+        temperature: 0.2
       })
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Gemini API Error details:', errText);
+      console.error('Groq API Error details:', errText);
       
       let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
       try {
         const parsedErr = JSON.parse(errText);
         if (parsedErr.error?.message) {
-          errorMsg = `Gemini API Hatası: ${parsedErr.error.message}`;
-          if (parsedErr.error.message.includes('not found') || parsedErr.error.message.includes('ModelService')) {
-            errorMsg += ' (İpucu: API anahtarınızda Generative Language API etkinleştirilmemiş veya yanlış konsoldan oluşturulmuş olabilir. Google AI Studio üzerinden yeni bir anahtar almayı deneyin.)';
-          }
+          errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
         }
       } catch (e) {}
       
@@ -721,7 +730,7 @@ app.post('/api/ai/ask', auth, async (req, res) => {
     }
 
     const data = await response.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Cevap üretilemedi.';
+    const answer = data.choices?.[0]?.message?.content || 'Cevap üretilemedi.';
     res.json({ answer });
   } catch (err) {
     console.error('AI ask error:', err);
