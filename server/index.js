@@ -59,6 +59,21 @@ if (!fs.existsSync(dbPath)) {
     }
   }
 }
+
+// In Vercel serverless functions, copy SQLite database to /tmp so it can be opened in read-write mode
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  try {
+    const tmpDbPath = path.join('/tmp', 'dev.db');
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, tmpDbPath);
+      dbPath = tmpDbPath;
+      console.log(`Database successfully copied to writable path: ${dbPath}`);
+    }
+  } catch (err) {
+    console.error('Failed to copy database to /tmp:', err.message);
+  }
+}
+
 process.env.DATABASE_URL = `file:${dbPath}`;
 
 const app = express();
