@@ -1211,34 +1211,35 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            <form onSubmit={handleAiAsk} className="relative mt-2 flex items-center gap-2">
+            <form onSubmit={handleAiAsk} className="mt-2 flex items-center gap-3">
+              {/* Photo Upload Button */}
+              <label className="flex h-[52px] w-[52px] shrink-0 bg-primary/10 hover:bg-primary/20 text-primary rounded-full items-center justify-center cursor-pointer transition-all border border-primary/10 shadow-sm hover:scale-105 active:scale-95 select-none">
+                <span className="material-symbols-outlined text-2xl notranslate" translate="no">photo_camera</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => setAiImage(event.target.result);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+
+              {/* Text Input and Send Button Container */}
               <div className="relative flex-1">
                 <input 
                   value={aiQuestion} 
                   onChange={(e) => setAiQuestion(e.target.value)} 
-                  placeholder="Sorunu yaz veya soru fotoğrafı yükle..." 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-6 pr-24 outline-none text-xs font-bold"
+                  placeholder="Sorunu yaz veya fotoğraf yükle..." 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-full py-4 pl-6 pr-14 outline-none text-xs font-bold"
                 />
                 
-                {/* Photo Attach Button */}
-                <label className="absolute right-12 top-2 h-10 w-10 text-slate-400 hover:text-primary transition-colors flex items-center justify-center cursor-pointer select-none">
-                  <span className="material-symbols-outlined text-xl">image</span>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (event) => setAiImage(event.target.result);
-                      reader.readAsDataURL(file);
-                    }}
-                  />
-                </label>
-
                 {/* Send Button */}
-                <button type="submit" className="absolute right-2 top-2 h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg"><span className="material-symbols-outlined">send</span></button>
+                <button type="submit" className="absolute right-2 top-2 h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all cursor-pointer"><span className="material-symbols-outlined">send</span></button>
               </div>
             </form>
           </div>
