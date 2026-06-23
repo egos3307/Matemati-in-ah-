@@ -43,7 +43,7 @@ const Home = () => {
             <div className="relative">
               <div className="absolute -inset-4 rounded-xl bg-primary/10 blur-3xl"></div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-primary shadow-2xl pt-12 px-8 flex items-end justify-center">
-                <img alt="Matematik öğretmeni kollarını bağlamış gülümsüyor" className="h-full w-auto object-contain object-bottom" src="/hero-teacher.png"/>
+                <img alt="Matematik öğretmeni kollarını bağlamış gülümsüyor" className="h-full w-auto object-contain object-bottom" src="/untitled-design.png"/>
               </div>
             </div>
           </div>
