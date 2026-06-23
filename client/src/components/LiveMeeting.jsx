@@ -109,7 +109,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
           SHOW_WATERMARK_FOR_GUESTS: false,
           SHOW_BRAND_WATERMARK: false,
           DISPLAY_WELCOME_PAGE_CONTENT: false,
-          DEFAULT_BACKGROUND: '#0f172a',
+          DEFAULT_BACKGROUND: '#f8fafc',
           TOOLBAR_BUTTONS: [
             'microphone', 'camera', 'desktop', 'chat', 'settings', 'tileview', 'fullscreen', 'hangup'
           ]
@@ -143,7 +143,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
     <>
       {/* Main Meeting Container (Preserved in DOM to keep connection alive when minimized) */}
       <div 
-        className={`fixed z-[999] flex flex-col font-sans text-slate-100 bg-slate-950 transition-all duration-200 border border-slate-800/80 shadow-2xl ${
+        className={`fixed z-[999] flex flex-col font-sans text-slate-800 bg-white transition-all duration-200 border border-slate-200/80 shadow-2xl ${
           viewMode === 'fullscreen' 
             ? 'inset-0' 
             : viewMode === 'floating' 
@@ -167,17 +167,17 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
         {/* Header Bar */}
         <div 
           onMouseDown={viewMode === 'floating' ? handleMouseDown : undefined}
-          className={`bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-white/5 shadow-md select-none ${
+          className={`bg-slate-50/90 text-slate-800 px-4 py-2.5 flex items-center justify-between border-b border-slate-200/60 shadow-sm select-none ${
             viewMode === 'floating' ? 'cursor-move' : ''
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 bg-primary/20 rounded-lg flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-base">video_camera_front</span>
+            <div className="h-7 w-7 flex items-center justify-center">
+              <img src="/logo.png" alt="Fulle Matematik Logo" className="h-full w-full object-contain" />
             </div>
             <div>
-              <h4 className="font-bold text-xs md:text-sm">Canlı Matematik Sınıfı</h4>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+              <h4 className="font-bold text-xs md:text-sm text-slate-900">Canlı Ders Odası</h4>
+              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
                 {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
               </p>
             </div>
@@ -189,7 +189,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
               <button 
                 onClick={() => setViewMode('floating')}
                 title="Pencere Moduna Geç"
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-slate-850 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">picture_in_picture_alt</span>
               </button>
@@ -197,7 +197,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
               <button 
                 onClick={() => setViewMode('fullscreen')}
                 title="Tam Ekrana Geç"
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-slate-850 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">fullscreen</span>
               </button>
@@ -206,7 +206,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
             <button 
               onClick={() => setViewMode('minimized')}
               title="Aşağı İndir (Küçült)"
-              className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 hover:bg-slate-200/60 rounded-lg text-slate-500 hover:text-slate-850 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-lg">remove</span>
             </button>
@@ -214,7 +214,7 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
             <button 
               onClick={onClose} 
               title="Sınıftan Ayrıl"
-              className="ml-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-lg shadow-red-950/20"
+              className="ml-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-lg shadow-red-500/20"
             >
               <span className="material-symbols-outlined text-xs">call_end</span>
               Ayrıl
@@ -223,20 +223,20 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
         </div>
 
         {/* Main Jitsi Area */}
-        <div className="flex-1 bg-slate-950 relative">
+        <div className="flex-1 bg-slate-50 relative">
           {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-50 z-10">
               <div className="w-8 h-8 rounded-full border-3 border-primary border-t-transparent animate-spin"></div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Sınıf Hazırlanıyor...</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Sınıf Hazırlanıyor...</p>
             </div>
           )}
           
           {error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 text-center px-4 z-10">
-              <div className="w-12 h-12 rounded-full bg-red-950/30 border border-red-500/20 text-red-500 flex items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-50 text-center px-4 z-10">
+              <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 text-red-500 flex items-center justify-center">
                 <span className="material-symbols-outlined text-2xl">error</span>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{error}</p>
+              <p className="text-[10px] font-bold text-slate-650 uppercase tracking-widest">{error}</p>
               <button 
                 onClick={onClose} 
                 className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
@@ -254,14 +254,14 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
       {viewMode === 'minimized' && (
         <div 
           onClick={() => setViewMode('floating')}
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-2xl hover:scale-105 transition-all z-[9999] group border border-white/10"
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-white flex items-center justify-center cursor-pointer shadow-2xl hover:scale-105 transition-all z-[9999] group border border-slate-200/80"
         >
           {/* Pulsing visual indicator */}
           <div className="absolute inset-0 rounded-full border border-primary animate-ping opacity-75"></div>
-          {/* Avatar/Initial and Mic/Video status display */}
-          <span className="material-symbols-outlined text-white text-2xl z-10">video_call</span>
+          {/* Logo inside bubble */}
+          <img src="/logo.png" alt="Fulle Matematik Logo" className="w-9 h-9 object-contain z-10" />
           {/* Tooltip */}
-          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-800">
+          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-white text-slate-800 text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-slate-200">
             Derse Geri Dön ({userName})
           </div>
         </div>
@@ -269,7 +269,5 @@ const LiveMeeting = ({ lessonId, role, userName, onClose }) => {
     </>
   );
 };
-
-export default LiveMeeting;
 
 export default LiveMeeting;
