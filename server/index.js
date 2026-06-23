@@ -42,7 +42,11 @@ async function createDailyRoom() {
   }
 }
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Dynamically set database URL to absolute path of server/dev.db for local & Vercel serverless consistency
+process.env.DATABASE_URL = `file:${path.resolve(__dirname, 'dev.db')}`;
 
 const app = express();
 const prisma = new PrismaClient();
@@ -599,6 +603,10 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   res.json({ answer: `Bu harika bir soru! "${question}" hakkında çalışmaya devam etmelisin. Yakında gerçek AI desteği eklenecek.` });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
