@@ -655,15 +655,18 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
 // LiveKit Token Endpoint
 app.post('/api/livekit/token', auth, async (req, res) => {
   const { roomName, participantName, participantIdentity, role } = req.body;
-  const apiKey = process.env.LIVEKIT_API_KEY;
-  const apiSecret = process.env.LIVEKIT_API_SECRET;
-  const livekitUrl = process.env.LIVEKIT_URL;
+  
+  // Clean surrounding quotes if any are present from the .env parser
+  const apiKey = (process.env.LIVEKIT_API_KEY || '').replace(/['"]/g, '').trim();
+  const apiSecret = (process.env.LIVEKIT_API_SECRET || '').replace(/['"]/g, '').trim();
+  const livekitUrl = (process.env.LIVEKIT_URL || '').replace(/['"]/g, '').trim();
 
   // If LiveKit credentials are not defined or contain default placeholders, tell client to use Jitsi fallback
   if (!apiKey || !apiSecret || !livekitUrl || 
       apiKey === 'your_livekit_api_key_here' || 
       apiSecret === 'your_livekit_api_secret_here' || 
-      livekitUrl.includes('your-project')) {
+      livekitUrl.includes('your-project') ||
+      livekitUrl.includes('your_livekit_url_here')) {
     console.log('LiveKit not fully configured in env. Falling back to Jitsi Meeting.');
     return res.json({ useFallback: true });
   }

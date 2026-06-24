@@ -22,13 +22,10 @@ const checkIsTeacher = (participant) => {
   } catch (e) {
     // metadata is not JSON
   }
-  // Suffix fallback checking
   return participant.identity.includes('Öğretmen') || participant.identity.includes('TEACHER');
 };
 
 // 1. JITSI FALLBACK COMPONENT
-// This guarantees that if LiveKit is not configured in Vercel or locally, 
-// the student and teacher can still join the lesson immediately.
 const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
@@ -40,7 +37,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
     const loadJitsi = () => {
       if (!containerRef.current) return;
       if (!window.JitsiMeetExternalAPI) {
-        console.warn('Jitsi Meet External API not found, trying fallback scripts.');
+        console.warn('Jitsi Meet External API script was not loaded.');
         return;
       }
 
@@ -118,7 +115,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
-const MeetingSession = ({ role, userName, onClose }) => {
+const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
   const cameraTracks = useTracks([Track.Source.Camera]);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]);
@@ -144,6 +141,17 @@ const MeetingSession = ({ role, userName, onClose }) => {
       document.body.style.overflow = originalStyle;
     };
   }, []);
+
+  // Monitor connection health. If connection hangs or fails, call error handler to fallback
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
+      const timeout = setTimeout(() => {
+        console.warn("LiveKit connection timed out. Activating Jitsi fallback.");
+        if (onLiveKitError) onLiveKitError();
+      }, 6000); // 6 seconds timeout
+      return () => clearTimeout(timeout);
+    }
+  }, [connectionState, onLiveKitError]);
 
   // Request media streams gracefully AFTER connecting (prevents startup crash if permission blocked/no camera)
   useEffect(() => {
@@ -292,6 +300,7 @@ const MeetingSession = ({ role, userName, onClose }) => {
     }
   };
 
+  // Render loading state if connection is not ready
   if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
     return (
       <div className="w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans fixed inset-0 z-[99999] overflow-hidden">
@@ -652,6 +661,11 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
     fetchToken();
   }, [lessonId, userName, userId, role]);
 
+  const handleLiveKitError = () => {
+    console.warn("LiveKit failed, switching to Jitsi fallback.");
+    setUseFallback(true);
+  };
+
   if (loading) {
     return createPortal(
       <div className="fixed inset-0 z-[99999] w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
@@ -684,7 +698,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
     <LiveKitRoom
       token={token}
       serverUrl={serverUrl}
-      onDisconnected={onClose}
+      onDisconnected={handleLiveKitError} // Auto-fallback if network drops or connection fails during room
       connectOptions={{ autoSubscribe: true }}
       className="fixed inset-0 z-[99999] w-screen h-screen bg-slate-950 overflow-hidden"
     >
@@ -692,6 +706,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
         role={role} 
         userName={userName} 
         onClose={onClose} 
+        onLiveKitError={handleLiveKitError} // Auto-fallback if initial connection handshake hangs
       />
     </LiveKitRoom>,
     document.body
