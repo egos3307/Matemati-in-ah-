@@ -88,7 +88,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
   }, [roomName, userName, onClose]);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen z-[99999] flex flex-col bg-[#0b0f19] font-sans text-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-[#0b0f19] font-sans text-slate-100 overflow-hidden">
       {/* Header */}
       <div className="bg-slate-900/90 backdrop-blur px-5 py-3 flex items-center justify-between border-b border-slate-800/80 z-10">
         <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   // Render loading state if connection is not ready
   if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
     return (
-      <div className="w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans fixed inset-0 z-[99999] overflow-hidden">
+      <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
         <div className="relative w-12 h-12 flex items-center justify-center">
           <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
           <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -356,7 +356,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   }
 
   return (
-    <div className="fixed inset-0 w-screen h-screen z-[99999] flex flex-col bg-[#080b11] font-sans text-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-[#080b11] font-sans text-slate-100 overflow-hidden">
       {/* Top Header */}
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
         <div className="flex items-center gap-3">
@@ -586,21 +586,21 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       </div>
 
       {/* Control Bar (Mute, Video, Screen Share, Participants, Leave) */}
-      <div className="bg-slate-900/90 backdrop-blur-md py-4.5 px-6 flex items-center justify-between border-t border-slate-800/60 z-10 shadow-lg select-none">
+      <div className="bg-slate-900/90 backdrop-blur-md py-3 px-4 sm:px-6 flex items-center justify-between border-t border-slate-800/60 z-10 shadow-lg select-none">
         
         {/* 1. Mic & Cam Toggles */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Audio Button */}
           <button 
             onClick={toggleMicrophone}
-            className={`p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
+            className={`p-2.5 sm:p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
               isMicrophoneEnabled 
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750 hover:scale-102' 
                 : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
             }`}
             title={isMicrophoneEnabled ? "Sesi Kapat" : "Sesi Aç"}
           >
-            <span className="material-symbols-outlined text-lg">
+            <span className="material-symbols-outlined text-base sm:text-lg">
               {isMicrophoneEnabled ? 'mic' : 'mic_off'}
             </span>
           </button>
@@ -608,14 +608,14 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           {/* Camera Button */}
           <button 
             onClick={toggleCamera}
-            className={`p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
+            className={`p-2.5 sm:p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
               isCameraEnabled 
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750 hover:scale-102' 
                 : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
             }`}
             title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
           >
-            <span className="material-symbols-outlined text-lg">
+            <span className="material-symbols-outlined text-base sm:text-lg">
               {isCameraEnabled ? 'videocam' : 'videocam_off'}
             </span>
           </button>
@@ -624,22 +624,22 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
         {/* 2. Custom Middle: Participants List Toggle */}
         <button
           onClick={() => setShowParticipants(!showParticipants)}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer shadow-sm hover:scale-102 ${
+          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 ${
             showParticipants 
               ? 'bg-slate-100 text-slate-900 border-white font-extrabold' 
               : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
           }`}
         >
           <span className="material-symbols-outlined text-base">group</span>
-          <span>Katılımcılar</span>
+          <span className="hidden sm:inline">Katılımcılar</span>
         </button>
 
         {/* 3. Action Buttons (Share & Hangup) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Screen Share Button */}
           <button 
             onClick={toggleScreenShare}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer shadow-md ${
+            className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md ${
               isLocalScreenSharing 
                 ? 'bg-primary hover:bg-primary/95 text-white border-primary shadow-primary/10 hover:scale-102' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750 hover:scale-102'
@@ -648,16 +648,16 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
             <span className="material-symbols-outlined text-base">
               {isLocalScreenSharing ? 'stop_screen_share' : 'screen_share'}
             </span>
-            {isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}
+            <span className="hidden md:inline">{isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}</span>
           </button>
 
           {/* Leave Button */}
           <button 
             onClick={handleLeave}
-            className="bg-red-600 hover:bg-red-750 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-500/20 hover:scale-102"
+            className="bg-red-600 hover:bg-red-750 text-white px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-500/20 hover:scale-102"
           >
             <span className="material-symbols-outlined text-base">call_end</span>
-            Ayrıl
+            <span className="hidden sm:inline">Ayrıl</span>
           </button>
         </div>
       </div>
@@ -717,7 +717,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
 
   if (loading) {
     return createPortal(
-      <div className="fixed inset-0 z-[99999] w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
+      <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
         <div className="relative w-10 h-10 flex items-center justify-center">
           <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
           <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
