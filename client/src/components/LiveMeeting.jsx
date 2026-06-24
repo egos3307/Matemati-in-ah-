@@ -147,6 +147,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
     if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
       const timeout = setTimeout(() => {
         console.warn("LiveKit connection timed out. Activating Jitsi fallback.");
+        alert("LiveKit sunucusuna bağlanırken zaman aşımı (6 saniye) oluştu.\nLütfen ağınızı kontrol edin.\nYedek sunucu odasına aktarılıyorsunuz.");
         if (onLiveKitError) onLiveKitError();
       }, 6000); // 6 seconds timeout
       return () => clearTimeout(timeout);
@@ -700,6 +701,11 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
       token={token}
       serverUrl={serverUrl}
       onDisconnected={handleLiveKitError} // Auto-fallback if network drops or connection fails during room
+      onError={(err) => {
+        console.error("LiveKit connection error:", err);
+        alert(`LiveKit Bağlantı Hatası:\n${err.message}\n\nYedek sunucu moduna geçiş yapılıyor.`);
+        handleLiveKitError();
+      }}
       connectOptions={{ autoSubscribe: true }}
       className="fixed inset-0 z-[99999] w-screen h-screen bg-slate-950 overflow-hidden"
     >
