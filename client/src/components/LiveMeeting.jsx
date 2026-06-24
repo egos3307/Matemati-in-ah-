@@ -647,7 +647,8 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
           setUseFallback(true);
         } else {
           setToken(res.data.token);
-          setServerUrl(res.data.serverUrl);
+          const cleanServerUrl = (res.data.serverUrl || '').replace(/\/$/, '').trim();
+          setServerUrl(cleanServerUrl);
           setUseFallback(false);
         }
         setLoading(false);

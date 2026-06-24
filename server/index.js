@@ -662,10 +662,10 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
 app.post('/api/livekit/token', auth, async (req, res) => {
   const { roomName, participantName, participantIdentity, role } = req.body;
   
-  // Clean surrounding quotes if any are present from the .env parser
+  // Clean surrounding quotes and trailing slashes if any are present from the .env parser
   const apiKey = (process.env.LIVEKIT_API_KEY || '').replace(/['"]/g, '').trim();
   const apiSecret = (process.env.LIVEKIT_API_SECRET || '').replace(/['"]/g, '').trim();
-  const livekitUrl = (process.env.LIVEKIT_URL || '').replace(/['"]/g, '').trim();
+  const livekitUrl = (process.env.LIVEKIT_URL || '').replace(/['"]/g, '').replace(/\/$/, '').trim();
 
   // If LiveKit credentials are not defined or contain default placeholders, tell client to use Jitsi fallback
   if (!apiKey || !apiSecret || !livekitUrl || 
