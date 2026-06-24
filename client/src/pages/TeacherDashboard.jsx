@@ -373,7 +373,7 @@ const TeacherDashboard = () => {
         <div className="flex items-center gap-3 px-2">
           <img src="/logo.png" alt="Fullematematik Logo" className="h-12 w-12 object-contain" />
           <div>
-            <h1 className="text-lg font-black leading-none">Fullematematik</h1>
+            <h1 className="text-lg font-black leading-none">Fullematematiği</h1>
             <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Öğretmen Paneli</p>
           </div>
         </div>
@@ -425,7 +425,7 @@ const TeacherDashboard = () => {
                activeTab === 'camps' ? `Kamp Yönetimi` :
                `Hoş Geldiniz, ${user?.name.split(' ')[0]}`}
             </h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematik Yönetim Sistemi</p>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematiği Yönetim Sistemi</p>
           </div>
           <div className="flex items-center gap-4">
             <button 

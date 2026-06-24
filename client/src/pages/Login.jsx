@@ -38,7 +38,7 @@ const Login = () => {
         <div className="flex justify-center">
           <img src="/logo.png" alt="Fullematematik Logo" className="h-20 w-20 object-contain" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-black tracking-tight text-slate-900">Fullematematik</h2>
+        <h2 className="mt-6 text-center text-3xl font-black tracking-tight text-slate-900">Fullematematiği</h2>
         <p className="mt-2 text-center text-sm text-slate-500 font-medium">Başarıya giden yolda ilk adım</p>
       </div>
 
