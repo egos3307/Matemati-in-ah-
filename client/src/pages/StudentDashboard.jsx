@@ -592,6 +592,44 @@ const StudentDashboard = () => {
               </div>
             </div>
 
+            {/* ÖDEME BİLGİSİ BANNERI */}
+            {user?.paymentAmount && (
+              <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+                    user.paymentStatus === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
+                    user.paymentStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-600' :
+                    'bg-rose-50 text-rose-600'
+                  }`}>
+                    <span className="material-symbols-outlined text-2xl">payments</span>
+                  </div>
+                  <div>
+                    <h4 className="font-black text-slate-900 text-sm">Aylık Ödeme Takibi</h4>
+                    <p className="text-xs text-slate-400 font-bold mt-0.5">
+                      Ücret: <span className="text-slate-700">{user.paymentAmount}</span> 
+                      {user.paymentDay && <span> • Ödeme Günü: <span className="text-slate-700">{user.paymentDay}</span></span>}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 self-start md:self-auto">
+                  <span className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black uppercase tracking-wider ${
+                    user.paymentStatus === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
+                    user.paymentStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-600' :
+                    'bg-rose-50 text-rose-600'
+                  }`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                    {user.paymentStatus === 'PAID' ? 'Bu Ayki Ödeme Yapıldı' :
+                     user.paymentStatus === 'PARTIAL' ? 'Kısmi Ödeme Yapıldı' :
+                     'Ödeme Bekleniyor'}
+                  </span>
+                  {user.paymentNote && (
+                    <span className="text-xs text-slate-400 font-medium italic">({user.paymentNote})</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* HEDEFLERİM (PERSONAL GOALS TRACKER) */}
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/50">

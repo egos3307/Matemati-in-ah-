@@ -91,6 +91,9 @@ const TeacherDashboard = () => {
   const [approvedRequestResult, setApprovedRequestResult] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState({ id: null, email: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
+  const [showPaymentEditModal, setShowPaymentEditModal] = useState(false);
+  const [paymentEditingStudent, setPaymentEditingStudent] = useState(null);
+  const [paymentSearch, setPaymentSearch] = useState('');
 
   // Camp states
   const [campsList, setCampsList] = useState([]);
@@ -217,6 +220,38 @@ const TeacherDashboard = () => {
     } catch (err) {
       console.error('Error updating student:', err);
       alert('Öğrenci güncellenirken bir hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handlePaymentEditClick = (student) => {
+    setPaymentEditingStudent({
+      id: student.id,
+      name: student.name,
+      studentCode: student.studentCode,
+      grade: student.grade || '',
+      email: student.email || '',
+      parentName: student.parentName || '',
+      parentTel: student.parentTel || '',
+      studentTel: student.studentTel || '',
+      serviceProvided: student.serviceProvided || '',
+      paymentStatus: student.paymentStatus || 'UNPAID',
+      paymentDay: student.paymentDay || '',
+      paymentAmount: student.paymentAmount || '',
+      paymentNote: student.paymentNote || ''
+    });
+    setShowPaymentEditModal(true);
+  };
+
+  const handlePaymentEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/teacher/student/${paymentEditingStudent.id}`, paymentEditingStudent);
+      setShowPaymentEditModal(false);
+      fetchStudents();
+      alert('Ödeme bilgileri başarıyla güncellendi.');
+    } catch (err) {
+      console.error('Error updating payment:', err);
+      alert('Ödeme güncellenirken hata oluştu: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -574,6 +609,13 @@ const TeacherDashboard = () => {
             <span className="material-symbols-outlined">forum</span>
             <span>Formdan Gelenler</span>
           </button>
+          <button 
+            onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+          >
+            <span className="material-symbols-outlined">payments</span>
+            <span>Ödemeler</span>
+          </button>
         </nav>
       </aside>
 
@@ -585,6 +627,7 @@ const TeacherDashboard = () => {
               {activeTab === 'student-detail' ? `Öğrenci Detayı` : 
                activeTab === 'camps' ? `Kamp Yönetimi` :
                activeTab === 'forms' ? `Form Başvuruları & Sorular` :
+               activeTab === 'payments' ? `Ödeme Takip Sistemi` :
                `Hoş Geldiniz, ${user?.name.split(' ')[0]}`}
             </h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematiği Yönetim Sistemi</p>
@@ -1065,6 +1108,32 @@ const TeacherDashboard = () => {
                             <span className="text-slate-400 text-xs font-bold">Verilen Hizmet</span>
                             <span className="text-xs font-black text-white">{selectedStudent.serviceProvided || '-'}</span>
                           </div>
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 text-xs font-bold">Ödeme Durumu</span>
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                              selectedStudent.paymentStatus === 'PAID' ? 'bg-emerald-500/20 text-emerald-300' :
+                              selectedStudent.paymentStatus === 'PARTIAL' ? 'bg-amber-500/20 text-amber-300' :
+                              'bg-rose-500/20 text-rose-300'
+                            }`}>
+                              {selectedStudent.paymentStatus === 'PAID' ? 'Ödendi' :
+                               selectedStudent.paymentStatus === 'PARTIAL' ? 'Kısmi' :
+                               'Ödenmedi'}
+                            </span>
+                          </div>
+                          {selectedStudent.paymentAmount && (
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-400 font-medium">Aylık Ücret</span>
+                              <span className="font-black text-slate-200">{selectedStudent.paymentAmount}</span>
+                            </div>
+                          )}
+                          {selectedStudent.paymentDay && (
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-400 font-medium">Ödeme Günü</span>
+                              <span className="font-black text-slate-200">{selectedStudent.paymentDay}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2167,6 +2236,153 @@ const TeacherDashboard = () => {
 
             </div>
           )}
+
+          {activeTab === 'payments' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Stats Bar */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">group</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Toplam Öğrenci</span>
+                    <h3 className="text-2xl font-black text-slate-900 mt-0.5">{students.length}</h3>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Ödeyenler</span>
+                    <h3 className="text-2xl font-black text-slate-900 mt-0.5">{students.filter(s => s.paymentStatus === 'PAID').length}</h3>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">pending</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Kısmi Ödeyenler</span>
+                    <h3 className="text-2xl font-black text-slate-900 mt-0.5">{students.filter(s => s.paymentStatus === 'PARTIAL').length}</h3>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">error</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">Ödeme Bekleyenler</span>
+                    <h3 className="text-2xl font-black text-slate-900 mt-0.5">{students.filter(s => s.paymentStatus === 'UNPAID' || !s.paymentStatus).length}</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main List */}
+              <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">Öğrenci Ödeme Listesi</h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1">Öğrencilerin aylık ücret, ödeme günü ve güncel ödeme durumu takibi</p>
+                  </div>
+                  
+                  {/* Search Bar */}
+                  <div className="relative w-full md:w-80">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                    <input 
+                      type="text" 
+                      placeholder="Öğrenci adı veya kod ile ara..." 
+                      className="w-full pl-11 pr-5 py-3 rounded-2xl border border-slate-100 bg-slate-50/50 text-slate-800 placeholder-slate-400 font-bold text-sm outline-none focus:border-primary/20 focus:ring-2 focus:ring-primary/10 transition-all"
+                      value={paymentSearch}
+                      onChange={(e) => setPaymentSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Öğrenci</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Sınıf/Seviye</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Aylık Ücret</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Ödeme Günü</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Durum</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Açıklama / Not</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right pr-2">Eylemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {students
+                        .filter(s => {
+                          const query = paymentSearch.toLowerCase().trim();
+                          if (!query) return true;
+                          return (s.name || '').toLowerCase().includes(query) || (s.studentCode || '').toLowerCase().includes(query);
+                        })
+                        .map(student => (
+                          <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="py-4 pl-2">
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-sm">{student.name.charAt(0)}</div>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-sm">{student.name}</div>
+                                  <code className="text-[10px] text-slate-400 font-bold">{student.studentCode}</code>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4">
+                              <span className="font-bold text-slate-600 text-sm">
+                                {(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}
+                              </span>
+                            </td>
+                            <td className="py-4 font-bold text-slate-700 text-sm">{student.paymentAmount || '-'}</td>
+                            <td className="py-4 font-bold text-slate-700 text-sm">{student.paymentDay || '-'}</td>
+                            <td className="py-4">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                                student.paymentStatus === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
+                                student.paymentStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-600' :
+                                'bg-rose-50 text-rose-600'
+                              }`}>
+                                <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                {student.paymentStatus === 'PAID' ? 'Ödendi' :
+                                 student.paymentStatus === 'PARTIAL' ? 'Kısmi Ödendi' :
+                                 'Ödenmedi'}
+                              </span>
+                            </td>
+                            <td className="py-4 text-xs text-slate-500 font-medium max-w-xs truncate" title={student.paymentNote}>
+                              {student.paymentNote || '-'}
+                            </td>
+                            <td className="py-4 text-right pr-2">
+                              <button
+                                onClick={() => handlePaymentEditClick(student)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 border border-primary/10 text-primary hover:bg-primary/5 rounded-xl text-xs font-black transition-all"
+                              >
+                                <span className="material-symbols-outlined text-sm">edit</span>
+                                Düzenle
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      }
+                      {students.filter(s => {
+                        const query = paymentSearch.toLowerCase().trim();
+                        if (!query) return true;
+                        return (s.name || '').toLowerCase().includes(query) || (s.studentCode || '').toLowerCase().includes(query);
+                      }).length === 0 && (
+                        <tr>
+                          <td colSpan="7" className="text-center py-8 text-slate-400 font-bold text-sm">Öğrenci bulunamadı.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -2319,6 +2535,70 @@ const TeacherDashboard = () => {
               </div>
 
               <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Değişiklikleri Kaydet</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Edit Modal */}
+      {showPaymentEditModal && paymentEditingStudent && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-xl rounded-[40px] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setShowPaymentEditModal(false)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900 transition-colors">
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">Ödeme Bilgilerini Güncelle</h3>
+            <p className="text-slate-400 font-bold text-sm mb-8 uppercase tracking-widest">{paymentEditingStudent.name} ({paymentEditingStudent.studentCode})</p>
+            
+            <form onSubmit={handlePaymentEditSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Aylık Ücret</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Örn: 5000 TL"
+                    value={paymentEditingStudent.paymentAmount}
+                    onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentAmount: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Ödeme Günü</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Örn: Her ayın 15'i"
+                    value={paymentEditingStudent.paymentDay}
+                    onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentDay: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Bu Ayki Ödeme Durumu</label>
+                <select
+                  className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                  value={paymentEditingStudent.paymentStatus}
+                  onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentStatus: e.target.value})}
+                  required
+                >
+                  <option value="UNPAID">Ödenmedi</option>
+                  <option value="PARTIAL">Kısmi Ödendi</option>
+                  <option value="PAID">Ödendi</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Açıklama / Not</label>
+                <textarea
+                  className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20 h-24 resize-none"
+                  placeholder="Ödeme detayları, gecikme durumları vb. notlar..."
+                  value={paymentEditingStudent.paymentNote || ''}
+                  onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentNote: e.target.value})}
+                />
+              </div>
+
+              <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Bilgileri Güncelle</button>
             </form>
           </div>
         </div>

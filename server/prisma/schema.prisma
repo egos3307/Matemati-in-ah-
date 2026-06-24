@@ -24,6 +24,10 @@ model User {
   parentTel  String? // Veli Tel No
   studentTel String? // Öğrenci Tel No
   serviceProvided String? // Verilen Hizmet
+  paymentStatus   String?  @default("UNPAID") // PAID, UNPAID, PARTIAL
+  paymentDay      String?  // Ödeme günü
+  paymentAmount   String?  // Aylık ücret
+  paymentNote     String?  // Ödeme notları
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
