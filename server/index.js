@@ -682,9 +682,8 @@ app.post('/api/livekit/token', auth, async (req, res) => {
     return res.status(400).json({ error: 'Oda adı (roomName) ve katılımcı adı (participantName) gereklidir.' });
   }
 
-  // Identity must be completely unique to avoid session collisions. 
-  // Suffix with random tag if unique identifier is not passed.
-  const uniqueIdentity = participantIdentity || `${participantName}_${Math.random().toString(36).substring(2, 8)}`;
+  // Identity must be completely unique and explicitly cast to a String to avoid session collisions and type-mismatch errors
+  const uniqueIdentity = String(participantIdentity || `${participantName}_${Math.random().toString(36).substring(2, 8)}`);
 
   try {
     const at = new AccessToken(apiKey, apiSecret, {
