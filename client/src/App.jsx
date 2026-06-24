@@ -10,10 +10,10 @@ import StudentDashboard from './pages/StudentDashboard';
 import Derslerimiz from './pages/Derslerimiz';
 import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
+import Contact from './pages/Contact';
 
 // Placeholder components for other pages
 const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematik, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
-const Contact = () => <div className="p-8 text-center mt-20 text-gray-700">Bize ulaşın: info@fullematematigi.com.tr</div>;
 
 const AppContent = () => {
   const location = useLocation();
