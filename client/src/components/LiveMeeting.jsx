@@ -164,7 +164,50 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       const startStreams = async () => {
         try {
           await localParticipant.setMicrophoneEnabled(true);
-          await localParticipant.setCameraEnabled(true);
+          
+          // Get the best standard (non-wide angle, front-facing) camera device ID if available
+          const getBestCameraDeviceId = async () => {
+            try {
+              if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                return null;
+              }
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoDevices = devices.filter(device => device.kind === 'videoinput');
+              if (videoDevices.length <= 1) return null;
+
+              // Filter out wide-angle, virtual and back cameras to default to standard front camera
+              const frontCameras = videoDevices.filter(d => {
+                const label = d.label.toLowerCase();
+                return !label.includes('back') && 
+                       !label.includes('ark') && 
+                       !label.includes('wide') && 
+                       !label.includes('geniş') && 
+                       !label.includes('ultra') && 
+                       !label.includes('virtual');
+              });
+
+              if (frontCameras.length > 0) {
+                return frontCameras[0].deviceId;
+              }
+              return videoDevices[0].deviceId;
+            } catch (e) {
+              console.warn('Error enumerating video devices:', e);
+              return null;
+            }
+          };
+
+          const deviceId = await getBestCameraDeviceId();
+          if (deviceId) {
+            await localParticipant.setCameraEnabled(true, {
+              deviceId: deviceId,
+              resolution: { width: 1280, height: 720, frameRate: 24 }
+            });
+          } else {
+            await localParticipant.setCameraEnabled(true, {
+              facingMode: 'user',
+              resolution: { width: 1280, height: 720, frameRate: 24 }
+            });
+          }
         } catch (err) {
           console.warn("Could not auto-enable devices (blocked permissions or device missing):", err);
         }
@@ -172,6 +215,122 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       startStreams();
     }
   }, [connectionState, localParticipant]);
+
+  // Picture-in-Picture logic for background screen sharing
+  useEffect(() => {
+    let animationFrameId;
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360; // Standard 16:9 canvas size for dual feed or single feed
+    const ctx = canvas.getContext('2d');
+    
+    const pipVideo = document.createElement('video');
+    pipVideo.muted = true;
+    pipVideo.playsInline = true;
+    pipVideo.style.display = 'none';
+    document.body.appendChild(pipVideo);
+
+    const drawFrame = () => {
+      // Clear canvas with dark slate background matching app theme
+      ctx.fillStyle = '#080b11';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Find video elements in the DOM for camera tracks (webcams only)
+      const videoElements = document.querySelectorAll('video');
+      const cameraVideos = [];
+      videoElements.forEach(v => {
+        if (v !== pipVideo && (v.srcObject || v.readyState >= 2)) {
+          // Identify webcam feeds by looking for 'object-cover' class
+          if (v.className.includes('object-cover')) {
+            cameraVideos.push(v);
+          }
+        }
+      });
+
+      if (cameraVideos.length > 0) {
+        if (cameraVideos.length === 1) {
+          // 1 video: draw centered (keeping aspect ratio)
+          ctx.drawImage(cameraVideos[0], 80, 0, 480, 360);
+        } else {
+          // 2 videos: draw side-by-side
+          ctx.drawImage(cameraVideos[0], 0, 60, 320, 240);
+          ctx.drawImage(cameraVideos[1], 320, 60, 320, 240);
+        }
+      } else {
+        // Draw placeholder text if no active webcam is found
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Kameralar Bekleniyor...', canvas.width / 2, canvas.height / 2);
+      }
+
+      animationFrameId = requestAnimationFrame(drawFrame);
+    };
+
+    const handleVisibilityChange = async () => {
+      // Only enter PiP if screen share is currently active (meaning the user is sharing screen/presenting)
+      if (!isScreenSharing) return;
+
+      if (document.visibilityState === 'hidden') {
+        try {
+          drawFrame();
+          const stream = canvas.captureStream(15); // 15 fps
+          pipVideo.srcObject = stream;
+          await pipVideo.play();
+          if (document.pictureInPictureEnabled) {
+            await pipVideo.requestPictureInPicture();
+            console.log('Entered PiP stream successfully');
+          }
+        } catch (err) {
+          console.warn('Failed to enter PiP:', err);
+        }
+      } else {
+        if (document.pictureInPictureElement) {
+          try {
+            await document.exitPictureInPicture();
+          } catch (err) {
+            console.warn('Failed to exit PiP:', err);
+          }
+        }
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+        if (pipVideo.srcObject) {
+          pipVideo.srcObject.getTracks().forEach(track => track.stop());
+          pipVideo.srcObject = null;
+        }
+      }
+    };
+
+    const handleLeavePiP = () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (pipVideo.srcObject) {
+        pipVideo.srcObject.getTracks().forEach(track => track.stop());
+        pipVideo.srcObject = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    pipVideo.addEventListener('leavepictureinpicture', handleLeavePiP);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      pipVideo.removeEventListener('leavepictureinpicture', handleLeavePiP);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      if (pipVideo.srcObject) {
+        pipVideo.srcObject.getTracks().forEach(track => track.stop());
+      }
+      if (pipVideo.parentNode) {
+        pipVideo.parentNode.removeChild(pipVideo);
+      }
+    };
+  }, [isScreenSharing]);
+
 
   // Monitor browser fullscreen state
   useEffect(() => {
