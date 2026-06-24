@@ -85,7 +85,7 @@ const Home = () => {
                 </div>
               </div>
             </div>
-            <div className="relative hidden md:block">
+            <div className="relative hidden md:block max-w-md mx-auto w-full">
               <div className="absolute -inset-4 rounded-xl bg-primary/10 blur-3xl"></div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-primary shadow-2xl flex items-center justify-center">
                 <img alt="Matematik öğretmeni kollarını bağlamış gülümsüyor" className="h-full w-full object-cover" src="/untitled-design.png"/>
