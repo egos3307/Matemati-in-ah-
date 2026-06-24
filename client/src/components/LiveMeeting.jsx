@@ -7,7 +7,8 @@ import {
   useLocalParticipant, 
   VideoTrack, 
   useConnectionState,
-  useParticipants
+  useParticipants,
+  useMaybeRoomContext
 } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
@@ -118,12 +119,15 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
   const cameraTracks = useTracks([Track.Source.Camera]);
-  const screenShareTracks = useTracks([Track.Source.ScreenShare]);
+  const screenShareTracks = useTracks([Track.Source.ScreenShare]).filter(
+    (track) => track.publication?.kind === 'video' || track.track?.kind === 'video'
+  );
   const participants = useParticipants();
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const room = useMaybeRoomContext();
 
   const isScreenSharing = screenShareTracks.length > 0;
-  const isLocalScreenSharing = localParticipant ? localParticipant.isScreenShareEnabled : false;
+  const isLocalScreenSharing = isScreenShareEnabled;
 
   // Custom UI view toggle states
   const [showParticipants, setShowParticipants] = useState(false);
@@ -290,13 +294,20 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
     }
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
     try {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
     } catch (err) {
       console.warn(err);
+    }
+    if (room) {
+      try {
+        await room.disconnect();
+      } catch (err) {
+        console.warn("Room disconnect failed:", err);
+      }
     }
     if (onClose) {
       onClose();
@@ -395,9 +406,10 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                 <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
                   {cameraTracks.map((trackRef) => {
                     const isTeacher = checkIsTeacher(trackRef.participant);
+                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
                     return (
                       <div 
-                        key={trackRef.publication.trackSid} 
+                        key={trackKey} 
                         className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
                           isTeacher ? 'border-amber-500/50 shadow-amber-500/5' : 'border-slate-800'
                         }`}
@@ -426,9 +438,10 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
                 {cameraTracks.map((trackRef) => {
                   const isTeacher = checkIsTeacher(trackRef.participant);
+                  const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
                   return (
                     <div 
-                      key={trackRef.publication.trackSid} 
+                      key={trackKey} 
                       className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] ${
                         isTeacher 
                           ? 'border-amber-500/50 shadow-lg shadow-amber-500/5 hover:border-amber-500' 
