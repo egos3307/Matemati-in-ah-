@@ -13,14 +13,7 @@ const Home = () => {
   const [trialError, setTrialError] = useState('');
   const [trialLoading, setTrialLoading] = useState(false);
 
-  // Contact Form State
-  const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactSuccess, setContactSuccess] = useState('');
-  const [contactError, setContactError] = useState('');
-  const [contactLoading, setContactLoading] = useState(false);
+
 
   const scrollToForm = () => {
     const element = document.getElementById('tanisma-dersi');
@@ -54,29 +47,7 @@ const Home = () => {
     }
   };
 
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
-    setContactLoading(true);
-    setContactSuccess('');
-    setContactError('');
-    try {
-      await axios.post('/api/contact-messages', {
-        name: contactName,
-        phone: contactPhone,
-        email: contactEmail,
-        message: contactMessage,
-      });
-      setContactSuccess('Sorunuz/Mesajınız başarıyla iletilmiştir. En kısa sürede geri dönüş yapacağız.');
-      setContactName('');
-      setContactPhone('');
-      setContactEmail('');
-      setContactMessage('');
-    } catch (err) {
-      setContactError(err.response?.data?.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
-    } finally {
-      setContactLoading(false);
-    }
-  };
+
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
@@ -423,102 +394,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Contact Form Section */}
-        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="iletisim">
-          <div className="flex flex-col overflow-hidden rounded-xl border border-primary/10 bg-white shadow-2xl lg:flex-row">
-            <div className="flex flex-col justify-center bg-primary p-12 text-white lg:w-2/5">
-              <h2 className="mb-6 text-3xl font-black">Soruların mı var?</h2>
-              <p className="mb-10 text-white/80">Sana en uygun eğitim paketini birlikte seçelim. Formu doldur, uzman ekibimiz en kısa sürede seni arasın.</p>
-              <div className="flex flex-col gap-6">
-                <div className="flex items-center gap-4">
-                  <span className="material-symbols-outlined">mail</span>
-                  <span>info@fullematematigi.com.tr</span>
-                </div>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-4">
-                    <span className="material-symbols-outlined">call</span>
-                    <span>0535 059 89 50</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="material-symbols-outlined">call</span>
-                    <span>0545 225 96 35</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="material-symbols-outlined">location_on</span>
-                  <span>Malatya, Yeşilyurt</span>
-                </div>
-              </div>
-            </div>
-            <form onSubmit={handleContactSubmit} className="flex flex-col gap-6 p-12 lg:w-3/5 bg-white">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">Adınız Soyadınız</label>
-                  <input
-                    required
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                    placeholder="Örn: Ali Yılmaz"
-                    type="text"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">Telefon Numaranız</label>
-                  <input
-                    required
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                    placeholder="05XX XXX XX XX"
-                    type="tel"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700">E-posta Adresiniz</label>
-                <input
-                  required
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  placeholder="ali@örnek.com"
-                  type="email"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700">Mesajınız (Opsiyonel)</label>
-                <textarea
-                  value={contactMessage}
-                  onChange={(e) => setContactMessage(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  placeholder="Size nasıl yardımcı olabiliriz?"
-                  rows={4}
-                ></textarea>
-              </div>
 
-              {contactError && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-                  {contactError}
-                </div>
-              )}
-
-              {contactSuccess && (
-                <div className="text-sm text-green-600 bg-green-50 p-4 rounded-lg border border-green-200 font-medium">
-                  {contactSuccess}
-                </div>
-              )}
-
-              <button
-                disabled={contactLoading}
-                className="w-fit rounded-full bg-primary px-10 py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:opacity-50 cursor-pointer"
-                type="submit"
-              >
-                {contactLoading ? 'Gönderiliyor...' : 'Beni Arayın'}
-              </button>
-            </form>
-          </div>
-        </section>
       </main>
 
       {/* Footer */}
