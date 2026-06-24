@@ -133,7 +133,13 @@ app.get('/api/debug', async (req, res) => {
     env: {
       NODE_ENV: process.env.NODE_ENV,
       VERCEL: process.env.VERCEL,
-      DATABASE_URL: process.env.DATABASE_URL
+      DATABASE_URL: process.env.DATABASE_URL ? 'DEFINED' : 'UNDEFINED',
+      LIVEKIT_API_KEY_EXISTS: !!process.env.LIVEKIT_API_KEY,
+      LIVEKIT_API_KEY_PREVIEW: process.env.LIVEKIT_API_KEY ? `${process.env.LIVEKIT_API_KEY.substring(0, 5)}...${process.env.LIVEKIT_API_KEY.slice(-5)}` : 'N/A',
+      LIVEKIT_API_SECRET_EXISTS: !!process.env.LIVEKIT_API_SECRET,
+      LIVEKIT_API_SECRET_PREVIEW: process.env.LIVEKIT_API_SECRET ? `${process.env.LIVEKIT_API_SECRET.substring(0, 5)}...${process.env.LIVEKIT_API_SECRET.slice(-5)}` : 'N/A',
+      LIVEKIT_URL_EXISTS: !!process.env.LIVEKIT_URL,
+      LIVEKIT_URL_VALUE: process.env.LIVEKIT_URL || 'N/A'
     },
     exists: {
       dirname_devDb: fs.existsSync(path.resolve(__dirname, 'dev.db')),
