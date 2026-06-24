@@ -120,9 +120,10 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const cameraTracks = useTracks([Track.Source.Camera]);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]);
   const participants = useParticipants();
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
 
   const isScreenSharing = screenShareTracks.length > 0;
+  const isLocalScreenSharing = localParticipant ? localParticipant.isScreenShareEnabled : false;
 
   // Custom UI view toggle states
   const [showParticipants, setShowParticipants] = useState(false);
@@ -147,7 +148,6 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
     if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
       const timeout = setTimeout(() => {
         console.warn("LiveKit connection timed out. Activating Jitsi fallback.");
-        alert("LiveKit sunucusuna bağlanırken zaman aşımı (6 saniye) oluştu.\nLütfen ağınızı kontrol edin.\nYedek sunucu odasına aktarılıyorsunuz.");
         if (onLiveKitError) onLiveKitError();
       }, 6000); // 6 seconds timeout
       return () => clearTimeout(timeout);
@@ -281,10 +281,12 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const toggleScreenShare = async () => {
     if (!localParticipant) return;
     try {
-      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+      // Toggle screen share dynamically reading direct state to bypass state delay
+      const isCurrentlySharing = localParticipant.isScreenShareEnabled;
+      await localParticipant.setScreenShareEnabled(!isCurrentlySharing);
     } catch (err) {
       console.error("Screen share toggle failed:", err);
-      alert("Ekran paylaşımı başlatılamadı. Tarayıcınızın ekran paylaşım iznini verdiğinizden ve bağlantınızın güvenli (HTTPS) olduğundan emin olun.");
+      alert(`Ekran paylaşımı başlatılamadı: ${err.message || err}\n\nLütfen tarayıcınızın ekran kayıt izinlerini verdiğinizden ve bağlantınızın güvenli (HTTPS) olduğundan emin olun.`);
     }
   };
 
@@ -599,21 +601,21 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           <button 
             onClick={toggleScreenShare}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer shadow-md ${
-              isScreenShareEnabled 
+              isLocalScreenSharing 
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/10 hover:scale-102' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750 hover:scale-102'
             }`}
           >
             <span className="material-symbols-outlined text-base">
-              {isScreenShareEnabled ? 'stop_screen_share' : 'screen_share'}
+              {isLocalScreenSharing ? 'stop_screen_share' : 'screen_share'}
             </span>
-            {isScreenShareEnabled ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}
+            {isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}
           </button>
 
           {/* Leave Button */}
           <button 
             onClick={handleLeave}
-            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-500/20 hover:scale-102"
+            className="bg-red-600 hover:bg-red-750 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-red-500/20 hover:scale-102"
           >
             <span className="material-symbols-outlined text-base">call_end</span>
             Ayrıl
@@ -630,7 +632,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
   const [serverUrl, setServerUrl] = useState(null);
   const [useFallback, setUseFallback] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const isLeavingRef = useRef(false);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -663,7 +665,13 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
     fetchToken();
   }, [lessonId, userName, userId, role]);
 
+  const handleClose = () => {
+    isLeavingRef.current = true;
+    if (onClose) onClose();
+  };
+
   const handleLiveKitError = () => {
+    if (isLeavingRef.current) return;
     console.warn("LiveKit failed, switching to Jitsi fallback.");
     setUseFallback(true);
   };
@@ -689,7 +697,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
         roomName={roomName}
         userName={userName}
         role={role}
-        onClose={onClose}
+        onClose={handleClose}
       />,
       document.body
     );
@@ -712,7 +720,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
       <MeetingSession 
         role={role} 
         userName={userName} 
-        onClose={onClose} 
+        onClose={handleClose} 
         onLiveKitError={handleLiveKitError} // Auto-fallback if initial connection handshake hangs
       />
     </LiveKitRoom>,
