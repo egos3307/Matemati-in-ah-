@@ -466,6 +466,175 @@ app.get('/api/teacher/student/:id/trials', auth, checkRole('TEACHER'), async (re
   }
 });
 
+// Trial Lesson Request Routes
+app.post('/api/trial-requests', async (req, res) => {
+  const { type, studentName, email, phone, grade } = req.body;
+  if (!studentName || !email || !phone || !grade) {
+    return res.status(400).json({ error: 'Lütfen tüm zorunlu alanları doldurun.' });
+  }
+  try {
+    const request = await prisma.trialLessonRequest.create({
+      data: {
+        type: type || 'SELF',
+        studentName,
+        email,
+        phone,
+        grade,
+        status: 'PENDING'
+      }
+    });
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/teacher/trial-requests', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const requests = await prisma.trialLessonRequest.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/trial-requests/:id/approve', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { scheduledDate } = req.body;
+  if (!scheduledDate) {
+    return res.status(400).json({ error: 'Lütfen bir ders tarihi ve saati seçin.' });
+  }
+
+  try {
+    const request = await prisma.trialLessonRequest.findUnique({ where: { id } });
+    if (!request) {
+      return res.status(404).json({ error: 'Talep bulunamadı.' });
+    }
+
+    // 1. Check if user already exists with this email
+    let student = await prisma.user.findUnique({ where: { email: request.email } });
+    
+    // 2. If student does not exist, create a new student user
+    if (!student) {
+      const hashedPassword = await bcrypt.hash('student', 10);
+      let studentCode;
+      let isUnique = false;
+      while (!isUnique) {
+        const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
+        studentCode = `FM${randomNum}`;
+        const existing = await prisma.user.findUnique({ where: { studentCode } });
+        if (!existing) isUnique = true;
+      }
+
+      student = await prisma.user.create({
+        data: {
+          email: request.email,
+          password: hashedPassword,
+          name: request.studentName,
+          grade: request.grade,
+          studentTel: request.phone,
+          studentCode,
+          role: 'STUDENT'
+        }
+      });
+    }
+
+    // 3. Create a video conference link
+    let zoomJoinUrl = await createDailyRoom();
+    if (!zoomJoinUrl) {
+      const uniqueId = Math.random().toString(36).substring(2, 9);
+      zoomJoinUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
+    }
+
+    // 4. Create the trial lesson
+    const lesson = await prisma.lesson.create({
+      data: {
+        title: 'Ücretsiz Tanışma Dersi',
+        description: 'Ücretsiz tanışma ve seviye tespit dersi.',
+        date: new Date(scheduledDate),
+        teacherId: req.user.id,
+        studentId: student.id,
+        zoomJoinUrl
+      }
+    });
+
+    // 5. Update trial request status
+    const updatedRequest = await prisma.trialLessonRequest.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        scheduledDate: new Date(scheduledDate)
+      }
+    });
+
+    res.json({
+      request: updatedRequest,
+      studentCode: student.studentCode,
+      lesson,
+      student
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/trial-requests/:id/reject', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const updated = await prisma.trialLessonRequest.update({
+      where: { id },
+      data: { status: 'REJECTED' }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Contact Messages Routes
+app.post('/api/contact-messages', async (req, res) => {
+  const { name, phone, email, message } = req.body;
+  if (!name || !phone || !email) {
+    return res.status(400).json({ error: 'Lütfen ad soyad, telefon ve e-posta alanlarını doldurun.' });
+  }
+  try {
+    const contactMsg = await prisma.contactMessage.create({
+      data: {
+        name,
+        phone,
+        email,
+        message: message || ''
+      }
+    });
+    res.json(contactMsg);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/teacher/contact-messages', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const messages = await prisma.contactMessage.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/contact-messages/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.contactMessage.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Blog Routes
 function slugify(text) {
   if (!text) return '';

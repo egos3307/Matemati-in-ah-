@@ -82,6 +82,14 @@ const TeacherDashboard = () => {
   const [editingRecordingId, setEditingRecordingId] = useState(null);
   const [recordingUrlInput, setRecordingUrlInput] = useState('');
 
+  // Form submission and question states
+  const [trialRequests, setTrialRequests] = useState([]);
+  const [contactMessages, setContactMessages] = useState([]);
+  const [selectedRequestForSchedule, setSelectedRequestForSchedule] = useState(null);
+  const [scheduledDateInput, setScheduledDateInput] = useState('');
+  const [scheduledTimeInput, setScheduledTimeInput] = useState('12:00');
+  const [approvedRequestResult, setApprovedRequestResult] = useState(null);
+
   // Camp states
   const [campsList, setCampsList] = useState([]);
   const [newCamp, setNewCamp] = useState({
@@ -198,6 +206,9 @@ const TeacherDashboard = () => {
       fetchBlogs();
     } else if (activeTab === 'camps') {
       fetchCamps();
+    } else if (activeTab === 'forms') {
+      fetchTrialRequests();
+      fetchContactMessages();
     }
   }, [activeTab]);
 
@@ -216,6 +227,82 @@ const TeacherDashboard = () => {
       setCampsList(res.data);
     } catch (err) {
       console.error('Error fetching camps:', err);
+    }
+  };
+
+  const fetchTrialRequests = async () => {
+    try {
+      const res = await axios.get('/api/teacher/trial-requests');
+      setTrialRequests(res.data);
+    } catch (err) {
+      console.error('Error fetching trial requests:', err);
+    }
+  };
+
+  const fetchContactMessages = async () => {
+    try {
+      const res = await axios.get('/api/teacher/contact-messages');
+      setContactMessages(res.data);
+    } catch (err) {
+      console.error('Error fetching contact messages:', err);
+    }
+  };
+
+  const handleApproveTrialRequest = async (requestId) => {
+    if (!scheduledDateInput || !scheduledTimeInput) {
+      alert('Lütfen bir tarih ve saat seçin.');
+      return;
+    }
+    try {
+      const scheduledDateTime = new Date(`${scheduledDateInput}T${scheduledTimeInput}`);
+      const res = await axios.post(`/api/teacher/trial-requests/${requestId}/approve`, {
+        scheduledDate: scheduledDateTime.toISOString()
+      });
+      alert('Tanışma dersi başarıyla onaylandı ve ders oluşturuldu!');
+      
+      // Update local state list
+      setTrialRequests(prev => prev.map(req => req.id === requestId ? res.data.request : req));
+      
+      // Store result to show success panel with credentials and WhatsApp link
+      const formattedDate = new Date(scheduledDateTime).toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const formattedTime = scheduledTimeInput;
+      const waText = `Merhaba ${res.data.request.studentName}, ücretsiz tanışma dersi talebiniz onaylandı. Dersiniz ${formattedDate} saat ${formattedTime} olarak belirlenmiştir. Derse katılmak için öğrenci girişi yapabilirsiniz.\n\nGiriş bilgileriniz:\nKod: ${res.data.studentCode}\nŞifre: student\n\nGiriş adresi: https://fullematematik.com/giris`;
+      
+      setApprovedRequestResult({
+        studentName: res.data.request.studentName,
+        studentCode: res.data.studentCode,
+        scheduledDate: formattedDate,
+        scheduledTime: formattedTime,
+        phone: res.data.request.phone,
+        whatsappLink: `https://wa.me/${res.data.request.phone.replace(/\D/g, '').startsWith('0') ? '90' + res.data.request.phone.replace(/\D/g, '').substring(1) : '90' + res.data.request.phone.replace(/\D/g, '')}?text=${encodeURIComponent(waText)}`
+      });
+
+      setSelectedRequestForSchedule(null);
+      // Refresh students and lessons lists
+      fetchStudents();
+      fetchLessons();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Talebi onaylarken hata oluştu.');
+    }
+  };
+
+  const handleRejectTrialRequest = async (requestId) => {
+    if (!window.confirm('Bu tanışma dersi talebini reddetmek istediğinize emin misiniz?')) return;
+    try {
+      const res = await axios.post(`/api/teacher/trial-requests/${requestId}/reject`);
+      setTrialRequests(prev => prev.map(req => req.id === requestId ? res.data : req));
+    } catch (err) {
+      alert('Hata oluştu.');
+    }
+  };
+
+  const handleDeleteContactMessage = async (messageId) => {
+    if (!window.confirm('Bu mesajı silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/contact-messages/${messageId}`);
+      setContactMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } catch (err) {
+      alert('Hata oluştu.');
     }
   };
 
@@ -413,6 +500,13 @@ const TeacherDashboard = () => {
             <span className="material-symbols-outlined">school</span>
             <span>Eğitim Kampları</span>
           </button>
+          <button 
+            onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+          >
+            <span className="material-symbols-outlined">forum</span>
+            <span>Formdan Gelenler</span>
+          </button>
         </nav>
       </aside>
 
@@ -423,6 +517,7 @@ const TeacherDashboard = () => {
             <h2 className="text-2xl font-black text-slate-900">
               {activeTab === 'student-detail' ? `Öğrenci Detayı` : 
                activeTab === 'camps' ? `Kamp Yönetimi` :
+               activeTab === 'forms' ? `Form Başvuruları & Sorular` :
                `Hoş Geldiniz, ${user?.name.split(' ')[0]}`}
             </h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematiği Yönetim Sistemi</p>
@@ -1472,6 +1567,299 @@ const TeacherDashboard = () => {
                   </form>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'forms' && (
+            <div className="p-8 space-y-8 animate-in fade-in duration-300">
+              
+              {/* Header Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-primary font-black uppercase tracking-widest">Tanışma Dersi</p>
+                    <h3 className="text-3xl font-black mt-1 text-slate-900">{trialRequests.filter(r => r.status === 'PENDING').length} Bekleyen</h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1">Toplam {trialRequests.length} başvuru</p>
+                  </div>
+                  <span className="material-symbols-outlined text-5xl text-primary/30">school</span>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Soru & Mesajlar</p>
+                    <h3 className="text-3xl font-black mt-1 text-slate-900">{contactMessages.length} İleti</h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1">Ana sayfa iletişim formundan gelenler</p>
+                  </div>
+                  <span className="material-symbols-outlined text-5xl text-blue-300/40">forum</span>
+                </div>
+              </div>
+
+              {/* Success Approved Notification Card */}
+              {approvedRequestResult && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-[30px] p-8 space-y-4 animate-in zoom-in-95 duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+                      <span className="material-symbols-outlined text-2xl">check_circle</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-black text-slate-900">Ders Başarıyla Planlandı!</h4>
+                      <p className="text-sm text-slate-600 mt-1">
+                        <strong>{approvedRequestResult.studentName}</strong> için ücretsiz tanışma dersi oluşturuldu ve öğrenci hesabı aktifleştirildi.
+                      </p>
+                      
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-emerald-100">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Öğrenci Kodu</span>
+                          <strong className="text-slate-800 font-black text-lg">{approvedRequestResult.studentCode}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Ders Tarihi & Saati</span>
+                          <strong className="text-slate-800 font-bold text-sm">{approvedRequestResult.scheduledDate} - {approvedRequestResult.scheduledTime}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Geçici Şifre</span>
+                          <strong className="text-slate-800 font-bold text-sm">student</strong>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex flex-wrap gap-4">
+                        <a
+                          href={approvedRequestResult.whatsappLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02]"
+                        >
+                          <span className="material-symbols-outlined text-base">chat</span>
+                          WhatsApp ile Bilgilendir
+                        </a>
+                        <button
+                          onClick={() => setApprovedRequestResult(null)}
+                          className="border border-slate-200 hover:bg-slate-50 text-slate-600 px-6 py-3 rounded-2xl font-black text-sm transition-all"
+                        >
+                          Kapat
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left side: Trial Requests */}
+                <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900">Tanışma Dersi Talepleri</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">Öğrenci adaylarının deneme dersi başvuruları</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-400">school</span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    {trialRequests.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 font-bold">Herhangi bir başvuru bulunmamaktadır.</div>
+                    ) : (
+                      trialRequests.map((req) => (
+                        <div key={req.id} className="border border-slate-100 rounded-2xl p-5 hover:border-primary/20 hover:shadow-sm transition-all space-y-4 bg-slate-50/30">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-black text-slate-900">{req.studentName}</h4>
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                                  req.type === 'CHILD' ? 'bg-indigo-50 text-indigo-600' : 'bg-orange-50 text-primary'
+                                }`}>
+                                  {req.type === 'CHILD' ? 'Veli (Çocuğu için)' : 'Kendisi için'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium mt-1">{req.email} • {req.phone}</p>
+                              <p className="text-xs font-bold text-primary mt-1">Sınıf/Seviye: {req.grade}. Sınıf</p>
+                            </div>
+
+                            <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-xl tracking-wider ${
+                              req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                              req.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
+                              'bg-amber-50 text-amber-600'
+                            }`}>
+                              {req.status === 'APPROVED' ? 'Kabul Edildi' :
+                               req.status === 'REJECTED' ? 'Reddedildi' :
+                               'Beklemede'}
+                            </span>
+                          </div>
+
+                          {/* Inline Scheduler Box */}
+                          {selectedRequestForSchedule === req.id && (
+                            <div className="bg-white border border-primary/20 rounded-2xl p-5 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                              <h5 className="text-xs font-black text-slate-900 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
+                                Tanışma Dersi Planlama
+                              </h5>
+                              
+                              {/* Reference Calendar View */}
+                              <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Planlı Dersler Referansı</p>
+                                <div className="text-xs max-h-32 overflow-y-auto space-y-1.5">
+                                  {lessons.filter(l => {
+                                    const lDate = new Date(l.date);
+                                    const today = new Date();
+                                    return lDate >= today;
+                                  }).slice(0, 5).map(l => (
+                                    <div key={l.id} className="flex justify-between items-center text-slate-600 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100">
+                                      <span className="font-semibold">{l.title} ({l.student?.name || 'Genel'})</span>
+                                      <span className="text-[10px] font-bold">{new Date(l.date).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                  ))}
+                                  {lessons.filter(l => new Date(l.date) >= new Date()).length === 0 && (
+                                    <p className="text-slate-400 italic">Yaklaşan ders bulunmuyor.</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Tarih Seçin</label>
+                                  <input
+                                    type="date"
+                                    required
+                                    value={scheduledDateInput}
+                                    onChange={(e) => setScheduledDateInput(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-primary text-slate-800"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Saat Seçin</label>
+                                  <input
+                                    type="time"
+                                    required
+                                    value={scheduledTimeInput}
+                                    onChange={(e) => setScheduledTimeInput(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-primary text-slate-800"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={() => setSelectedRequestForSchedule(null)}
+                                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                                >
+                                  Vazgeç
+                                </button>
+                                <button
+                                  onClick={() => handleApproveTrialRequest(req.id)}
+                                  className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors"
+                                >
+                                  Onayla ve Planla
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {req.status === 'PENDING' && selectedRequestForSchedule !== req.id && (
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => handleRejectTrialRequest(req.id)}
+                                className="px-3.5 py-2 text-xs font-bold border border-slate-200 text-slate-500 rounded-xl hover:bg-red-55 hover:text-red-600 hover:border-red-100 transition-colors"
+                              >
+                                Reddet
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedRequestForSchedule(req.id);
+                                  const todayStr = new Date().toISOString().split('T')[0];
+                                  setScheduledDateInput(todayStr);
+                                }}
+                                className="px-4 py-2 text-xs font-bold bg-primary text-white rounded-xl shadow-md shadow-primary/10 hover:bg-primary/95 transition-all"
+                              >
+                                Kabul Et & Ders Planla
+                              </button>
+                            </div>
+                          )}
+
+                          {req.status === 'APPROVED' && req.scheduledDate && (
+                            <div className="text-xs bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex justify-between items-center text-slate-700">
+                              <div>
+                                <span className="font-semibold text-emerald-700">Onaylandı ve Planlandı</span>
+                                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                                  Ders: {new Date(req.scheduledDate).toLocaleString('tr-TR')}
+                                </p>
+                              </div>
+                              <a
+                                href={getWhatsAppLink(req.phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg flex items-center justify-center transition-colors"
+                                title="WhatsApp'tan iletişime geç"
+                              >
+                                <span className="material-symbols-outlined text-sm">chat</span>
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Right side: Contact Messages */}
+                <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900">İletişim Mesajları</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">"Sorularınız mı var?" formundan gelen iletiler</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-400">forum</span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    {contactMessages.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 font-bold">Mesaj kutusu boş.</div>
+                    ) : (
+                      contactMessages.map((msg) => (
+                        <div key={msg.id} className="border border-slate-100 rounded-2xl p-5 hover:border-primary/20 transition-all space-y-3 bg-slate-50/30 relative group">
+                          <button
+                            onClick={() => handleDeleteContactMessage(msg.id)}
+                            className="absolute right-4 top-4 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Sil"
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                          
+                          <div>
+                            <h4 className="font-black text-slate-900 text-sm">{msg.name}</h4>
+                            <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                              {new Date(msg.createdAt).toLocaleString('tr-TR')}
+                            </p>
+                          </div>
+                          
+                          <div className="text-xs text-slate-600 bg-white border border-slate-100 p-3 rounded-xl leading-relaxed">
+                            {msg.message || <span className="italic text-slate-300">İçerik belirtilmemiş.</span>}
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+                            <a href={`tel:${msg.phone}`} className="hover:text-primary transition-colors flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">call</span>
+                              Arayın
+                            </a>
+                            <a href={`mailto:${msg.email}`} className="hover:text-primary transition-colors flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">mail</span>
+                              E-posta
+                            </a>
+                            <a
+                              href={getWhatsAppLink(msg.phone)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-emerald-600 transition-colors flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-sm">chat</span>
+                              WhatsApp
+                            </a>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
         </div>

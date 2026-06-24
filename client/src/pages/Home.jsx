@@ -1,9 +1,83 @@
-11
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 
 const Home = () => {
+  // Free Trial Form State
+  const [trialType, setTrialType] = useState('SELF'); // SELF, CHILD
+  const [trialStudentName, setTrialStudentName] = useState('');
+  const [trialEmail, setTrialEmail] = useState('');
+  const [trialPhone, setTrialPhone] = useState('');
+  const [trialGrade, setTrialGrade] = useState('');
+  const [trialSuccess, setTrialSuccess] = useState('');
+  const [trialError, setTrialError] = useState('');
+  const [trialLoading, setTrialLoading] = useState(false);
+
+  // Contact Form State
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSuccess, setContactSuccess] = useState('');
+  const [contactError, setContactError] = useState('');
+  const [contactLoading, setContactLoading] = useState(false);
+
+  const scrollToForm = () => {
+    const element = document.getElementById('tanisma-dersi');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleTrialSubmit = async (e) => {
+    e.preventDefault();
+    setTrialLoading(true);
+    setTrialSuccess('');
+    setTrialError('');
+    try {
+      await axios.post('/api/trial-requests', {
+        type: trialType,
+        studentName: trialStudentName,
+        email: trialEmail,
+        phone: trialPhone,
+        grade: trialGrade,
+      });
+      setTrialSuccess('Tanışma dersi talebiniz başarıyla alınmıştır. Öğretmenimiz en kısa sürede sizinle iletişime geçecektir.');
+      setTrialStudentName('');
+      setTrialEmail('');
+      setTrialPhone('');
+      setTrialGrade('');
+    } catch (err) {
+      setTrialError(err.response?.data?.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setTrialLoading(false);
+    }
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactLoading(true);
+    setContactSuccess('');
+    setContactError('');
+    try {
+      await axios.post('/api/contact-messages', {
+        name: contactName,
+        phone: contactPhone,
+        email: contactEmail,
+        message: contactMessage,
+      });
+      setContactSuccess('Sorunuz/Mesajınız başarıyla iletilmiştir. En kısa sürede geri dönüş yapacağız.');
+      setContactName('');
+      setContactPhone('');
+      setContactEmail('');
+      setContactMessage('');
+    } catch (err) {
+      setContactError(err.response?.data?.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <main className="flex-1">
@@ -22,7 +96,7 @@ const Home = () => {
                 Uzman hocalar eşliğinde matematik korkunu yen, temelini sağlamlaştır ve sınavda hayalindeki başarıyı yakala. Sana özel çalışma planıyla her şey daha kolay.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <button className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105">
+                <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
                   Ücretsiz Deneme Dersi
                 </button>
                 <button className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-primary/20 px-8 text-lg font-bold text-primary hover:bg-primary/5">
@@ -219,6 +293,136 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Free Trial Lesson Section */}
+        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="tanisma-dersi">
+          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-8 md:p-12 shadow-xl">
+            <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl"></div>
+            <div className="absolute -left-20 -bottom-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl"></div>
+            
+            <div className="relative mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
+                Sınırlı Kontenjan
+              </span>
+              <h2 className="mt-4 text-3xl font-black text-slate-900 md:text-4xl">Ücretsiz Tanışma Dersi Başvurusu</h2>
+              <p className="mt-4 text-slate-600">
+                Matematik seviyenizi belirlemek ve size en uygun çalışma planını hazırlamak için ücretsiz birebir tanışma dersi oluşturun.
+              </p>
+            </div>
+
+            <form onSubmit={handleTrialSubmit} className="relative mx-auto mt-12 max-w-2xl rounded-2xl bg-white p-8 shadow-lg border border-slate-100 flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-slate-700">Ders Kimin İçin?</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setTrialType('SELF')}
+                    className={`flex items-center justify-center gap-2 rounded-xl py-3 border-2 font-bold transition-all ${
+                      trialType === 'SELF'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">person</span>
+                    Kendim İçin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrialType('CHILD')}
+                    className={`flex items-center justify-center gap-2 rounded-xl py-3 border-2 font-bold transition-all ${
+                      trialType === 'CHILD'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">child_care</span>
+                    Çocuğum İçin
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-bold text-slate-700">Öğrenci Adı Soyadı</label>
+                  <input
+                    type="text"
+                    required
+                    value={trialStudentName}
+                    onChange={(e) => setTrialStudentName(e.target.value)}
+                    placeholder="Örn: Ali Yılmaz"
+                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-bold text-slate-700">Sınıf / Seviye</label>
+                  <select
+                    required
+                    value={trialGrade}
+                    onChange={(e) => setTrialGrade(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  >
+                    <option value="">Seçiniz</option>
+                    <option value="5">5. Sınıf</option>
+                    <option value="6">6. Sınıf</option>
+                    <option value="7">7. Sınıf</option>
+                    <option value="8">8. Sınıf (LGS)</option>
+                    <option value="9">9. Sınıf</option>
+                    <option value="10">10. Sınıf</option>
+                    <option value="11">11. Sınıf</option>
+                    <option value="12">12. Sınıf (YKS)</option>
+                    <option value="Mezun">Mezun (YKS)</option>
+                    <option value="KPSS">KPSS Adayı</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-bold text-slate-700">E-posta Adresi</label>
+                  <input
+                    type="email"
+                    required
+                    value={trialEmail}
+                    onChange={(e) => setTrialEmail(e.target.value)}
+                    placeholder="ali@ornek.com"
+                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-bold text-slate-700">Telefon Numarası</label>
+                  <input
+                    type="tel"
+                    required
+                    value={trialPhone}
+                    onChange={(e) => setTrialPhone(e.target.value)}
+                    placeholder="05XX XXX XX XX"
+                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  />
+                </div>
+              </div>
+
+              {trialError && (
+                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                  {trialError}
+                </div>
+              )}
+
+              {trialSuccess && (
+                <div className="text-sm text-green-600 bg-green-50 p-4 rounded-lg border border-green-200 font-medium">
+                  {trialSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={trialLoading}
+                className="w-full rounded-xl bg-primary py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/95 hover:shadow-xl disabled:opacity-50 cursor-pointer"
+              >
+                {trialLoading ? 'Başvuru Gönderiliyor...' : 'Ücretsiz Tanışma Dersi Talebi Oluştur'}
+              </button>
+            </form>
+          </div>
+        </section>
+
         {/* Contact Form Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="iletisim">
           <div className="flex flex-col overflow-hidden rounded-xl border border-primary/10 bg-white shadow-2xl lg:flex-row">
@@ -240,27 +444,71 @@ const Home = () => {
                 </div>
               </div>
             </div>
-            <form className="flex flex-col gap-6 p-12 lg:w-3/5 bg-white">
+            <form onSubmit={handleContactSubmit} className="flex flex-col gap-6 p-12 lg:w-3/5 bg-white">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-bold text-slate-700">Adınız Soyadınız</label>
-                  <input className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2" placeholder="Örn: Ali Yılmaz" type="text"/>
+                  <input
+                    required
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                    placeholder="Örn: Ali Yılmaz"
+                    type="text"
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-bold text-slate-700">Telefon Numaranız</label>
-                  <input className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2" placeholder="05XX XXX XX XX" type="tel"/>
+                  <input
+                    required
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                    placeholder="05XX XXX XX XX"
+                    type="tel"
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-slate-700">E-posta Adresiniz</label>
-                <input className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2" placeholder="ali@örnek.com" type="email"/>
+                <input
+                  required
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  placeholder="ali@örnek.com"
+                  type="email"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-slate-700">Mesajınız (Opsiyonel)</label>
-                <textarea className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2" placeholder="Size nasıl yardımcı olabiliriz?" rows={4}></textarea>
+                <textarea
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-primary/5 focus:border-primary focus:ring-primary outline-none px-4 py-2"
+                  placeholder="Size nasıl yardımcı olabiliriz?"
+                  rows={4}
+                ></textarea>
               </div>
-              <button className="w-fit rounded-full bg-primary px-10 py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl" type="submit">
-                Beni Arayın
+
+              {contactError && (
+                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                  {contactError}
+                </div>
+              )}
+
+              {contactSuccess && (
+                <div className="text-sm text-green-600 bg-green-50 p-4 rounded-lg border border-green-200 font-medium">
+                  {contactSuccess}
+                </div>
+              )}
+
+              <button
+                disabled={contactLoading}
+                className="w-fit rounded-full bg-primary px-10 py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl disabled:opacity-50 cursor-pointer"
+                type="submit"
+              >
+                {contactLoading ? 'Gönderiliyor...' : 'Beni Arayın'}
               </button>
             </form>
           </div>

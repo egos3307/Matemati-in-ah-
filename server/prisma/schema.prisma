@@ -108,3 +108,25 @@ model Camp {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model TrialLessonRequest {
+  id            Int      @id @default(autoincrement())
+  type          String   // "SELF" (Kendim için), "CHILD" (Çocuğum için)
+  studentName   String   // Öğrenci Adı Soyadı
+  email         String
+  phone         String
+  grade         String   // Sınıf
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  scheduledDate DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String
+  message   String?
+  createdAt DateTime @default(now())
+}
