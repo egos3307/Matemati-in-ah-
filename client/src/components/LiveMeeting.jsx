@@ -94,7 +94,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Logo" className="h-7 w-7 object-contain animate-pulse" />
           <div>
-            <h4 className="font-bold text-xs md:text-sm text-slate-100">Canlı Ders Odası <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded ml-2">Yedek Sunucu</span></h4>
+            <h4 className="font-bold text-xs md:text-sm text-slate-100">Canlı Ders Odası <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded ml-2">Yedek Sunucu</span></h4>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
               {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
             </p>
@@ -309,7 +309,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           "Ekran Paylaşımı İzni Engellendi veya İptal Edildi!\n\n" +
           "Lütfen şunları kontrol edin:\n" +
           "1. Ekran seçme penceresi geldiğinde 'İptal'e basmış veya pencereyi kapatmış olabilirsiniz. Tekrar deneyip ekranınızı seçerek 'Paylaş'a tıklayın.\n" +
-          "2. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Ekran Kaydı' (Screen Recording) kısmında tarayıcınızın (Chrome, Safari vb.) izninin açık olduğundan emin olun."
+          "2. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Ekran Kaydı' (Screen Recording) kısmında tarayıcınızın (Chrome, Safari vb.) izninin açık olduğünden emin olun."
         );
       } else {
         alert(
@@ -345,8 +345,8 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
     return (
       <div className="w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans fixed inset-0 z-[99999] overflow-hidden">
         <div className="relative w-12 h-12 flex items-center justify-center">
-          <div className="absolute w-full h-full border-4 border-emerald-500/20 rounded-full"></div>
-          <div className="absolute w-full h-full border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
+          <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
           {connectionState === ConnectionState.Connecting ? 'Sınıf Sunucusuna Bağlanılıyor...' : 'Yeniden Bağlanılıyor...'}
@@ -366,7 +366,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           <div>
             <div className="flex items-center gap-2">
               <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Canlı Ders Odası</h4>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
             </div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
               {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
@@ -387,7 +387,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           </button>
 
           {isScreenSharing && (
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20 uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black border border-primary/20 uppercase tracking-wider">
               Ekran Paylaşılıyor
             </span>
           )}
@@ -422,7 +422,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                 {/* Header */}
                 <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
                   <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px] text-emerald-400">group</span>
+                    <span className="material-symbols-outlined text-[12px] text-primary">group</span>
                     Katılımcılar
                   </span>
                   <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
@@ -437,14 +437,14 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                       <div 
                         key={trackKey} 
                         className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
-                          isTeacher ? 'border-amber-500/50 shadow-amber-500/5' : 'border-slate-800'
+                          isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                         }`}
                       >
                         <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
                         
                         {/* Status name tags */}
                         <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
-                          {isTeacher && <span className="text-[7px] bg-amber-500 text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
+                          {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
                           <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
                         </div>
                       </div>
@@ -470,8 +470,8 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                       key={trackKey} 
                       className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] ${
                         isTeacher 
-                          ? 'border-amber-500/50 shadow-lg shadow-amber-500/5 hover:border-amber-500' 
-                          : 'border-slate-800 hover:border-emerald-500/30'
+                          ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
+                          : 'border-slate-800 hover:border-primary/30'
                       }`}
                     >
                       <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
@@ -479,7 +479,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                       {/* Floating tag inside camera panel */}
                       <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
                         {isTeacher ? (
-                          <span className="flex items-center gap-1 text-xs text-amber-400 font-black">
+                          <span className="flex items-center gap-1 text-xs text-primary font-black">
                             <span className="material-symbols-outlined text-xs">star</span>
                             {trackRef.participant.name || trackRef.participant.identity}
                           </span>
@@ -492,7 +492,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
 
                       {/* Speaking indicator overlay */}
                       {trackRef.participant.isSpeaking && (
-                        <div className="absolute top-3 right-3 bg-emerald-500 text-white rounded-full p-1 shadow-lg shadow-emerald-500/20 border border-white/20 animate-bounce flex items-center justify-center">
+                        <div className="absolute top-3 right-3 bg-primary text-white rounded-full p-1 shadow-lg shadow-primary/20 border border-white/20 animate-bounce flex items-center justify-center">
                           <span className="material-symbols-outlined text-xs font-bold">volume_up</span>
                         </div>
                       )}
@@ -521,7 +521,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           <div className="w-80 h-full bg-slate-900/90 backdrop-blur-lg border-l border-slate-800/80 p-5 flex flex-col gap-4 z-15 shadow-2xl animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between border-b border-slate-850 pb-3">
               <h5 className="font-extrabold text-xs md:text-sm text-slate-100 flex items-center gap-2 uppercase tracking-wider">
-                <span className="material-symbols-outlined text-base text-emerald-400">group</span>
+                <span className="material-symbols-outlined text-base text-primary">group</span>
                 Sınıftakiler ({participants.length})
               </h5>
               <button 
@@ -540,14 +540,14 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                     key={p.sid} 
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all duration-200 ${
                       isTeacher 
-                        ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50' 
+                        ? 'border-primary/30 bg-primary/5 hover:border-primary/50' 
                         : 'border-slate-850 bg-slate-950/20 hover:border-slate-800'
                     }`}
                   >
                     <div className="flex items-center gap-3 truncate flex-1 mr-2">
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm border ${
                         isTeacher 
-                          ? 'bg-amber-500 text-slate-950 border-amber-400' 
+                          ? 'bg-primary text-slate-950 border-primary/20' 
                           : 'bg-slate-800 text-slate-200 border-slate-700'
                       }`}>
                         {p.name ? p.name.charAt(0).toUpperCase() : p.identity.charAt(0).toUpperCase()}
@@ -557,7 +557,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                           {p.name || p.identity} {p.isLocal ? '(Sen)' : ''}
                         </p>
                         <span className={`text-[8px] font-black uppercase tracking-widest mt-0.5 block ${
-                          isTeacher ? 'text-amber-400' : 'text-slate-400'
+                          isTeacher ? 'text-primary' : 'text-slate-400'
                         }`}>
                           {isTeacher ? 'Öğretmen' : 'Öğrenci'}
                         </span>
@@ -641,7 +641,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
             onClick={toggleScreenShare}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer shadow-md ${
               isLocalScreenSharing 
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/10 hover:scale-102' 
+                ? 'bg-primary hover:bg-primary/95 text-white border-primary shadow-primary/10 hover:scale-102' 
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750 hover:scale-102'
             }`}
           >
@@ -719,8 +719,8 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
     return createPortal(
       <div className="fixed inset-0 z-[99999] w-screen h-screen flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
         <div className="relative w-10 h-10 flex items-center justify-center">
-          <div className="absolute w-full h-full border-4 border-emerald-500/20 rounded-full"></div>
-          <div className="absolute w-full h-full border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
+          <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Sınıf Hazırlanıyor...</p>
       </div>,
