@@ -257,6 +257,45 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
   }
 });
 
+app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { email, name, grade, parentName, parentTel, studentTel } = req.body;
+  try {
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        email,
+        name,
+        grade,
+        parentName,
+        parentTel,
+        studentTel
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    // Cascade delete relations
+    await prisma.trial.deleteMany({ where: { studentId: id } });
+    await prisma.studentHomework.deleteMany({ where: { studentId: id } });
+    await prisma.lesson.updateMany({
+      where: { studentId: id },
+      data: { studentId: null }
+    });
+
+    const deleted = await prisma.user.delete({ where: { id } });
+    res.json({ success: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, res) => {
   const { title, description, date, studentId, zoomJoinUrl } = req.body;
   try {

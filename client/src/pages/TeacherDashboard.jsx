@@ -89,6 +89,8 @@ const TeacherDashboard = () => {
   const [scheduledDateInput, setScheduledDateInput] = useState('');
   const [scheduledTimeInput, setScheduledTimeInput] = useState('12:00');
   const [approvedRequestResult, setApprovedRequestResult] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState({ id: null, email: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '' });
 
   // Camp states
   const [campsList, setCampsList] = useState([]);
@@ -169,6 +171,51 @@ const TeacherDashboard = () => {
       console.error('Error adding student:', err);
       const message = err.response?.data?.error || err.response?.data?.message || 'Öğrenci eklenirken bir hata oluştu.';
       alert(`Hata: ${message}`);
+    }
+  };
+
+  const handleEditStudentClick = (student) => {
+    setEditingStudent({
+      id: student.id,
+      email: student.email || '',
+      name: student.name || '',
+      grade: student.grade || '',
+      parentName: student.parentName || '',
+      parentTel: student.parentTel || '',
+      studentTel: student.studentTel || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditStudentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/teacher/student/${editingStudent.id}`, editingStudent);
+      setShowEditModal(false);
+      fetchStudents();
+      alert('Öğrenci bilgileri başarıyla güncellendi.');
+    } catch (err) {
+      console.error('Error updating student:', err);
+      alert('Öğrenci güncellenirken bir hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteStudent = async (studentId, studentName) => {
+    if (!window.confirm(`"${studentName}" adlı öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/teacher/student/${studentId}`);
+      fetchStudents();
+      // Reset selected student details if currently opened student is deleted
+      if (selectedStudent && selectedStudent.id === studentId) {
+        setSelectedStudent(null);
+        setActiveTab('students');
+      }
+      alert('Öğrenci başarıyla silindi.');
+    } catch (err) {
+      console.error('Error deleting student:', err);
+      alert('Öğrenci silinirken bir hata oluştu: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -596,7 +643,29 @@ const TeacherDashboard = () => {
                     <div key={student.id} onClick={() => fetchStudentTrials(student)} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer group">
                       <div className="flex items-start justify-between mb-4">
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-black">{student.name.charAt(0)}</div>
-                        <code className="text-[10px] font-black bg-slate-50 px-2 py-1 rounded text-slate-400">{student.studentCode}</code>
+                        <div className="flex gap-1.5 items-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditStudentClick(student);
+                            }}
+                            className="text-slate-300 hover:text-primary transition-colors p-1"
+                            title="Düzenle"
+                          >
+                            <span className="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteStudent(student.id, student.name);
+                            }}
+                            className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                            title="Sil"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                          <code className="text-[10px] font-black bg-slate-50 px-2 py-1 rounded text-slate-400">{student.studentCode}</code>
+                        </div>
                       </div>
                       <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
                       <p className="text-sm text-slate-400 font-bold mb-4">{student.grade}. Sınıf</p>
@@ -1917,6 +1986,89 @@ const TeacherDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Student Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setShowEditModal(false)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900 transition-colors">
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+            <h3 className="text-3xl font-black text-slate-900 mb-2">Öğrenci Bilgilerini Düzenle</h3>
+            <p className="text-slate-400 font-bold text-sm mb-10 uppercase tracking-widest">Bilgileri güncelleyebilirsiniz</p>
+            
+            <form onSubmit={handleEditStudentSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Ad Soyad</label>
+                  <input
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Sınıf</label>
+                  <select
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.grade}
+                    onChange={(e) => setEditingStudent({...editingStudent, grade: e.target.value})}
+                    required
+                  >
+                    <option value="">Seçiniz</option>
+                    {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">E-posta</label>
+                  <input
+                    type="email"
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({...editingStudent, email: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Öğrenci Tel (Opsiyonel)</label>
+                  <input
+                    type="tel"
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.studentTel}
+                    onChange={(e) => setEditingStudent({...editingStudent, studentTel: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Veli Adı</label>
+                  <input
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.parentName}
+                    onChange={(e) => setEditingStudent({...editingStudent, parentName: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Veli Tel</label>
+                  <input
+                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                    value={editingStudent.parentTel}
+                    onChange={(e) => setEditingStudent({...editingStudent, parentTel: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Değişiklikleri Kaydet</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Live Class Overlay / Modal */}
       {activeMeeting && (
         activeMeeting.zoomJoinUrl && activeMeeting.zoomJoinUrl.includes('zoom.us') ? (
