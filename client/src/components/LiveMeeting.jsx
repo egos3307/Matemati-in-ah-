@@ -284,13 +284,39 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
 
   const toggleScreenShare = async () => {
     if (!localParticipant) return;
+
+    // Check if the browser supports screen sharing API
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert(
+        "Ekran Paylaşımı Desteklenmiyor!\n\n" +
+        "Bu durumun iki nedeni olabilir:\n" +
+        "1. Telefon veya tablet (iOS/Android) kullanıyorsunuz: Mobil tarayıcılar ekran paylaşımını teknik olarak desteklemez. Lütfen bilgisayardan bağlanın.\n" +
+        "2. Güvenli olmayan bir bağlantı (HTTP) kullanıyorsunuz: Ekran paylaşımı için sitenin adresi 'https://' ile başlamalıdır."
+      );
+      return;
+    }
+
     try {
       // Toggle screen share dynamically reading direct state to bypass state delay
       const isCurrentlySharing = localParticipant.isScreenShareEnabled;
       await localParticipant.setScreenShareEnabled(!isCurrentlySharing);
     } catch (err) {
       console.error("Screen share toggle failed:", err);
-      alert(`Ekran paylaşımı başlatılamadı: ${err.message || err}\n\nLütfen tarayıcınızın ekran kayıt izinlerini verdiğinizden ve bağlantınızın güvenli (HTTPS) olduğundan emin olun.`);
+      
+      const errorMsg = String(err.message || err).toLowerCase();
+      if (err.name === 'NotAllowedError' || errorMsg.includes('permission denied') || errorMsg.includes('not allowed')) {
+        alert(
+          "Ekran Paylaşımı İzni Engellendi veya İptal Edildi!\n\n" +
+          "Lütfen şunları kontrol edin:\n" +
+          "1. Ekran seçme penceresi geldiğinde 'İptal'e basmış veya pencereyi kapatmış olabilirsiniz. Tekrar deneyip ekranınızı seçerek 'Paylaş'a tıklayın.\n" +
+          "2. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Ekran Kaydı' (Screen Recording) kısmında tarayıcınızın (Chrome, Safari vb.) izninin açık olduğundan emin olun."
+        );
+      } else {
+        alert(
+          `Ekran paylaşımı başlatılamadı: ${err.message || err}\n\n` +
+          "Lütfen tarayıcınızı güncelleyin veya Google Chrome/Microsoft Edge ile tekrar deneyin."
+        );
+      }
     }
   };
 
