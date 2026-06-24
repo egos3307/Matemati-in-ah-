@@ -134,6 +134,7 @@ app.get('/api/debug', async (req, res) => {
       NODE_ENV: process.env.NODE_ENV,
       VERCEL: process.env.VERCEL,
       DATABASE_URL: process.env.DATABASE_URL ? 'DEFINED' : 'UNDEFINED',
+      SERVER_TIME: new Date().toISOString(),
       LIVEKIT_API_KEY_EXISTS: !!process.env.LIVEKIT_API_KEY,
       LIVEKIT_API_KEY_PREVIEW: process.env.LIVEKIT_API_KEY ? `${process.env.LIVEKIT_API_KEY.substring(0, 5)}...${process.env.LIVEKIT_API_KEY.slice(-5)}` : 'N/A',
       LIVEKIT_API_SECRET_EXISTS: !!process.env.LIVEKIT_API_SECRET,
