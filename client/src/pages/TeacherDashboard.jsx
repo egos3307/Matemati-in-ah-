@@ -1550,6 +1550,7 @@ const TeacherDashboard = () => {
             lessonId={activeMeeting.id}
             role="TEACHER"
             userName={user?.name || 'Öğretmen'}
+            userId={user?.id || user?.studentCode || user?.email}
             onClose={() => setActiveMeeting(null)}
           />
         )

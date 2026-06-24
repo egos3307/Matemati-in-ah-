@@ -654,18 +654,32 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
 
 // LiveKit Token Endpoint
 app.post('/api/livekit/token', auth, async (req, res) => {
-  const { roomName, participantName, role } = req.body;
-  const apiKey = process.env.LIVEKIT_API_KEY || 'devkey';
-  const apiSecret = process.env.LIVEKIT_API_SECRET || 'secret';
-  const livekitUrl = process.env.LIVEKIT_URL || 'wss://fullematematik-live.livekit.cloud';
+  const { roomName, participantName, participantIdentity, role } = req.body;
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  const livekitUrl = process.env.LIVEKIT_URL;
+
+  // If LiveKit credentials are not defined or contain default placeholders, tell client to use Jitsi fallback
+  if (!apiKey || !apiSecret || !livekitUrl || 
+      apiKey === 'your_livekit_api_key_here' || 
+      apiSecret === 'your_livekit_api_secret_here' || 
+      livekitUrl.includes('your-project')) {
+    console.log('LiveKit not fully configured in env. Falling back to Jitsi Meeting.');
+    return res.json({ useFallback: true });
+  }
 
   if (!roomName || !participantName) {
     return res.status(400).json({ error: 'Oda adı (roomName) ve katılımcı adı (participantName) gereklidir.' });
   }
 
+  // Identity must be completely unique to avoid session collisions. 
+  // Suffix with random tag if unique identifier is not passed.
+  const uniqueIdentity = participantIdentity || `${participantName}_${Math.random().toString(36).substring(2, 8)}`;
+
   try {
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: participantName,
+      identity: uniqueIdentity,
+      name: participantName, // Display name
       metadata: JSON.stringify({ role: role || 'STUDENT' })
     });
 
@@ -678,10 +692,11 @@ app.post('/api/livekit/token', auth, async (req, res) => {
     });
 
     const token = await at.toJwt();
-    res.json({ token, serverUrl: livekitUrl });
+    res.json({ token, serverUrl: livekitUrl, useFallback: false });
   } catch (err) {
     console.error('LiveKit token generation error:', err);
-    res.status(500).json({ error: err.message });
+    // Automatically fallback to Jitsi if generation fails
+    res.json({ useFallback: true });
   }
 });
 
