@@ -124,9 +124,28 @@ const TeacherDashboard = () => {
     return `https://wa.me/${cleaned}`;
   };
 
+  const getGradeDistribution = () => {
+    const counts = {};
+    students.forEach(s => {
+      const grade = s.grade || 'Diğer';
+      counts[grade] = (counts[grade] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  };
+
+  const getUpcomingLessons = () => {
+    const today = new Date();
+    return lessons
+      .filter(l => new Date(l.date) >= today)
+      .slice(0, 4);
+  };
+
   useEffect(() => {
     fetchStudents();
     fetchLessons();
+    fetchTrialRequests();
+    fetchContactMessages();
+    fetchCamps();
   }, []);
 
   const fetchStudents = async () => {
@@ -582,57 +601,267 @@ const TeacherDashboard = () => {
 
         <div className="p-8">
           {activeTab === 'dashboard' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 bg-primary/5 rounded-3xl border border-primary/10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-primary text-white rounded-2xl">
-                      <span className="material-symbols-outlined">group</span>
-                    </div>
+            <div className="space-y-8 animate-in fade-in duration-300">
+              
+              {/* Statistics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                {/* Students Stat */}
+                <div className="p-6 bg-primary/5 border border-primary/10 rounded-[24px] flex items-center gap-4 hover:shadow-md transition-all">
+                  <div className="p-4 bg-primary text-white rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">group</span>
                   </div>
-                  <p className="text-slate-500 text-sm font-bold">Toplam Öğrenci</p>
-                  <h3 className="text-4xl font-black text-slate-900">{students.length}</h3>
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Toplam Öğrenci</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-0.5">{students.length}</h3>
+                  </div>
                 </div>
-                {/* Diğer kartlar... */}
+
+                {/* Lessons Stat */}
+                <div className="p-6 bg-blue-50 border border-blue-100 rounded-[24px] flex items-center gap-4 hover:shadow-md transition-all">
+                  <div className="p-4 bg-blue-500 text-white rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">calendar_month</span>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Toplam Canlı Ders</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-0.5">{lessons.length}</h3>
+                  </div>
+                </div>
+
+                {/* Trial Requests Stat */}
+                <div className="p-6 bg-amber-50 border border-amber-100 rounded-[24px] flex items-center gap-4 hover:shadow-md transition-all">
+                  <div className="p-4 bg-amber-500 text-white rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">school</span>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Bekleyen Talepler</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-0.5">{trialRequests.filter(r => r.status === 'PENDING').length}</h3>
+                  </div>
+                </div>
+
+                {/* Active Camps Stat */}
+                <div className="p-6 bg-purple-50 border border-purple-100 rounded-[24px] flex items-center gap-4 hover:shadow-md transition-all">
+                  <div className="p-4 bg-purple-500 text-white rounded-2xl flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">campaign</span>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Aktif Kamplar</p>
+                    <h3 className="text-3xl font-black text-slate-900 mt-0.5">{campsList.length}</h3>
+                  </div>
+                </div>
+
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                  <h3 className="font-black text-slate-900">Son Kayıtlı Öğrenciler</h3>
-                  <button onClick={() => setActiveTab('students')} className="text-primary text-xs font-black uppercase tracking-widest">Tümünü Gör</button>
+              {/* Middle Section: Upcoming Lessons & Quick Links */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* Upcoming Lessons Widget */}
+                <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">Yaklaşan Canlı Dersler</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">Önümüzdeki planlanmış öğrenci dersleri</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-400">event_upcoming</span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+                    {getUpcomingLessons().length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 font-bold text-sm">Yakın zamanda planlanmış canlı ders bulunmuyor.</div>
+                    ) : (
+                      getUpcomingLessons().map((lesson) => (
+                        <div key={lesson.id} className="p-4 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all">
+                          <div>
+                            <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Canlı Ders
+                            </span>
+                            <h4 className="font-black text-slate-955 text-sm mt-1">{lesson.title}</h4>
+                            <p className="text-xs text-slate-500 font-bold mt-1">
+                              Öğrenci: <span className="text-slate-800">{lesson.student?.name || 'Tüm Sınıf'}</span>
+                            </p>
+                            <p className="text-xs text-slate-400 font-medium mt-0.5">
+                              {new Date(lesson.date).toLocaleString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => setActiveMeeting(lesson)}
+                              className="flex-1 sm:flex-none bg-primary hover:bg-primary/95 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-primary/10 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-base">videocam</span>
+                              Dersi Başlat
+                            </button>
+                            {lesson.student?.studentTel && (
+                              <a
+                                href={getWhatsAppLink(lesson.student.studentTel)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl flex items-center justify-center transition-colors"
+                                title="Öğrenciye WhatsApp'tan yaz"
+                              >
+                                <span className="material-symbols-outlined text-base">chat</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50/50">
-                      <tr>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Öğrenci</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giriş Kodu</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sınıf</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Veli</th>
-                        <th className="px-6 py-4"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {students.slice(0, 5).map(student => (
-                        <tr key={student.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => fetchStudentTrials(student)}>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black">{student.name.charAt(0)}</div>
-                              <div className="font-bold text-slate-900">{student.name}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4"><code className="bg-slate-100 px-2 py-1 rounded text-primary font-black text-xs">{student.studentCode}</code></td>
-                          <td className="px-6 py-4 font-bold text-slate-500">{student.grade}. Sınıf</td>
-                          <td className="px-6 py-4 text-xs text-slate-400 font-medium">{student.parentName || '-'}</td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+                {/* Quick Navigation and Actions widget */}
+                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">Hızlı İşlemler</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">Sık kullanılan panel kısayolları</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-400">bolt</span>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-primary/5 hover:text-primary rounded-2xl border border-slate-100 font-bold text-sm text-slate-700 transition-all text-left cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">person_add</span>
+                        Yeni Öğrenci Kaydet
+                      </span>
+                      <span className="material-symbols-outlined text-base">chevron_right</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('new-lesson')}
+                      className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-primary/5 hover:text-primary rounded-2xl border border-slate-100 font-bold text-sm text-slate-700 transition-all text-left cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">calendar_month</span>
+                        Yeni Ders Programla
+                      </span>
+                      <span className="material-symbols-outlined text-base">chevron_right</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('forms')}
+                      className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-primary/5 hover:text-primary rounded-2xl border border-slate-100 font-bold text-sm text-slate-700 transition-all text-left cursor-pointer relative"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">forum</span>
+                        Gelen Başvuruları Oku
+                      </span>
+                      {trialRequests.filter(r => r.status === 'PENDING').length > 0 && (
+                        <span className="bg-primary text-white text-[9px] px-2 py-0.5 rounded-full font-black ml-2">
+                          {trialRequests.filter(r => r.status === 'PENDING').length} Yeni
+                        </span>
+                      )}
+                      <span className="material-symbols-outlined text-base">chevron_right</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('blog')}
+                      className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-primary/5 hover:text-primary rounded-2xl border border-slate-100 font-bold text-sm text-slate-700 transition-all text-left cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">edit_note</span>
+                        Blog Yazısı Ekle
+                      </span>
+                      <span className="material-symbols-outlined text-base">chevron_right</span>
+                    </button>
+                  </div>
                 </div>
+
               </div>
+
+              {/* Bottom Section: Recent Students Table & Grade Distribution */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* Recent Students Table */}
+                <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">Son Kayıtlı Öğrenciler</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">Platforma en son katılan 5 öğrenci</p>
+                    </div>
+                    <button onClick={() => setActiveTab('students')} className="text-primary text-xs font-black uppercase tracking-widest cursor-pointer">Tümünü Gör</button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-slate-50">
+                          <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Öğrenci</th>
+                          <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giriş Kodu</th>
+                          <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sınıf</th>
+                          <th className="pb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Veli</th>
+                          <th className="pb-3"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {students.slice(-5).reverse().map(student => (
+                          <tr key={student.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => fetchStudentTrials(student)}>
+                            <td className="py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-sm">{student.name.charAt(0)}</div>
+                                <div className="font-bold text-slate-900 text-sm">{student.name}</div>
+                              </div>
+                            </td>
+                            <td className="py-3"><code className="bg-slate-100 px-2 py-1 rounded text-primary font-black text-xs">{student.studentCode}</code></td>
+                            <td className="py-3 font-bold text-slate-500 text-sm">{student.grade}. Sınıf</td>
+                            <td className="py-3 text-xs text-slate-400 font-medium">{student.parentName || '-'}</td>
+                            <td className="py-3 text-right">
+                              <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
+                            </td>
+                          </tr>
+                        ))}
+                        {students.length === 0 && (
+                          <tr>
+                            <td colSpan="5" className="text-center py-6 text-slate-400 font-bold text-sm">Henüz öğrenci bulunmuyor.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Grade Distribution widget */}
+                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">Sınıf Dağılımı</h3>
+                      <p className="text-xs text-slate-400 font-bold mt-1">Öğrencilerin sınıf seviyelerine göre oranı</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-400">bar_chart</span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                    {students.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 font-bold text-sm">Öğrenci bulunmuyor.</div>
+                    ) : (
+                      getGradeDistribution().map(([grade, count]) => {
+                        const percent = ((count / students.length) * 100).toFixed(0);
+                        return (
+                          <div key={grade} className="space-y-1.5">
+                            <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-slate-700">{grade}. Sınıf</span>
+                              <span className="text-slate-500">{count} Öğrenci ({percent}%)</span>
+                            </div>
+                            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full transition-all duration-1000"
+                                style={{ width: `${percent}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
             </div>
           )}
 
