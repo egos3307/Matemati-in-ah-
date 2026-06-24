@@ -222,7 +222,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Teacher Routes
 app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res) => {
-  const { email, password, name, grade, parentName, parentTel, studentTel } = req.body;
+  const { email, password, name, grade, parentName, parentTel, studentTel, serviceProvided } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password || 'student', 10);
     
@@ -248,6 +248,7 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
         parentTel, 
         studentTel,
         studentCode,
+        serviceProvided,
         role: 'STUDENT' 
       },
     });
@@ -259,7 +260,7 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
 
 app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { email, name, grade, parentName, parentTel, studentTel } = req.body;
+  const { email, name, grade, parentName, parentTel, studentTel, serviceProvided } = req.body;
   try {
     const updated = await prisma.user.update({
       where: { id },
@@ -269,7 +270,8 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
         grade,
         parentName,
         parentTel,
-        studentTel
+        studentTel,
+        serviceProvided
       }
     });
     res.json(updated);

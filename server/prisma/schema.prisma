@@ -23,6 +23,7 @@ model User {
   parentName String? // Veli Ad Soyad
   parentTel  String? // Veli Tel No
   studentTel String? // Öğrenci Tel No
+  serviceProvided String? // Verilen Hizmet
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

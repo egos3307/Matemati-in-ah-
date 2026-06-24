@@ -260,7 +260,9 @@ const StudentDashboard = () => {
       "9": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "İngilizce"],
       "10": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "İngilizce"],
       "11": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"],
-      "12": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"]
+      "12": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"],
+      "KPSS": ["Matematik", "Geometri", "Sayısal Mantık", "Türkçe", "Tarih", "Coğrafya", "Vatandaşlık"],
+      "Mezun": ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"]
     };
     
     const userGrade = user?.grade || "5";
@@ -571,7 +573,7 @@ const StudentDashboard = () => {
                       </h2>
                     )}
                     <p className="text-[11px] text-slate-300 font-bold">
-                      {user?.name} • {user?.grade}. Sınıf Öğrencisi
+                      {user?.name} • {(user?.grade === 'KPSS' || user?.grade === 'Mezun') ? `${user?.grade} Öğrencisi` : `${user?.grade}. Sınıf Öğrencisi`}
                     </p>
                   </div>
 

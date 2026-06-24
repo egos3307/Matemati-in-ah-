@@ -57,7 +57,7 @@ const handleImageUpload = (file, callback) => {
 
 const TeacherDashboard = () => {
   const [students, setStudents] = useState([]);
-  const [newStudent, setNewStudent] = useState({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '' });
+  const [newStudent, setNewStudent] = useState({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
   const [newLesson, setNewLesson] = useState({ title: '', description: '', date: '' });
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -90,7 +90,7 @@ const TeacherDashboard = () => {
   const [scheduledTimeInput, setScheduledTimeInput] = useState('12:00');
   const [approvedRequestResult, setApprovedRequestResult] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState({ id: null, email: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '' });
+  const [editingStudent, setEditingStudent] = useState({ id: null, email: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
 
   // Camp states
   const [campsList, setCampsList] = useState([]);
@@ -182,7 +182,7 @@ const TeacherDashboard = () => {
     e.preventDefault();
     try {
       const res = await axios.post('/api/teacher/add-student', newStudent);
-      setNewStudent({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '' });
+      setNewStudent({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
       fetchStudents();
       setShowAddModal(false);
       alert(`Öğrenci Kaydedildi!\nKod: ${res.data.studentCode}`);
@@ -201,7 +201,8 @@ const TeacherDashboard = () => {
       grade: student.grade || '',
       parentName: student.parentName || '',
       parentTel: student.parentTel || '',
-      studentTel: student.studentTel || ''
+      studentTel: student.studentTel || '',
+      serviceProvided: student.serviceProvided || ''
     });
     setShowEditModal(true);
   };
@@ -808,7 +809,7 @@ const TeacherDashboard = () => {
                               </div>
                             </td>
                             <td className="py-3"><code className="bg-slate-100 px-2 py-1 rounded text-primary font-black text-xs">{student.studentCode}</code></td>
-                            <td className="py-3 font-bold text-slate-500 text-sm">{student.grade}. Sınıf</td>
+                            <td className="py-3 font-bold text-slate-500 text-sm">{(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}</td>
                             <td className="py-3 text-xs text-slate-400 font-medium">{student.parentName || '-'}</td>
                             <td className="py-3 text-right">
                               <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
@@ -844,7 +845,7 @@ const TeacherDashboard = () => {
                         return (
                           <div key={grade} className="space-y-1.5">
                             <div className="flex justify-between items-center text-xs font-bold">
-                              <span className="text-slate-700">{grade}. Sınıf</span>
+                              <span className="text-slate-700">{(grade === 'KPSS' || grade === 'Mezun' || grade === 'Diğer') ? grade : `${grade}. Sınıf`}</span>
                               <span className="text-slate-500">{count} Öğrenci ({percent}%)</span>
                             </div>
                             <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -897,7 +898,7 @@ const TeacherDashboard = () => {
                         </div>
                       </div>
                       <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
-                      <p className="text-sm text-slate-400 font-bold mb-4">{student.grade}. Sınıf</p>
+                      <p className="text-sm text-slate-400 font-bold mb-4">{(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}</p>
                       <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
                         <span className="material-symbols-outlined text-sm">call</span>
                         {student.parentTel || 'Telefon yok'}
@@ -917,7 +918,7 @@ const TeacherDashboard = () => {
                   <div>
                     <h3 className="text-3xl font-black text-slate-900">{selectedStudent.name}</h3>
                     <div className="flex gap-4 mt-1">
-                      <span className="text-xs font-bold text-primary uppercase tracking-widest">{selectedStudent.grade}. Sınıf</span>
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">{(selectedStudent.grade === 'KPSS' || selectedStudent.grade === 'Mezun') ? selectedStudent.grade : `${selectedStudent.grade}. Sınıf`}</span>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kod: {selectedStudent.studentCode}</span>
                     </div>
                   </div>
@@ -1058,6 +1059,12 @@ const TeacherDashboard = () => {
                               </a>
                             </div>
                           )}
+                        </div>
+                        <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 text-xs font-bold">Verilen Hizmet</span>
+                            <span className="text-xs font-black text-white">{selectedStudent.serviceProvided || '-'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1256,7 +1263,7 @@ const TeacherDashboard = () => {
                       >
                         <option value="">Öğrenci Seçiniz</option>
                         {students.map(student => (
-                          <option key={student.id} value={student.id}>{student.name} ({student.grade}. Sınıf)</option>
+                          <option key={student.id} value={student.id}>{student.name} ({(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`})</option>
                         ))}
                       </select>
                     </div>
@@ -1969,7 +1976,7 @@ const TeacherDashboard = () => {
                                 </span>
                               </div>
                               <p className="text-xs text-slate-500 font-medium mt-1">{req.email} • {req.phone}</p>
-                              <p className="text-xs font-bold text-primary mt-1">Sınıf/Seviye: {req.grade}. Sınıf</p>
+                              <p className="text-xs font-bold text-primary mt-1">Sınıf/Seviye: {(req.grade === 'KPSS' || req.grade === 'Mezun') ? req.grade : `${req.grade}. Sınıf`}</p>
                             </div>
 
                             <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-xl tracking-wider ${
@@ -2184,6 +2191,8 @@ const TeacherDashboard = () => {
                   <select className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" value={newStudent.grade} onChange={(e) => setNewStudent({...newStudent, grade: e.target.value})} required>
                     <option value="">Seçiniz</option>
                     {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    <option value="Mezun">Mezun</option>
+                    <option value="KPSS">KPSS</option>
                   </select>
                 </div>
               </div>
@@ -2208,6 +2217,11 @@ const TeacherDashboard = () => {
                   <label className="text-xs font-black text-slate-400 uppercase ml-1">Veli Tel</label>
                   <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none" value={newStudent.parentTel} onChange={(e) => setNewStudent({...newStudent, parentTel: e.target.value})}/>
                 </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-slate-100">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Verilen Hizmet (Opsiyonel)</label>
+                <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" placeholder="Örn: Haftalık 2 Ders Matematik Özel Ders, LGS Hazırlık Paketi vb." value={newStudent.serviceProvided || ''} onChange={(e) => setNewStudent({...newStudent, serviceProvided: e.target.value})}/>
               </div>
 
               <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Kaydı Tamamla</button>
@@ -2247,6 +2261,8 @@ const TeacherDashboard = () => {
                   >
                     <option value="">Seçiniz</option>
                     {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    <option value="Mezun">Mezun</option>
+                    <option value="KPSS">KPSS</option>
                   </select>
                 </div>
               </div>
@@ -2290,6 +2306,16 @@ const TeacherDashboard = () => {
                     onChange={(e) => setEditingStudent({...editingStudent, parentTel: e.target.value})}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-slate-100">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Verilen Hizmet (Opsiyonel)</label>
+                <input
+                  className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="Örn: Haftalık 2 Ders Matematik Özel Ders, LGS Hazırlık Paketi vb."
+                  value={editingStudent.serviceProvided || ''}
+                  onChange={(e) => setEditingStudent({...editingStudent, serviceProvided: e.target.value})}
+                />
               </div>
 
               <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Değişiklikleri Kaydet</button>
