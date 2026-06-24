@@ -74,7 +74,7 @@ const ZoomMeeting = ({ meetingNumber, meetingPassword, role, userName, userEmail
               signature: signature,
               sdkKey: sdkKey,
               passWord: meetingPassword || '',
-              userEmail: userEmail || 'info@fullematematik.com',
+              userEmail: userEmail || 'info@fullematematigi.com.tr',
               success: (success) => {
                 console.log('Joined zoom meeting successfully:', success);
                 setLoading(false);

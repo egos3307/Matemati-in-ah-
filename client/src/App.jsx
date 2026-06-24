@@ -13,7 +13,7 @@ import BlogPostDetail from './pages/BlogPostDetail';
 
 // Placeholder components for other pages
 const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematik, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
-const Contact = () => <div className="p-8 text-center mt-20 text-gray-700">Bize ulaşın: iletisim@fullematematik.com</div>;
+const Contact = () => <div className="p-8 text-center mt-20 text-gray-700">Bize ulaşın: info@fullematematigi.com.tr</div>;
 
 const AppContent = () => {
   const location = useLocation();

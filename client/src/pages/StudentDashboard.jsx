@@ -251,28 +251,114 @@ const StudentDashboard = () => {
   };
 
   const loadSubjects = () => {
-    // Grade based subjects from ders.md logic
     const gradeSubjects = {
-      "5": ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce"],
-      "6": ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce"],
-      "7": ["Türkçe", "Matematik", "Fen Bilimleri", "Sosyal Bilgiler", "İngilizce"],
-      "8": ["Türkçe", "Matematik", "Fen Bilimleri", "T.C. İnkılap Tarihi ve Atatürkçülük", "İngilizce"],
-      "9": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "İngilizce"],
-      "10": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "İngilizce"],
-      "11": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"],
-      "12": ["Türk Dili ve Edebiyatı", "Matematik", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"],
-      "KPSS": ["Matematik", "Geometri", "Sayısal Mantık", "Türkçe", "Tarih", "Coğrafya", "Vatandaşlık"],
-      "Mezun": ["Türk Dili ve Edebiyatı", "Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Tarih", "Coğrafya", "Felsefe", "İngilizce"]
+      "5": [
+        { name: "Türkçe", count: 20 },
+        { name: "Matematik", count: 20 },
+        { name: "Fen Bilimleri", count: 20 },
+        { name: "Sosyal Bilgiler", count: 20 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "6": [
+        { name: "Türkçe", count: 20 },
+        { name: "Matematik", count: 20 },
+        { name: "Fen Bilimleri", count: 20 },
+        { name: "Sosyal Bilgiler", count: 20 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "7": [
+        { name: "Türkçe", count: 20 },
+        { name: "Matematik", count: 20 },
+        { name: "Fen Bilimleri", count: 20 },
+        { name: "Sosyal Bilgiler", count: 20 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "8": [
+        { name: "Türkçe", count: 20 },
+        { name: "Matematik", count: 20 },
+        { name: "Fen Bilimleri", count: 20 },
+        { name: "T.C. İnkılap Tarihi ve Atatürkçülük", count: 10 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü ve Ahlak Bilgisi", count: 10 }
+      ],
+      "9": [
+        { name: "Türk Dili ve Edebiyatı", count: 30 },
+        { name: "Matematik", count: 30 },
+        { name: "Fizik", count: 15 },
+        { name: "Kimya", count: 15 },
+        { name: "Biyoloji", count: 15 },
+        { name: "Tarih", count: 15 },
+        { name: "Coğrafya", count: 15 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "10": [
+        { name: "Türk Dili ve Edebiyatı", count: 30 },
+        { name: "Matematik", count: 30 },
+        { name: "Fizik", count: 15 },
+        { name: "Kimya", count: 15 },
+        { name: "Biyoloji", count: 15 },
+        { name: "Tarih", count: 15 },
+        { name: "Coğrafya", count: 15 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "11": [
+        { name: "Türk Dili ve Edebiyatı", count: 30 },
+        { name: "Matematik", count: 30 },
+        { name: "Fizik", count: 15 },
+        { name: "Kimya", count: 15 },
+        { name: "Biyoloji", count: 15 },
+        { name: "Tarih", count: 15 },
+        { name: "Coğrafya", count: 15 },
+        { name: "Felsefe", count: 10 },
+        { name: "İngilizce", count: 10 },
+        { name: "Din Kültürü", count: 10 }
+      ],
+      "12": [
+        { name: "Türkçe (TYT)", count: 40 },
+        { name: "Matematik (TYT)", count: 40 },
+        { name: "Fizik (TYT)", count: 7 },
+        { name: "Kimya (TYT)", count: 7 },
+        { name: "Biyoloji (TYT)", count: 6 },
+        { name: "Tarih (TYT)", count: 5 },
+        { name: "Coğrafya (TYT)", count: 5 },
+        { name: "Felsefe (TYT)", count: 5 },
+        { name: "Din Kültürü (TYT)", count: 5 }
+      ],
+      "Mezun": [
+        { name: "Türkçe (TYT)", count: 40 },
+        { name: "Matematik (TYT)", count: 40 },
+        { name: "Fizik (TYT)", count: 7 },
+        { name: "Kimya (TYT)", count: 7 },
+        { name: "Biyoloji (TYT)", count: 6 },
+        { name: "Tarih (TYT)", count: 5 },
+        { name: "Coğrafya (TYT)", count: 5 },
+        { name: "Felsefe (TYT)", count: 5 },
+        { name: "Din Kültürü (TYT)", count: 5 }
+      ],
+      "KPSS": [
+        { name: "Türkçe", count: 30 },
+        { name: "Matematik ve Geometri", count: 30 },
+        { name: "Tarih", count: 27 },
+        { name: "Coğrafya", count: 18 },
+        { name: "Vatandaşlık", count: 9 },
+        { name: "Güncel Bilgiler", count: 6 }
+      ]
     };
     
     const userGrade = user?.grade || "5";
-    const currentSubjects = gradeSubjects[userGrade] || gradeSubjects["5"];
-    setSubjects(currentSubjects);
+    const currentSubjectsData = gradeSubjects[userGrade] || gradeSubjects["5"];
     
-    // Initialize results state
+    const subjectNames = currentSubjectsData.map(s => s.name);
+    setSubjects(subjectNames);
+    
     const initialResults = {};
-    currentSubjects.forEach(s => {
-      initialResults[s] = { questionCount: 20, correct: 0, wrong: 0, empty: 20, net: 0 };
+    currentSubjectsData.forEach(s => {
+      initialResults[s.name] = { questionCount: s.count, correct: 0, wrong: 0, empty: s.count, net: 0 };
     });
     setNewTrial({ name: '', type: 'GENEL', results: initialResults });
   };
@@ -285,9 +371,6 @@ const StudentDashboard = () => {
       return;
     }
     setSubjects(prev => [...prev, name]);
-    
-    const userGradeNum = parseInt(user?.grade) || 5;
-    const coef = userGradeNum <= 8 ? (1/3) : 0.25;
     
     setNewTrial(prev => ({
       ...prev,
@@ -367,9 +450,15 @@ const StudentDashboard = () => {
     // Calculate empty
     currentSubject.empty = Math.max(0, currentSubject.questionCount - (currentSubject.correct + currentSubject.wrong));
     
-    // Calculate net: LGS (grade <= 8) is 3 wrong = 1 correct, YKS (grade >= 9) is 4 wrong = 1 correct
-    const userGradeNum = parseInt(user?.grade) || 5;
-    const coef = userGradeNum <= 8 ? (1/3) : 0.25;
+    // Calculate net: LGS (grade <= 8) is 3 wrong = 1 correct, YKS (grade >= 9) and KPSS/Mezun is 4 wrong = 1 correct
+    const userGrade = user?.grade || "5";
+    let coef = 0.25;
+    if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
+      const userGradeNum = parseInt(userGrade) || 5;
+      if (userGradeNum <= 8) {
+        coef = 1/3;
+      }
+    }
     currentSubject.net = Math.max(0, currentSubject.correct - (currentSubject.wrong * coef));
     
     setNewTrial({
@@ -450,30 +539,129 @@ const StudentDashboard = () => {
     });
   };
 
-  const mathTopics = isLise ? [
-    'Temel Kavramlar ve Sayılar',
-    'Bölme ve Bölünebilme',
-    'Rasyonel Sayılar',
-    'Birinci Dereceden Denklemler',
-    'Üslü ve Köklü Sayılar',
-    'Çarpanlara Ayırma',
-    'Oran-Orantı',
-    'Problemler',
-    'Kümeler ve Fonksiyonlar',
-    'Polinomlar ve İkinci Dereceden Denklemler',
-    'Trigonometri',
-    'Logaritma ve Diziler',
-    'Limit, Türev, İntegral',
-    'Geometri (Üçgenler ve Çokgenler)'
-  ] : [
-    'Sayılar ve İşlemler',
-    'Üslü ve Köklü İfadeler',
-    'Cebirsel İfadeler',
-    'Denklemler ve Eşitsizlikler',
-    'Geometri ve Ölçme',
-    'Veri İşleme',
-    'Olasılık'
-  ];
+  const topicsByGrade = {
+    "5": [
+      "Doğal Sayılar ve Doğal Sayılarla İşlemler",
+      "Kesirler ve Kesirlerle İşlemler",
+      "Ondalık Gösterim ve Yüzdeler",
+      "Temel Geometrik Kavramlar ve Çizimler",
+      "Üçgenler ve Dörtgenler",
+      "Uzunluk ve Zaman Ölçme",
+      "Alan Ölçme",
+      "Veri İşleme",
+      "Geometrik Cisimler (Prizmalar)"
+    ],
+    "6": [
+      "Doğal Sayılarla İşlemler (Çarpanlar ve Katlar)",
+      "Kümeler",
+      "Tam Sayılar ve Kesirler",
+      "Ondalık Gösterim ve Oran",
+      "Cebirsel İfadeler ve Veri Analizi",
+      "Açılar ve Alan Ölçme",
+      "Çember",
+      "Geometrik Cisimler ve Hacim Ölçme",
+      "Sıvı Ölçme"
+    ],
+    "7": [
+      "Tam Sayılarla İşlemler",
+      "Rasyonel Sayılar ve Rasyonel Sayılarla İşlemler",
+      "Cebirsel İfadeler ve Denklem Çözme",
+      "Eşitlik ve Denklem",
+      "Oran ve Orantı",
+      "Yüzdeler",
+      "Doğrular ve Açılar",
+      "Çokgenler",
+      "Çember ve Daire",
+      "Veri Analizi",
+      "Cisimlerin Farklı Yönlerden Görünümleri"
+    ],
+    "8": [
+      "Çarpanlar ve Katlar",
+      "Üslü İfadeler",
+      "Kareköklü İfadeler",
+      "Veri Analizi",
+      "Basit Olayların Olma Olasılığı",
+      "Cebirsel İfadeler ve Özdeşlikler",
+      "Doğrusal Denklemler",
+      "Eşitsizlikler",
+      "Üçgenler ve Üçgende Yardımcı Elemanlar",
+      "Eşlik ve Benzerlik",
+      "Dönüşüm Geometrisi",
+      "Geometrik Cisimler (Prizma, Silindir, Piramit, Koni)"
+    ],
+    "9": [
+      "Mantık",
+      "Kümeler (Alt Küme, Kümelerde İşlemler)",
+      "Sayı Kümeleri, Bölünebilme Kuralları",
+      "EBOB-EKOK",
+      "Birinci Dereceden Denklemler ve Eşitsizlikler",
+      "Üslü ve Köklü İfadeler",
+      "Oran-Orantı ve Problemler",
+      "Üçgenler (Açı, Benzerlik, Alan ve Trigonometri)",
+      "Veri Analizi"
+    ],
+    "10": [
+      "Sayma ve Olasılık (Permütasyon, Kombinasyon, Binom, Olasılık)",
+      "Fonksiyonlar (Tanım, Grafikler, Bileşke ve Ters Fonksiyon)",
+      "Polinomlar ve Polinomlarda İşlemler",
+      "Çarpanlara Ayırma",
+      "İkinci Dereceden Denklemler ve Karmaşık Sayılar",
+      "Çokgenler ve Dörtgenler (Özel Dörtgenler)",
+      "Uzay Geometri (Prizma ve Piramitlerin Hacimleri)"
+    ],
+    "11": [
+      "Trigonometri (Yönlü Açılar, Fonksiyonlar, Grafikler, Teoremler)",
+      "Analitik Geometri (Doğrunun Analitik İncelenmesi)",
+      "Fonksiyonlarda Uygulamalar (Artan/Azalan, Parabol, Dönüşümler)",
+      "İkinci Dereceden Denklem ve Eşitsizlik Sistemleri",
+      "Çember ve Daire (Açı, Teğet, Uzunluk ve Alan)",
+      "Uzay Geometri (Katı Cisimler: Silindir, Koni, Küre)",
+      "Koşullu Olasılık ve Deneysel/Teorik Olasılık"
+    ],
+    "12": [
+      "Üstel ve Logaritmik Fonksiyonlar",
+      "Diziler (Aritmetik ve Geometrik Diziler)",
+      "Trigonometri (Toplam-Fark, Yarım Açı, Trigonometrik Denklemler)",
+      "Limit ve Süreklilik",
+      "Türev ve Uygulamaları (Maksimum-Minimum Problemleri)",
+      "İntegral ve Uygulamaları (Belirli İntegral ile Alan Hesabı)",
+      "Çemberin Analitik İncelenmesi"
+    ],
+    "Mezun": [
+      "Temel Kavramlar ve Sayı Kümeleri",
+      "Bölme, Bölünebilme ve EBOB-EKOK",
+      "Rasyonel Sayılar ve Birinci Dereceden Denklemler",
+      "Basit Eşitsizlikler ve Mutlak Değer",
+      "Üslü ve Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Oran-Orantı ve Problemler",
+      "Kümeler ve Fonksiyonlar",
+      "Polinomlar ve İkinci Dereceden Denklemler",
+      "Permütasyon, Kombinasyon, Binom ve Olasılık",
+      "Trigonometri (TYT-AYT)",
+      "Logaritma ve Diziler",
+      "Limit, Türev ve İntegral",
+      "Geometri (Üçgenler, Dörtgenler, Çember, Analitik Geometri)"
+    ],
+    "KPSS": [
+      "Temel Kavramlar ve Sayı Kümeleri",
+      "Bölme, Bölünebilme ve EBOB-EKOK",
+      "Rasyonel Sayılar ve Basit Eşitsizlikler",
+      "Mutlak Değer",
+      "Üslü ve Köklü İfadeler",
+      "Çarpanlara Ayırma ve Denklem Çözme",
+      "Oran-Orantı ve Problemler",
+      "Kümeler ve Fonksiyonlar",
+      "Modüler Aritmetik ve İşlem",
+      "Permütasyon, Kombinasyon ve Olasılık",
+      "Sayısal Mantık",
+      "Geometri (Açılar, Üçgenler, Çokgenler, Çember ve Analitik Geometri)"
+    ]
+  };
+
+  const userGrade = user?.grade || "5";
+  const mathTopics = topicsByGrade[userGrade] || topicsByGrade["5"];
+
 
   // Calculate topic curriculum completion rate
   const totalTasks = mathTopics.length * 3;
@@ -1264,7 +1452,20 @@ const StudentDashboard = () => {
                             <div className="col-span-2 text-center font-bold text-slate-600 text-xs">{res.questionCount !== undefined ? res.questionCount : '-'}</div>
                             <div className="col-span-2 text-center font-bold text-green-600 text-xs">{res.correct}</div>
                             <div className="col-span-2 text-center font-bold text-red-500 text-xs">{res.wrong}</div>
-                            <div className="col-span-2 text-right font-black text-primary text-xs">{res.net !== undefined ? res.net.toFixed(2) : (res.correct - (res.wrong * 0.25)).toFixed(2)}</div>
+                            <div className="col-span-2 text-right font-black text-primary text-xs">
+                              {(() => {
+                                const userGrade = user?.grade || "5";
+                                let coef = 0.25;
+                                if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
+                                  const userGradeNum = parseInt(userGrade) || 5;
+                                  if (userGradeNum <= 8) {
+                                    coef = 1/3;
+                                  }
+                                }
+                                const calculatedNet = res.net !== undefined ? res.net : (res.correct - (res.wrong * coef));
+                                return Math.max(0, calculatedNet).toFixed(2);
+                              })()}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1445,7 +1646,7 @@ const StudentDashboard = () => {
                 meetingPassword={password}
                 role="STUDENT"
                 userName={user?.name || 'Öğrenci'}
-                userEmail={user?.email || 'info@fullematematik.com'}
+                userEmail={user?.email || 'info@fullematematigi.com.tr'}
                 onClose={() => setActiveMeeting(null)}
               />
             );

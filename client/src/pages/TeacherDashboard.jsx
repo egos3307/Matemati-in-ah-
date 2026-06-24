@@ -474,6 +474,17 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleDeleteLesson = async (lessonId) => {
+    if (!window.confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/lessons/${lessonId}`);
+      fetchLessons();
+      alert('Ders başarıyla silindi!');
+    } catch (err) {
+      alert('Ders silinirken hata oluştu.');
+    }
+  };
+
   const handleDeleteCamp = async (id) => {
     try {
       await axios.delete(`/api/teacher/camps/${id}`);
@@ -747,6 +758,13 @@ const TeacherDashboard = () => {
                                 <span className="material-symbols-outlined text-base">chat</span>
                               </a>
                             )}
+                            <button
+                              onClick={() => handleDeleteLesson(lesson.id)}
+                              className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+                              title="Dersi Sil"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                            </button>
                           </div>
                         </div>
                       ))
@@ -1029,7 +1047,20 @@ const TeacherDashboard = () => {
                                       <div className="col-span-2 text-center font-bold text-slate-600 text-xs">{res.questionCount !== undefined ? res.questionCount : '-'}</div>
                                       <div className="col-span-2 text-center font-bold text-green-600 text-xs">{res.correct}</div>
                                       <div className="col-span-2 text-center font-bold text-red-500 text-xs">{res.wrong}</div>
-                                      <div className="col-span-2 text-right font-black text-primary text-xs">{res.net !== undefined ? res.net.toFixed(2) : (res.correct - (res.wrong * 0.25)).toFixed(2)}</div>
+                                      <div className="col-span-2 text-right font-black text-primary text-xs">
+                                        {(() => {
+                                          const userGrade = selectedStudent?.grade || "5";
+                                          let coef = 0.25;
+                                          if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
+                                            const userGradeNum = parseInt(userGrade) || 5;
+                                            if (userGradeNum <= 8) {
+                                              coef = 1/3;
+                                            }
+                                          }
+                                          const calculatedNet = res.net !== undefined ? res.net : (res.correct - (res.wrong * coef));
+                                          return Math.max(0, calculatedNet).toFixed(2);
+                                        })()}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -1277,6 +1308,14 @@ const TeacherDashboard = () => {
                                 title={lesson.recordingUrl ? "Kayıt Var (Düzenle)" : lesson.recordingRequested ? "Kayıt İstendi (Ekle)" : "Kayıt Ekle"}
                               >
                                 <span className="material-symbols-outlined text-base">video_library</span>
+                              </button>
+
+                              <button 
+                                onClick={() => handleDeleteLesson(lesson.id)}
+                                className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                title="Dersi Sil"
+                              >
+                                <span className="material-symbols-outlined text-base">delete</span>
                               </button>
                             </div>
                           </div>
@@ -2615,7 +2654,7 @@ const TeacherDashboard = () => {
                 meetingPassword={password}
                 role="TEACHER"
                 userName={user?.name || 'Öğretmen'}
-                userEmail={user?.email || 'info@fullematematik.com'}
+                userEmail={user?.email || 'info@fullematematigi.com.tr'}
                 onClose={() => setActiveMeeting(null)}
               />
             );

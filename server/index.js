@@ -336,6 +336,25 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
   }
 });
 
+app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    // Detach homework from this lesson to prevent foreign key constraint issues
+    await prisma.homework.updateMany({
+      where: { lessonId: id },
+      data: { lessonId: null }
+    });
+
+    const deleted = await prisma.lesson.delete({
+      where: { id }
+    });
+    res.json({ success: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({

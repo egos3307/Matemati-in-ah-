@@ -432,15 +432,21 @@ const Home = () => {
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4">
                   <span className="material-symbols-outlined">mail</span>
-                  <span>bilgi@fullematematik.com</span>
+                  <span>info@fullematematigi.com.tr</span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="material-symbols-outlined">call</span>
-                  <span>+90 (555) 123 45 67</span>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-4">
+                    <span className="material-symbols-outlined">call</span>
+                    <span>0535 059 89 50</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="material-symbols-outlined">call</span>
+                    <span>0545 225 96 35</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="material-symbols-outlined">location_on</span>
-                  <span>Beşiktaş, İstanbul</span>
+                  <span>Malatya, Yeşilyurt</span>
                 </div>
               </div>
             </div>
@@ -528,14 +534,8 @@ const Home = () => {
                 Türkiye'nin en interaktif matematik platformu olarak, öğrencilerin hedeflerine ulaşmasında en büyük destekçisiyiz. Kaliteli içerik ve uzman kadromuzla yanınızdayız.
               </p>
               <div className="flex gap-4">
-                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="#">
-                  <span className="material-symbols-outlined">social_leaderboard</span>
-                </a>
-                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="#">
+                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="https://instagram.com/fullematematigi" target="_blank" rel="noopener noreferrer" title="Instagram">
                   <span className="material-symbols-outlined">camera_alt</span>
-                </a>
-                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="#">
-                  <span className="material-symbols-outlined">share</span>
                 </a>
               </div>
             </div>
