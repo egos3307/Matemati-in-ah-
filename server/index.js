@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { auth, checkRole } = require('./middleware/auth');
 const crypto = require('crypto');
+const { AccessToken } = require('livekit-server-sdk');
+
 
 async function createDailyRoom() {
   const apiKey = process.env.DAILY_API_KEY;
@@ -646,6 +648,39 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
       sdkKey: sdkKey
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// LiveKit Token Endpoint
+app.post('/api/livekit/token', auth, async (req, res) => {
+  const { roomName, participantName, role } = req.body;
+  const apiKey = process.env.LIVEKIT_API_KEY || 'devkey';
+  const apiSecret = process.env.LIVEKIT_API_SECRET || 'secret';
+  const livekitUrl = process.env.LIVEKIT_URL || 'wss://fullematematik-live.livekit.cloud';
+
+  if (!roomName || !participantName) {
+    return res.status(400).json({ error: 'Oda adı (roomName) ve katılımcı adı (participantName) gereklidir.' });
+  }
+
+  try {
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity: participantName,
+      metadata: JSON.stringify({ role: role || 'STUDENT' })
+    });
+
+    at.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true
+    });
+
+    const token = await at.toJwt();
+    res.json({ token, serverUrl: livekitUrl });
+  } catch (err) {
+    console.error('LiveKit token generation error:', err);
     res.status(500).json({ error: err.message });
   }
 });
