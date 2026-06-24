@@ -437,6 +437,17 @@ const StudentDashboard = () => {
 
   const isLise = parseInt(user?.grade) >= 9;
 
+  const getTodayLessons = () => {
+    const today = new Date();
+    return lessons.filter(lesson => {
+      if (!lesson.date) return false;
+      const d = new Date(lesson.date);
+      return d.getDate() === today.getDate() &&
+             d.getMonth() === today.getMonth() &&
+             d.getFullYear() === today.getFullYear();
+    });
+  };
+
   const mathTopics = isLise ? [
     'Temel Kavramlar ve Sayılar',
     'Bölme ve Bölünebilme',
@@ -491,6 +502,29 @@ const StudentDashboard = () => {
         {activeTab === 'panel' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
+            {/* TODAY'S LESSON ALERT WIDGET */}
+            {getTodayLessons().length > 0 && (
+              <div className="p-6 bg-gradient-to-r from-primary to-indigo-950 rounded-3xl border border-primary/20 shadow-lg text-white flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/15">
+                    <span className="material-symbols-outlined text-2xl text-amber-300 animate-pulse">videocam</span>
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm tracking-wide">Bugün Canlı Dersin Var!</h4>
+                    <p className="text-xs text-white/80 font-semibold mt-0.5">
+                      {getTodayLessons()[0].title} • {new Date(getTodayLessons()[0].date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setActiveMeeting(getTodayLessons()[0])}
+                  className="bg-white hover:bg-slate-50 text-slate-900 px-6 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer hover:scale-102 transition-all self-start md:self-center uppercase tracking-wider"
+                >
+                  Derse Katıl
+                </button>
+              </div>
+            )}
+
             {/* MOTIVATIONAL COVER BANNER (FOTO VE YAZI YERI) */}
             <div className="relative h-48 md:h-56 w-full rounded-3xl overflow-hidden shadow-md border border-slate-100 group">
               {/* Banner Image or Default Mathematical Gradient */}
@@ -1290,7 +1324,15 @@ const StudentDashboard = () => {
                       <p className="text-xs text-slate-500 mt-1">{new Date(lesson.date).toLocaleString('tr-TR')}</p>
                     </div>
                     <div className="flex gap-2 items-center">
-                      {isPast ? (
+                      {/* Katıl button is always visible so students can join the classroom */}
+                      <button 
+                        onClick={() => setActiveMeeting(lesson)} 
+                        className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer shadow-sm hover:bg-primary/95 transition-all"
+                      >
+                        Katıl
+                      </button>
+
+                      {isPast && (
                         <>
                           {lesson.recordingRequested ? (
                             lesson.recordingUrl ? (
@@ -1319,13 +1361,6 @@ const StudentDashboard = () => {
                             </button>
                           )}
                         </>
-                      ) : (
-                        <button 
-                          onClick={() => setActiveMeeting(lesson)} 
-                          className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer shadow-sm hover:bg-primary/95 transition-all"
-                        >
-                          Katıl
-                        </button>
                       )}
                     </div>
                   </div>
