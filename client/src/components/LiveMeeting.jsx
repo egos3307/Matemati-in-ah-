@@ -381,6 +381,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const backupIntervalRef = useRef(null);
   const audioContextRef = useRef(null);
   const audioDestinationRef = useRef(null);
   const connectedTrackIdsRef = useRef(new Set());
@@ -391,6 +392,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (backupIntervalRef.current) {
+        clearInterval(backupIntervalRef.current);
       }
       if (audioContextRef.current) {
         try {
@@ -513,12 +517,21 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         } catch (drawErr) {
           console.warn("Canvas draw frame warning:", drawErr);
         }
-
-        animationFrameRef.current = requestAnimationFrame(drawFrame);
       };
 
-      // Start drawing frames onto canvas
-      drawFrame();
+      // Hybrid loop: use requestAnimationFrame for active tab, setInterval for background tab
+      const tick = () => {
+        drawFrame();
+        animationFrameRef.current = requestAnimationFrame(tick);
+      };
+      
+      // Start active tab drawing loop
+      animationFrameRef.current = requestAnimationFrame(tick);
+
+      // Start backup background tab drawing loop (throttled to 10 FPS in background to avoid browser completely freezing video)
+      backupIntervalRef.current = setInterval(() => {
+        drawFrame();
+      }, 100);
 
       // 5. Build media stream (Canvas 24 FPS + Mixed Audio)
       const canvasStream = canvas.captureStream(24);
@@ -569,6 +582,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
+        }
+        if (backupIntervalRef.current) {
+          clearInterval(backupIntervalRef.current);
+          backupIntervalRef.current = null;
         }
         if (audioContextRef.current) {
           try {
@@ -647,6 +664,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
+      }
+      if (backupIntervalRef.current) {
+        clearInterval(backupIntervalRef.current);
+        backupIntervalRef.current = null;
       }
     }
   };
@@ -1671,7 +1692,19 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         </div>
       )}
       {/* Hidden canvas used for background recording */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} width={1280} height={720} />
+      <canvas 
+        ref={canvasRef} 
+        style={{ 
+          position: 'fixed', 
+          left: '-9999px', 
+          top: '-9999px', 
+          pointerEvents: 'none', 
+          width: '1280px', 
+          height: '720px' 
+        }} 
+        width={1280} 
+        height={720} 
+      />
     </div>
   );
 };
