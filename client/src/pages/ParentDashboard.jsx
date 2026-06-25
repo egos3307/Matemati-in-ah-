@@ -10,6 +10,7 @@ const ParentDashboard = () => {
   const [trials, setTrials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeRecordingUrl, setActiveRecordingUrl] = useState(null);
   const { logout } = useAuth();
 
   useEffect(() => {
@@ -314,15 +315,13 @@ const ParentDashboard = () => {
 
                       <div className="flex items-center gap-2">
                         {isCompleted && lesson.recordingUrl ? (
-                          <a 
-                            href={lesson.recordingUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                          <button 
+                            onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
                             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 transition-colors shadow-sm cursor-pointer uppercase tracking-wider"
                           >
                             <span className="material-symbols-outlined text-[14px]">play_circle</span>
                             Kaydı İzle
-                          </a>
+                          </button>
                         ) : isCompleted ? (
                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                             Ders Tamamlandı
@@ -484,6 +483,35 @@ const ParentDashboard = () => {
           <span className="text-[10px] font-bold">Performans</span>
         </button>
       </nav>
+
+      {/* Video Recording Playback Modal */}
+      {activeRecordingUrl && (
+        <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full border border-slate-100 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">play_circle</span>
+                Ders Kaydı İzle
+              </h3>
+              <button 
+                onClick={() => setActiveRecordingUrl(null)}
+                className="text-slate-400 hover:text-slate-650 p-1 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+              <video 
+                src={activeRecordingUrl} 
+                controls 
+                playsInline 
+                autoPlay
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
