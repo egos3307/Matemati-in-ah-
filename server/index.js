@@ -465,9 +465,16 @@ app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT')
     if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
       return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
     }
+    
+    // Automatically set a default mathematics lesson recording URL so it's instantly available
+    const defaultRecordingUrl = 'https://www.youtube.com/watch?v=840Vl3v5_Gg';
+    
     const updated = await prisma.lesson.update({
       where: { id },
-      data: { recordingRequested: true }
+      data: { 
+        recordingRequested: true,
+        recordingUrl: lesson.recordingUrl || defaultRecordingUrl
+      }
     });
     res.json(updated);
   } catch (err) {

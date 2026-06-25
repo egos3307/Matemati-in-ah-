@@ -53,7 +53,7 @@ const Login = () => {
               onClick={() => { setLoginType('STUDENT'); setError(''); }}
               className={`flex-1 py-3 text-sm font-black rounded-xl transition-all ${loginType === 'STUDENT' ? 'bg-white text-primary shadow-sm' : 'text-slate-400'}`}
             >
-              Öğrenci Girişi
+              Öğrenci/Veli Girişi
             </button>
             <button 
               onClick={() => { setLoginType('TEACHER'); setError(''); }}
@@ -89,7 +89,7 @@ const Login = () => {
                 <input
                   type="email"
                   required
-                  placeholder="burakcelik@fullematematigi.com.tr"
+                  placeholder="ornek@fullematematigi.com.tr"
                   className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
