@@ -9,7 +9,8 @@ import {
   useConnectionState,
   useParticipants,
   useMaybeRoomContext,
-  RoomAudioRenderer
+  RoomAudioRenderer,
+  useDataChannel
 } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
@@ -27,7 +28,7 @@ const checkIsTeacher = (participant) => {
 };
 
 // WHITEBOARD COMPONENT
-const Whiteboard = ({ room, role, whiteboardCanvasRef }) => {
+const Whiteboard = ({ role, whiteboardCanvasRef }) => {
   const isTeacher = role === 'TEACHER';
   const canvasElRef = useRef(null);
   const [color, setColor] = useState('#ff0000'); // Default to red
@@ -35,6 +36,7 @@ const Whiteboard = ({ room, role, whiteboardCanvasRef }) => {
   const [isEraser, setIsEraser] = useState(false);
   const drawingRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
+  const { send } = useDataChannel('whiteboard');
 
   useEffect(() => {
     const canvas = canvasElRef.current;
@@ -102,21 +104,19 @@ const Whiteboard = ({ room, role, whiteboardCanvasRef }) => {
     ctx.stroke();
 
     // Publish to LiveKit
-    if (room) {
-      const packet = {
-        type: 'draw',
-        x0: lastPosRef.current.x,
-        y0: lastPosRef.current.y,
-        x1: currentPos.x,
-        y1: currentPos.y,
-        color,
-        size: penSize,
-        isEraser
-      };
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(packet));
-      room.localParticipant.publishData(data, { reliable: true });
-    }
+    const packet = {
+      type: 'draw',
+      x0: lastPosRef.current.x,
+      y0: lastPosRef.current.y,
+      x1: currentPos.x,
+      y1: currentPos.y,
+      color,
+      size: penSize,
+      isEraser
+    };
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(packet));
+    send(data, { reliable: true });
 
     lastPosRef.current = currentPos;
   };
@@ -132,12 +132,10 @@ const Whiteboard = ({ room, role, whiteboardCanvasRef }) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (room) {
-      const packet = { type: 'clear' };
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(packet));
-      room.localParticipant.publishData(data, { reliable: true });
-    }
+    const packet = { type: 'clear' };
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(packet));
+    send(data, { reliable: true });
   };
 
   return (
@@ -331,56 +329,50 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   }, [showWhiteboard]);
 
   // Handle incoming LiveKit data channel messages (Whiteboard sync)
-  useEffect(() => {
-    if (!room) return;
-    const handleData = (payload, participant, kind) => {
-      try {
-        const text = new TextDecoder().decode(payload);
-        const data = JSON.parse(text);
-        
-        if (data.type === 'toggle_whiteboard') {
-          setShowWhiteboard(data.visible);
-        } else if (data.type === 'draw') {
-          const canvas = whiteboardCanvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.strokeStyle = data.color;
-              ctx.lineWidth = data.size;
-              ctx.lineCap = 'round';
-              ctx.lineJoin = 'round';
-              
-              if (data.isEraser) {
-                ctx.globalCompositeOperation = 'destination-out';
-              } else {
-                ctx.globalCompositeOperation = 'source-over';
-              }
-              
-              ctx.beginPath();
-              ctx.moveTo(data.x0 * canvas.width, data.y0 * canvas.height);
-              ctx.lineTo(data.x1 * canvas.width, data.y1 * canvas.height);
-              ctx.stroke();
+  const { send } = useDataChannel('whiteboard', (msg) => {
+    try {
+      const text = new TextDecoder().decode(msg.payload);
+      const data = JSON.parse(text);
+      console.log("Incoming whiteboard data packet:", data);
+      
+      if (data.type === 'toggle_whiteboard') {
+        console.log("Toggling whiteboard display to:", data.visible);
+        setShowWhiteboard(data.visible);
+      } else if (data.type === 'draw') {
+        const canvas = whiteboardCanvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.strokeStyle = data.color;
+            ctx.lineWidth = data.size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (data.isEraser) {
+              ctx.globalCompositeOperation = 'destination-out';
+            } else {
+              ctx.globalCompositeOperation = 'source-over';
             }
-          }
-        } else if (data.type === 'clear') {
-          const canvas = whiteboardCanvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            
+            ctx.beginPath();
+            ctx.moveTo(data.x0 * canvas.width, data.y0 * canvas.height);
+            ctx.lineTo(data.x1 * canvas.width, data.y1 * canvas.height);
+            ctx.stroke();
           }
         }
-      } catch (err) {
-        console.error("Failed to parse data message:", err);
+      } else if (data.type === 'clear') {
+        const canvas = whiteboardCanvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
       }
-    };
-
-    room.on('dataReceived', handleData);
-    return () => {
-      room.off('dataReceived', handleData);
-    };
-  }, [room]);
+    } catch (err) {
+      console.error("Failed to parse data message:", err);
+    }
+  });
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -1067,12 +1059,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const handleToggleWhiteboard = () => {
     const nextVal = !showWhiteboard;
     setShowWhiteboard(nextVal);
-    if (room) {
-      const packet = { type: 'toggle_whiteboard', visible: nextVal };
-      const encoder = new TextEncoder();
-      const data = encoder.encode(JSON.stringify(packet));
-      room.localParticipant.publishData(data, { reliable: true });
-    }
+    const packet = { type: 'toggle_whiteboard', visible: nextVal };
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(packet));
+    send(data, { reliable: true });
   };
 
   const handleLeave = async () => {
@@ -1174,175 +1164,181 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       <div className="flex-1 flex relative overflow-hidden bg-[#05070a]">
         
         {/* VIDEO DISPLAY WINDOW */}
-        <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
-          {showWhiteboard ? (
-            // C. LAYOUT: WHITEBOARD ACTIVE
-            <div className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900">
-              <Whiteboard room={room} role={role} whiteboardCanvasRef={whiteboardCanvasRef} />
+        <div className="flex-1 relative overflow-hidden flex flex-col justify-center bg-black">
+          {/* Whiteboard view - always mounted but conditionally visible */}
+          <div 
+            className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900"
+            style={{ display: showWhiteboard ? 'flex' : 'none' }}
+          >
+            <Whiteboard role={role} whiteboardCanvasRef={whiteboardCanvasRef} />
+            
+            {/* Webcams Float Box (Draggable) */}
+            <div 
+              onMouseDown={handleMouseDown}
+              className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
+              style={{
+                left: `${floatingPos.x}px`,
+                top: `${floatingPos.y}px`,
+                width: '210px',
+              }}
+            >
+              {/* Header */}
+              <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px] text-primary">group</span>
+                  Katılımcılar
+                </span>
+                <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+              </div>
               
-              {/* Webcams Float Box (Draggable) */}
-              <div 
-                onMouseDown={handleMouseDown}
-                className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
-                style={{
-                  left: `${floatingPos.x}px`,
-                  top: `${floatingPos.y}px`,
-                  width: '210px',
-                }}
-              >
-                {/* Header */}
-                <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
-                  <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px] text-primary">group</span>
-                    Katılımcılar
-                  </span>
-                  <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
-                </div>
-                
-                {/* Videos */}
-                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
-                  {cameraTracks.map((trackRef) => {
-                    const isTeacher = checkIsTeacher(trackRef.participant);
-                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
-                    return (
-                      <div 
-                        key={trackKey} 
-                        className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
-                          isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
-                        }`}
-                      >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
-                        
-                        {/* Status name tags */}
-                        <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
-                          {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
-                          <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {cameraTracks.length === 0 && (
-                    <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                      Aktif kamera yok
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : isScreenSharing ? (
-            // A. LAYOUT: SCREEN SHARING ACTIVE
-            <div className="w-full h-full flex items-center justify-center p-3 relative bg-black">
-              <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950">
-                <VideoTrack 
-                  trackRef={screenShareTracks[0]} 
-                  className="w-full h-full object-contain" 
-                />
-              </div>
-
-              {/* Webcams Float Box (Draggable) */}
-              <div 
-                onMouseDown={handleMouseDown}
-                className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
-                style={{
-                  left: `${floatingPos.x}px`,
-                  top: `${floatingPos.y}px`,
-                  width: '210px',
-                }}
-              >
-                {/* Header */}
-                <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
-                  <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px] text-primary">group</span>
-                    Katılımcılar
-                  </span>
-                  <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
-                </div>
-                
-                {/* Videos */}
-                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
-                  {cameraTracks.map((trackRef) => {
-                    const isTeacher = checkIsTeacher(trackRef.participant);
-                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
-                    return (
-                      <div 
-                        key={trackKey} 
-                        className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
-                          isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
-                        }`}
-                      >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
-                        
-                        {/* Status name tags */}
-                        <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
-                          {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
-                          <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {cameraTracks.length === 0 && (
-                    <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                      Aktif kamera yok
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            // B. LAYOUT: NORMAL GRID OF WEBCAMS
-            <div className="w-full h-full flex items-center justify-center p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
+              {/* Videos */}
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
                 {cameraTracks.map((trackRef) => {
                   const isTeacher = checkIsTeacher(trackRef.participant);
                   const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
                   return (
                     <div 
                       key={trackKey} 
-                      className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] ${
-                        isTeacher 
-                          ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
-                          : 'border-slate-800 hover:border-primary/30'
+                      className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
+                        isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                       }`}
                     >
                       <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
                       
-                      {/* Floating tag inside camera panel */}
-                      <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
-                        {isTeacher ? (
-                          <span className="flex items-center gap-1 text-xs text-primary font-black">
-                            <span className="material-symbols-outlined text-xs">star</span>
-                            {trackRef.participant.name || trackRef.participant.identity}
-                          </span>
-                        ) : (
-                          <span className="text-slate-200">
-                            {trackRef.participant.name || trackRef.participant.identity} {trackRef.participant.identity.includes(localParticipant?.identity) ? '(Sen)' : ''}
-                          </span>
-                        )}
+                      {/* Status name tags */}
+                      <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
+                        {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
+                        <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
                       </div>
-
-                      {/* Speaking indicator overlay */}
-                      {trackRef.participant.isSpeaking && (
-                        <div className="absolute top-3 right-3 bg-primary text-white rounded-full p-1 shadow-lg shadow-primary/20 border border-white/20 animate-bounce flex items-center justify-center">
-                          <span className="material-symbols-outlined text-xs font-bold">volume_up</span>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
-
                 {cameraTracks.length === 0 && (
-                  <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-slate-900/10 rounded-[32px] border border-slate-900/30 max-w-md mx-auto shadow-sm">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center mb-4 shadow-inner">
-                      <span className="material-symbols-outlined text-3xl">videocam_off</span>
-                    </div>
-                    <h5 className="font-extrabold text-slate-300 text-sm mb-1.5 tracking-wide">Kameralar Bekleniyor</h5>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black leading-relaxed">
-                      Lütfen kameranızı açın. Diğer kullanıcıların kameralarını açmaları bekleniyor.
-                    </p>
+                  <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                    Aktif kamera yok
                   </div>
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Screen Share / Grid views - rendered when whiteboard is not active */}
+          {!showWhiteboard && (
+            isScreenSharing ? (
+              // A. LAYOUT: SCREEN SHARING ACTIVE
+              <div className="w-full h-full flex items-center justify-center p-3 relative bg-black">
+                <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950">
+                  <VideoTrack 
+                    trackRef={screenShareTracks[0]} 
+                    className="w-full h-full object-contain" 
+                  />
+                </div>
+
+                {/* Webcams Float Box (Draggable) */}
+                <div 
+                  onMouseDown={handleMouseDown}
+                  className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
+                  style={{
+                    left: `${floatingPos.x}px`,
+                    top: `${floatingPos.y}px`,
+                    width: '210px',
+                  }}
+                >
+                  {/* Header */}
+                  <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px] text-primary">group</span>
+                      Katılımcılar
+                    </span>
+                    <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+                  </div>
+                  
+                  {/* Videos */}
+                  <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
+                    {cameraTracks.map((trackRef) => {
+                      const isTeacher = checkIsTeacher(trackRef.participant);
+                      const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
+                      return (
+                        <div 
+                          key={trackKey} 
+                          className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
+                            isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
+                          }`}
+                        >
+                          <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
+                          
+                          {/* Status name tags */}
+                          <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
+                            {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
+                            <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {cameraTracks.length === 0 && (
+                      <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                        Aktif kamera yok
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // B. LAYOUT: NORMAL GRID OF WEBCAMS
+              <div className="w-full h-full flex items-center justify-center p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
+                  {cameraTracks.map((trackRef) => {
+                    const isTeacher = checkIsTeacher(trackRef.participant);
+                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
+                    return (
+                      <div 
+                        key={trackKey} 
+                        className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] ${
+                          isTeacher 
+                            ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
+                            : 'border-slate-800 hover:border-primary/30'
+                        }`}
+                      >
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
+                        
+                        {/* Floating tag inside camera panel */}
+                        <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
+                          {isTeacher ? (
+                            <span className="flex items-center gap-1 text-xs text-primary font-black">
+                              <span className="material-symbols-outlined text-xs">star</span>
+                              {trackRef.participant.name || trackRef.participant.identity}
+                            </span>
+                          ) : (
+                            <span className="text-slate-200">
+                              {trackRef.participant.name || trackRef.participant.identity} {trackRef.participant.identity.includes(localParticipant?.identity) ? '(Sen)' : ''}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Speaking indicator overlay */}
+                        {trackRef.participant.isSpeaking && (
+                          <div className="absolute top-3 right-3 bg-primary text-white rounded-full p-1 shadow-lg shadow-primary/20 border border-white/20 animate-bounce flex items-center justify-center">
+                            <span className="material-symbols-outlined text-xs font-bold">volume_up</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {cameraTracks.length === 0 && (
+                    <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-slate-900/10 rounded-[32px] border border-slate-900/30 max-w-md mx-auto shadow-sm">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center mb-4 shadow-inner">
+                        <span className="material-symbols-outlined text-3xl">videocam_off</span>
+                      </div>
+                      <h5 className="font-extrabold text-slate-300 text-sm mb-1.5 tracking-wide">Kameralar Bekleniyor</h5>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black leading-relaxed">
+                        Lütfen kameranızı açın. Diğer kullanıcıların kameralarını açmaları bekleniyor.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
           )}
         </div>
 
