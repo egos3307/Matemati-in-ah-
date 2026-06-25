@@ -132,25 +132,158 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
 
+  const canvasRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const audioDestinationRef = useRef(null);
+  const connectedTrackIdsRef = useRef(new Set());
+
+  // Clean up recording context when component unmounts
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        try {
+          audioContextRef.current.close();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  const connectAudioTrackToMixer = (mediaStreamTrack) => {
+    if (!mediaStreamTrack || !audioContextRef.current || !audioDestinationRef.current) return;
+    if (connectedTrackIdsRef.current.has(mediaStreamTrack.id)) return;
+    
+    try {
+      const ms = new MediaStream([mediaStreamTrack]);
+      const source = audioContextRef.current.createMediaStreamSource(ms);
+      source.connect(audioDestinationRef.current);
+      connectedTrackIdsRef.current.add(mediaStreamTrack.id);
+      console.log("Mixed audio track added:", mediaStreamTrack.id);
+    } catch (e) {
+      console.warn("Failed to mix audio track:", e);
+    }
+  };
+
   const startScreenRecording = async () => {
     try {
       chunksRef.current = [];
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        throw new Error("Tarayıcınız veya bağlantı türünüz ekran kaydı özelliğini desteklemiyor. Ekran kaydı başlatabilmek için sitenizin adresinin 'https://' ile başlaması (Güvenli Bağlantı) gerekmektedir.");
+      connectedTrackIdsRef.current.clear();
+
+      // 1. Initialize Web Audio API context for background mixing
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContextClass();
+      audioContextRef.current = audioCtx;
+      
+      const dest = audioCtx.createMediaStreamDestination();
+      audioDestinationRef.current = dest;
+
+      // 2. Connect local microphone audio track to mixer
+      if (localParticipant && isMicrophoneEnabled) {
+        const localAudioPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+        if (localAudioPub && localAudioPub.track && localAudioPub.track.mediaStreamTrack) {
+          connectAudioTrackToMixer(localAudioPub.track.mediaStreamTrack);
+        }
       }
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true
-      });
 
-      streamRef.current = screenStream;
+      // 3. Connect existing and future remote audio tracks to mixer
+      if (room) {
+        participants.forEach(p => {
+          p.trackPublications.forEach(pub => {
+            if (pub.kind === 'audio' && pub.track && pub.track.mediaStreamTrack) {
+              connectAudioTrackToMixer(pub.track.mediaStreamTrack);
+            }
+          });
+        });
 
+        // Dynamic track subscription hook
+        room.on('trackSubscribed', (track, publication, participant) => {
+          if (track.kind === 'audio' && track.mediaStreamTrack) {
+            connectAudioTrackToMixer(track.mediaStreamTrack);
+          }
+        });
+      }
+
+      // 4. Setup hidden canvas video capture loop
+      const canvas = canvasRef.current || document.createElement('canvas');
+      canvas.width = 1280;
+      canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+
+      const drawFrame = () => {
+        if (!ctx) return;
+
+        // Draw solid dark background
+        ctx.fillStyle = '#080b11';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Fetch all active, playing videos on the DOM
+        const videoElements = Array.from(document.querySelectorAll('video')).filter(video => {
+          return video.readyState >= 2 && !video.paused;
+        });
+
+        if (videoElements.length === 1) {
+          ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
+        } else if (videoElements.length === 2) {
+          const w = canvas.width / 2;
+          const h = canvas.height;
+          ctx.drawImage(videoElements[0], 0, 0, w, h);
+          ctx.drawImage(videoElements[1], w, 0, w, h);
+        } else if (videoElements.length > 2) {
+          const w = canvas.width / 2;
+          const h = canvas.height / 2;
+          ctx.drawImage(videoElements[0], 0, 0, w, h);
+          ctx.drawImage(videoElements[1], w, 0, w, h);
+          if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
+          if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
+        } else {
+          // If no videos are currently active, show a placeholder
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Canlı Ders Görüntüsü Bekleniyor...', canvas.width / 2, canvas.height / 2);
+        }
+
+        animationFrameRef.current = requestAnimationFrame(drawFrame);
+      };
+
+      // Start drawing frames onto canvas
+      drawFrame();
+
+      // 5. Build media stream (Canvas 24 FPS + Mixed Audio)
+      const canvasStream = canvas.captureStream(24);
+      const combinedStream = new MediaStream();
+
+      canvasStream.getVideoTracks().forEach(t => combinedStream.addTrack(t));
+      
+      const mixedAudioTrack = dest.stream.getAudioTracks()[0];
+      if (mixedAudioTrack) {
+        combinedStream.addTrack(mixedAudioTrack);
+      } else {
+        // Fallback microphone capture if mixer has no streams
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStream.getAudioTracks().forEach(t => combinedStream.addTrack(t));
+        } catch (micErr) {
+          console.warn("Fallback mic capture failed:", micErr);
+        }
+      }
+
+      streamRef.current = combinedStream;
+
+      // 6. Initialize MediaRecorder with standard fallbacks
       const options = { mimeType: 'video/webm;codecs=vp9,opus' };
       let recorder;
       try {
-        recorder = new MediaRecorder(screenStream, options);
+        recorder = new MediaRecorder(combinedStream, options);
       } catch (e) {
-        recorder = new MediaRecorder(screenStream);
+        try {
+          recorder = new MediaRecorder(combinedStream, { mimeType: 'video/mp4' });
+        } catch (e2) {
+          recorder = new MediaRecorder(combinedStream);
+        }
       }
 
       mediaRecorderRef.current = recorder;
@@ -163,14 +296,26 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       recorder.onstop = async () => {
         setRecordingStatus('saving');
+
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        if (audioContextRef.current) {
+          try {
+            await audioContextRef.current.close();
+          } catch (ctxErr) {}
+          audioContextRef.current = null;
+        }
+
         try {
-          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
           const tokenVal = localStorage.getItem('token');
           const response = await fetch(`/api/teacher/lessons/${lessonId}/upload-recording`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${tokenVal}`,
-              'Content-Type': 'video/webm'
+              'Content-Type': recorder.mimeType || 'video/webm'
             },
             body: blob
           });
@@ -196,13 +341,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       recorder.start(1000);
       setRecordingStatus('recording');
 
-      screenStream.getVideoTracks()[0].onended = () => {
-        stopScreenRecording();
-      };
     } catch (err) {
       console.error('Error starting screen recording:', err);
       alert('Kayıt başlatılamadı: ' + (err.message || err));
       setRecordingStatus('idle');
+      
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     }
   };
 
@@ -1104,6 +1251,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           </div>
         </div>
       )}
+      {/* Hidden canvas used for background recording */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} width={1280} height={720} />
     </div>
   );
 };
