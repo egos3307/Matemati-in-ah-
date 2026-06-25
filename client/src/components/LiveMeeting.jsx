@@ -522,7 +522,15 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-[99999] flex flex-col bg-[#080b11] font-sans text-slate-100 overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
+      style={{
+        backgroundImage: "linear-gradient(to bottom, rgba(8, 11, 17, 0.85), rgba(5, 7, 10, 0.9)), url('/canli-ders-bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
+    >
       {/* Top Header */}
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
         <div className="flex items-center gap-3">
@@ -561,7 +569,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       </div>
 
       {/* Main Content Pane (Videos & Sidebar) */}
-      <div className="flex-1 flex relative overflow-hidden bg-[#05070a]">
+      <div className="flex-1 flex relative overflow-hidden bg-transparent">
         
         {/* VIDEO DISPLAY WINDOW */}
         <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
@@ -667,8 +675,8 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
                 })}
 
                 {cameraTracks.length === 0 && (
-                  <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-slate-900/10 rounded-[32px] border border-slate-900/30 max-w-md mx-auto shadow-sm">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center mb-4 shadow-inner">
+                  <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-slate-900/40 backdrop-blur-md rounded-[32px] border border-slate-800 max-w-md mx-auto shadow-xl">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-900/60 border border-slate-800 text-slate-500 flex items-center justify-center mb-4 shadow-inner">
                       <span className="material-symbols-outlined text-3xl">videocam_off</span>
                     </div>
                     <h5 className="font-extrabold text-slate-300 text-sm mb-1.5 tracking-wide">Kameralar Bekleniyor</h5>
