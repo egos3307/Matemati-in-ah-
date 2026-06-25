@@ -117,7 +117,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
-const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
+const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
   const cameraTracks = useTracks([Track.Source.Camera]);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]).filter(
@@ -126,6 +126,96 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const room = useMaybeRoomContext();
+
+  const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, recording, saving
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const streamRef = useRef(null);
+
+  const startScreenRecording = async () => {
+    try {
+      chunksRef.current = [];
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "browser",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 24 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
+      });
+
+      streamRef.current = screenStream;
+
+      const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+      let recorder;
+      try {
+        recorder = new MediaRecorder(screenStream, options);
+      } catch (e) {
+        recorder = new MediaRecorder(screenStream);
+      }
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        setRecordingStatus('saving');
+        try {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          const tokenVal = localStorage.getItem('token');
+          const response = await fetch(`/api/teacher/lessons/${lessonId}/upload-recording`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tokenVal}`,
+              'Content-Type': 'video/webm'
+            },
+            body: blob
+          });
+
+          if (!response.ok) {
+            throw new Error('Yükleme başarısız oldu.');
+          }
+
+          const data = await response.json();
+          alert('Ders kaydı başarıyla kaydedildi ve sisteme yüklendi!');
+        } catch (err) {
+          console.error('Error saving recording:', err);
+          alert('Ders kaydı yüklenirken bir hata oluştu: ' + err.message);
+        } finally {
+          setRecordingStatus('idle');
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+          }
+        }
+      };
+
+      recorder.start(1000);
+      setRecordingStatus('recording');
+
+      screenStream.getVideoTracks()[0].onended = () => {
+        stopScreenRecording();
+      };
+    } catch (err) {
+      console.error('Error starting screen recording:', err);
+      alert('Kayıt başlatılamadı: ' + (err.message || err));
+      setRecordingStatus('idle');
+    }
+  };
+
+  const stopScreenRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
 
   const isScreenSharing = screenShareTracks.length > 0;
   const isLocalScreenSharing = isScreenShareEnabled;
@@ -524,6 +614,18 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   };
 
   const handleLeave = async () => {
+    if (recordingStatus === 'saving') {
+      alert('Ders kaydı şu anda sisteme yükleniyor, lütfen birkaç saniye bekleyin.');
+      return;
+    }
+    if (recordingStatus === 'recording') {
+      if (confirm('Ders kaydı devam ediyor. Kaydı sonlandırıp sisteme kaydetmek istiyor musunuz?')) {
+        stopScreenRecording();
+        alert('Kayıt durduruldu ve yükleme başladı. Lütfen yükleme tamamlandı uyarısı gelene kadar odadan ayrılmayın.');
+        return;
+      }
+    }
+
     try {
       if (document.fullscreenElement) {
         document.exitFullscreen();
@@ -910,6 +1012,28 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
 
         {/* 3. Action Buttons (Share & Hangup) */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Teacher Recording Controls */}
+          {role === 'TEACHER' && (
+            <button
+              onClick={recordingStatus === 'recording' ? stopScreenRecording : startScreenRecording}
+              disabled={recordingStatus === 'saving'}
+              className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md ${
+                recordingStatus === 'recording'
+                  ? 'bg-red-650 hover:bg-red-750 text-white border-red-700 animate-pulse'
+                  : recordingStatus === 'saving'
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/20 cursor-not-allowed'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">
+                {recordingStatus === 'recording' ? 'stop' : recordingStatus === 'saving' ? 'sync' : 'fiber_manual_record'}
+              </span>
+              <span className="hidden md:inline">
+                {recordingStatus === 'recording' ? 'Kaydı Durdur' : recordingStatus === 'saving' ? 'Kaydediliyor...' : 'Dersi Kaydet'}
+              </span>
+            </button>
+          )}
+
           {/* Screen Share Button */}
           <button 
             onClick={toggleScreenShare}
@@ -1076,6 +1200,7 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
       <MeetingSession 
         role={role} 
         userName={userName} 
+        lessonId={lessonId}
         onClose={handleClose} 
         onLiveKitError={handleLiveKitError} // Auto-fallback if initial connection handshake hangs
       />

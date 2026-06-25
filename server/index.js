@@ -119,6 +119,9 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Serve static recorded lessons
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
@@ -404,6 +407,43 @@ app.put('/api/teacher/lessons/:id/recording', auth, checkRole('TEACHER'), async 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/api/teacher/lessons/:id/upload-recording', auth, checkRole('TEACHER'), (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  const uploadDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const fileName = `lesson_${lessonId}_${Date.now()}.webm`;
+  const filePath = path.join(uploadDir, fileName);
+  const writeStream = fs.createWriteStream(filePath);
+
+  req.pipe(writeStream);
+
+  writeStream.on('finish', async () => {
+    try {
+      const recordingUrl = `/uploads/${fileName}`;
+      await prisma.lesson.update({
+        where: { id: lessonId },
+        data: {
+          recordingUrl,
+          recordingRequested: true
+        }
+      });
+      console.log(`Successfully saved recording to ${filePath}`);
+      res.json({ success: true, recordingUrl });
+    } catch (err) {
+      console.error('Error updating DB with recording:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  writeStream.on('error', (err) => {
+    console.error('File write error:', err);
+    res.status(500).json({ error: 'Dosya kaydedilirken bir hata oluştu.' });
+  });
 });
 
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
