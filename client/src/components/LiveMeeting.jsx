@@ -167,12 +167,24 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           await localParticipant.setMicrophoneEnabled(true);
         } catch (err) {
           console.warn("Could not auto-enable microphone:", err);
+          alert(
+            "Mikrofon Otomatik Başlatılamadı!\n\n" +
+            "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
+            "Lütfen adres çubuğunun solundaki kilit simgesinden mikrofon iznini 'İzin Ver' olarak ayarlayın."
+          );
         }
 
         try {
           await localParticipant.setCameraEnabled(true);
         } catch (err) {
           console.warn("Could not auto-enable camera:", err);
+          alert(
+            "Kamera Otomatik Başlatılamadı!\n\n" +
+            "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
+            "Lütfen:\n" +
+            "1. Adres çubuğundaki kilit simgesinden kamera iznini açın.\n" +
+            "2. Kameranın başka bir uygulama tarafından kullanılmadığından emin olun."
+          );
         }
       };
       startStreams();
@@ -392,6 +404,11 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
       console.error("Audio toggle failed:", err);
+      alert(
+        "Mikrofon Başlatılamadı!\n\n" +
+        "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
+        "Lütfen tarayıcının adres satırındaki kilit (güvenlik) simgesine tıklayarak mikrofon izninin 'İzin Ver' (Allow) olarak ayarlandığından emin olun."
+      );
     }
   };
 
@@ -401,6 +418,14 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
       console.error("Camera toggle failed:", err);
+      alert(
+        "Kamera Başlatılamadı!\n\n" +
+        "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
+        "Lütfen şunları kontrol edin:\n" +
+        "1. Tarayıcının adres satırındaki kilit simgesine tıklayarak kamera iznini açın.\n" +
+        "2. Kameranın başka bir uygulama (Zoom, Teams vb.) veya başka bir tarayıcı sekmesi tarafından kullanılmadığından emin olun.\n" +
+        "3. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Kamera' kısmından tarayıcınıza izin verildiğini kontrol edin."
+      );
     }
   };
 
