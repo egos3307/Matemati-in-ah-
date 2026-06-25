@@ -459,6 +459,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
       let catboxRes;
       let uploadSuccess = false;
+      let finalUrl = "";
 
       // Attempt 1: Native FormData + Blob first (supported in Node 18+)
       try {
@@ -478,6 +479,8 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
         if (catboxRes && catboxRes.ok) {
           uploadSuccess = true;
+          const text = await catboxRes.text();
+          finalUrl = text.trim();
         } else {
           console.warn(`Native FormData upload returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
         }
@@ -488,7 +491,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       // Attempt 2: Fallback manual buffer multipart construction (zero dependency, avoids chunked encoding issues)
       if (!uploadSuccess) {
         try {
-          console.log("Attempting manual multipart boundary fallback upload...");
+          console.log("Attempting manual multipart boundary fallback upload to Catbox...");
           const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
           const parts = [];
           parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
@@ -511,6 +514,8 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
           if (catboxRes && catboxRes.ok) {
             uploadSuccess = true;
+            const text = await catboxRes.text();
+            finalUrl = text.trim();
           } else {
             console.warn(`Fallback manual upload also returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
           }
@@ -519,13 +524,76 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         }
       }
 
-      if (!uploadSuccess || !catboxRes || !catboxRes.ok) {
-        const errorDetail = catboxRes ? `${catboxRes.status} ${catboxRes.statusText}` : 'Upload failed';
-        throw new Error('Dosya bulut sunucusuna yüklenemedi. Status: ' + errorDetail);
+      // Attempt 3: transfer.sh upload fallback (Keeps files for 14 days, direct link supported)
+      if (!uploadSuccess) {
+        try {
+          console.log("Attempting transfer.sh upload fallback...");
+          const transferRes = await fetch(`https://transfer.sh/lesson_${lessonId}.webm`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'video/webm',
+              'Content-Length': String(assembledBuffer.length),
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            body: assembledBuffer
+          });
+
+          const resText = await transferRes.text();
+          if (transferRes.ok && resText.startsWith('https://')) {
+            uploadSuccess = true;
+            finalUrl = resText.trim();
+            console.log(`Successfully uploaded to transfer.sh: ${finalUrl}`);
+          } else {
+            console.warn(`transfer.sh returned non-OK status: ${transferRes.status}. Response: ${resText}`);
+          }
+        } catch (transferErr) {
+          console.error("transfer.sh fallback upload failed with error:", transferErr);
+        }
       }
 
-      const fileUrl = await catboxRes.text();
-      const cleanUrl = fileUrl.trim();
+      // Attempt 4: Litterbox upload fallback (Keeps files for 72 hours temporary)
+      if (!uploadSuccess) {
+        try {
+          console.log("Attempting Litterbox upload fallback...");
+          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+          const parts = [];
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="time"\r\n\r\n72h\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+          parts.push(assembledBuffer);
+          parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+          
+          const payload = Buffer.concat(parts);
+
+          const litRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': `multipart/form-data; boundary=${boundary}`,
+              'Content-Length': String(payload.length),
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': '*/*'
+            },
+            body: payload
+          });
+
+          const resText = await litRes.text();
+          if (litRes.ok && resText.startsWith('https://')) {
+            uploadSuccess = true;
+            finalUrl = resText.trim();
+            console.log(`Successfully uploaded to Litterbox: ${finalUrl}`);
+          } else {
+            console.warn(`Litterbox returned non-OK status: ${litRes.status}. Response: ${resText}`);
+          }
+        } catch (litterErr) {
+          console.error("Litterbox fallback upload failed with error:", litterErr);
+        }
+      }
+
+      if (!uploadSuccess) {
+        throw new Error('Dosya bulut sunucusuna yüklenemedi. Tüm servis denemeleri başarısız oldu.');
+      }
+
+      const cleanUrl = finalUrl;
       console.log(`Assembled file successfully uploaded to cloud: ${cleanUrl}`);
 
       // Update the database URL
