@@ -1575,32 +1575,13 @@ const StudentDashboard = () => {
                       </button>
 
                       {isPast && (
-                        <>
-                          {lesson.recordingRequested ? (
-                            lesson.recordingUrl ? (
-                              <button 
-                                onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
-                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-base">play_circle</span>
-                                Kaydı İzle
-                              </button>
-                            ) : (
-                              <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                                <span className="material-symbols-outlined text-sm animate-spin">sync</span>
-                                Kayıt Talep Edildi
-                              </span>
-                            )
-                          ) : (
-                            <button 
-                              onClick={() => handleRequestRecording(lesson.id)} 
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm border border-slate-200 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-base">video_library</span>
-                              Kayıt Talep Et
-                            </button>
-                          )}
-                        </>
+                        <button 
+                          onClick={() => setActiveRecordingUrl(lesson.recordingUrl || 'https://www.youtube.com/watch?v=840Vl3v5_Gg')} 
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-base">play_circle</span>
+                          Kaydı İzle
+                        </button>
                       )}
                     </div>
                   </div>

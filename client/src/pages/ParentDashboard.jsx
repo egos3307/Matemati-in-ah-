@@ -314,15 +314,7 @@ const ParentDashboard = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {isCompleted && lesson.recordingUrl ? (
-                          <button 
-                            onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 transition-colors shadow-sm cursor-pointer uppercase tracking-wider"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">play_circle</span>
-                            Kaydı İzle
-                          </button>
-                        ) : isCompleted ? (
+                        {isCompleted ? (
                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                             Ders Tamamlandı
                           </span>
