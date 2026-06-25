@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { createPortal } from 'react-dom';
+import fixWebmDuration from '../utils/fixWebmDuration.js';
 import { 
   LiveKitRoom, 
   useTracks, 
@@ -323,6 +324,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const showWhiteboardRef = useRef(false);
   const whiteboardCanvasRef = useRef(null);
+  const recordingStartTimeRef = useRef(0);
 
   useEffect(() => {
     showWhiteboardRef.current = showWhiteboard;
@@ -562,6 +564,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       recorder.onstop = async () => {
         setRecordingStatus('saving');
+        const duration = Date.now() - recordingStartTimeRef.current;
 
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -575,7 +578,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
 
         try {
-          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
+          let blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
+          
+          try {
+            console.log("Fixing WebM recording duration metadata (Duration:", duration, "ms)...");
+            blob = await fixWebmDuration(blob, duration);
+            console.log("WebM duration metadata fixed successfully.");
+          } catch (fixErr) {
+            console.warn("Failed to fix WebM duration metadata:", fixErr);
+          }
+
           const tokenVal = localStorage.getItem('token');
           
           const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
@@ -624,6 +636,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       };
 
       recorder.start(1000);
+      recordingStartTimeRef.current = Date.now();
       setRecordingStatus('recording');
 
     } catch (err) {
