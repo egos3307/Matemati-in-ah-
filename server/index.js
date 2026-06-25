@@ -748,7 +748,7 @@ app.get('/api/teacher/teachers', auth, checkRole('TEACHER'), async (req, res) =>
   }
   try {
     const teachers = await prisma.user.findMany({
-      where: { role: { in: ['TEACHER', 'HEAD_TEACHER'] } },
+      where: { role: 'TEACHER' },
       select: { id: true, name: true, email: true, role: true }
     });
     res.json(teachers);
