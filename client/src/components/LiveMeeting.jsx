@@ -430,6 +430,12 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
       console.error("Audio toggle failed:", err);
+      alert(
+        "Mikrofon Başlatılamadı!\n\n" +
+        "Lütfen şunları kontrol edin:\n" +
+        "1. Tarayıcınızın adres çubuğundaki kilit (güvenlik) simgesine tıklayarak mikrofon izninin 'İzin Ver' (Allow) olarak ayarlandığından emin olun.\n" +
+        "2. Mikrofonunuzun başka bir uygulama (Zoom, Teams, Skype vb.) veya başka bir tarayıcı sekmesi tarafından kullanılmadığından emin olun."
+      );
     }
   };
 
@@ -439,6 +445,13 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
       console.error("Camera toggle failed:", err);
+      alert(
+        "Kamera Başlatılamadı!\n\n" +
+        "Lütfen şunları kontrol edin:\n" +
+        "1. Tarayıcınızın adres çubuğundaki kilit (güvenlik) simgesine tıklayarak kamera izninin 'İzin Ver' (Allow) olarak ayarlandığından emin olun.\n" +
+        "2. Kameranızın başka bir uygulama (Zoom, Teams, Skype vb.) veya başka bir tarayıcı sekmesi tarafından kullanılmadığından emin olun.\n" +
+        "3. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Kamera' kısmından tarayıcınıza izin verildiğini kontrol edin."
+      );
     }
   };
 
