@@ -939,11 +939,30 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
   };
 
+  const handleTouchStart = (e) => {
+    if (e.target.closest('button') || e.target.closest('.no-drag')) return;
+    setIsDragging(true);
+    const touch = e.touches[0];
+    dragStart.current = {
+      x: touch.clientX - floatingPos.x,
+      y: touch.clientY - floatingPos.y
+    };
+  };
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging) return;
-      let newX = e.clientX - dragStart.current.x;
-      let newY = e.clientY - dragStart.current.y;
+      
+      // Prevent browser default scroll during touch drag
+      if (e.touches && e.cancelable) {
+        e.preventDefault();
+      }
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      let newX = clientX - dragStart.current.x;
+      let newY = clientY - dragStart.current.y;
 
       const minX = 10;
       const minY = 10;
@@ -963,11 +982,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleMouseMove, { passive: false });
+      document.addEventListener('touchend', handleMouseUp);
+      document.addEventListener('touchcancel', handleMouseUp);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.removeEventListener('touchcancel', handleMouseUp);
     };
   }, [isDragging]);
 
@@ -1175,6 +1200,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             {/* Webcams Float Box (Draggable) */}
             <div 
               onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
               className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
               style={{
                 left: `${floatingPos.x}px`,
@@ -1237,6 +1263,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 {/* Webcams Float Box (Draggable) */}
                 <div 
                   onMouseDown={handleMouseDown}
+                  onTouchStart={handleTouchStart}
                   className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
                   style={{
                     left: `${floatingPos.x}px`,
