@@ -1659,13 +1659,45 @@ const StudentDashboard = () => {
               </button>
             </div>
             <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
-              <video 
-                src={activeRecordingUrl} 
-                controls 
-                playsInline 
-                autoPlay
-                className="w-full h-full object-contain"
-              />
+              {activeRecordingUrl.includes('youtube.com') || activeRecordingUrl.includes('youtu.be') ? (
+                (() => {
+                  let videoId = '';
+                  if (activeRecordingUrl.includes('youtube.com/watch?v=')) {
+                    videoId = activeRecordingUrl.split('watch?v=')[1].split('&')[0];
+                  } else if (activeRecordingUrl.includes('youtu.be/')) {
+                    videoId = activeRecordingUrl.split('youtu.be/')[1].split('?')[0];
+                  } else if (activeRecordingUrl.includes('youtube.com/embed/')) {
+                    return (
+                      <iframe 
+                        src={activeRecordingUrl} 
+                        title="Ders Kaydı" 
+                        frameBorder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen
+                        className="w-full h-full rounded-2xl"
+                      />
+                    );
+                  }
+                  return (
+                    <iframe 
+                      src={`https://www.youtube.com/embed/${videoId}`} 
+                      title="Ders Kaydı" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen
+                      className="w-full h-full rounded-2xl"
+                    />
+                  );
+                })()
+              ) : (
+                <video 
+                  src={activeRecordingUrl} 
+                  controls 
+                  playsInline 
+                  autoPlay
+                  className="w-full h-full object-contain"
+                />
+              )}
             </div>
           </div>
         </div>
