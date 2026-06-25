@@ -137,6 +137,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const audioContextRef = useRef(null);
   const audioDestinationRef = useRef(null);
   const connectedTrackIdsRef = useRef(new Set());
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Clean up recording context when component unmounts
   useEffect(() => {
@@ -310,51 +311,46 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
         try {
           const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
-          
-          // Create form data for catbox.moe direct browser upload
-          const formData = new FormData();
-          formData.append('reqtype', 'fileupload');
-          
-          const fileExtension = recorder.mimeType && recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
-          const file = new File([blob], `lesson_${lessonId}.${fileExtension}`, { type: blob.type });
-          formData.append('fileToUpload', file);
-
-          // Direct browser POST request to Catbox (bypassing Vercel 4.5MB gateway limit and read-only filesystem)
-          const response = await fetch('https://catbox.moe/user/api.php', {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!response.ok) {
-            throw new Error('Dosya yükleme sunucusu (Catbox) hata verdi.');
-          }
-
-          const fileUrl = await response.text();
-          if (!fileUrl || !fileUrl.startsWith('http')) {
-            throw new Error('Dosya yükleme sunucusundan geçersiz yanıt alındı: ' + fileUrl);
-          }
-
-          // Save the URL to our PostgreSQL database
           const tokenVal = localStorage.getItem('token');
-          const saveResponse = await fetch(`/api/teacher/lessons/${lessonId}/recording`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${tokenVal}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ recordingUrl: fileUrl.trim() })
-          });
+          
+          const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
+          const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
+          
+          console.log(`Uploading video blob of size ${blob.size} bytes in ${totalChunks} chunks...`);
 
-          if (!saveResponse.ok) {
-            throw new Error('Ders kaydı veritabanına kaydedilemedi.');
+          for (let index = 0; index < totalChunks; index++) {
+            const percent = Math.round((index / totalChunks) * 100);
+            setUploadProgress(percent);
+            
+            const start = index * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, blob.size);
+            const chunkBlob = blob.slice(start, end);
+            
+            const response = await fetch(`/api/teacher/lessons/${lessonId}/upload-chunk`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${tokenVal}`,
+                'Content-Type': 'application/octet-stream',
+                'x-chunk-index': index.toString(),
+                'x-total-chunks': totalChunks.toString()
+              },
+              body: chunkBlob
+            });
+            
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error || `Yükleme durakladı (Dilim: ${index + 1}/${totalChunks}).`);
+            }
           }
-
-          alert('Ders kaydı başarıyla bulut veritabanına kaydedildi ve yüklendi!');
+          
+          setUploadProgress(100);
+          alert('Ders kaydı başarıyla kaydedildi ve sisteme yüklendi!');
         } catch (err) {
           console.error('Error saving recording:', err);
           alert('Ders kaydı yüklenirken bir hata oluştu: ' + err.message);
         } finally {
           setRecordingStatus('idle');
+          setUploadProgress(0);
           if (streamRef.current) {
             streamRef.current.getTracks().forEach(t => t.stop());
             streamRef.current = null;
@@ -1210,7 +1206,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 {recordingStatus === 'recording' ? 'stop' : recordingStatus === 'saving' ? 'sync' : 'fiber_manual_record'}
               </span>
               <span className="hidden md:inline">
-                {recordingStatus === 'recording' ? 'Kaydı Durdur' : recordingStatus === 'saving' ? 'Kaydediliyor...' : 'Dersi Kaydet'}
+                {recordingStatus === 'recording' ? 'Kaydı Durdur' : recordingStatus === 'saving' ? `Yükleniyor (%${uploadProgress})...` : 'Dersi Kaydet'}
               </span>
             </button>
           )}

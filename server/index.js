@@ -409,41 +409,102 @@ app.put('/api/teacher/lessons/:id/recording', auth, checkRole('TEACHER'), async 
   }
 });
 
-app.post('/api/teacher/lessons/:id/upload-recording', auth, checkRole('TEACHER'), (req, res) => {
+app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
-  const uploadDir = path.join(__dirname, 'uploads');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+  const chunkIndex = parseInt(req.headers['x-chunk-index']);
+  const totalChunks = parseInt(req.headers['x-total-chunks']);
+
+  if (isNaN(chunkIndex) || isNaN(totalChunks)) {
+    return res.status(400).json({ error: 'Geçersiz dilim (chunk) bilgileri.' });
   }
 
-  const fileName = `lesson_${lessonId}.webm`;
-  const filePath = path.join(uploadDir, fileName);
-  const writeStream = fs.createWriteStream(filePath);
+  try {
+    // Read the binary stream of the chunk request body in full
+    const buffers = [];
+    for await (const chunk of req) {
+      buffers.push(chunk);
+    }
+    const chunkData = Buffer.concat(buffers);
 
-  req.pipe(writeStream);
+    // Save this chunk into our PostgreSQL database table
+    await prisma.lessonChunk.create({
+      data: {
+        lessonId,
+        index: chunkIndex,
+        data: chunkData
+      }
+    });
 
-  writeStream.on('finish', async () => {
-    try {
-      const recordingUrl = `/uploads/${fileName}`;
+    console.log(`Saved chunk ${chunkIndex + 1}/${totalChunks} to DB for lesson ${lessonId}`);
+
+    // Verify if all chunks have been uploaded
+    const count = await prisma.lessonChunk.count({
+      where: { lessonId }
+    });
+
+    if (count === totalChunks) {
+      console.log(`All chunks received for lesson ${lessonId}. Assembling in memory...`);
+      
+      // Fetch all chunks, sorted by index
+      const chunks = await prisma.lessonChunk.findMany({
+        where: { lessonId },
+        orderBy: { index: 'asc' }
+      });
+
+      // Concat the chunks buffer in memory (zero filesystem write!)
+      const buffersToConcat = chunks.map(c => c.data);
+      const assembledBuffer = Buffer.concat(buffersToConcat);
+
+      console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Uploading from backend to Catbox...`);
+
+      // Construct multipart/form-data manually (zero-dependency, works globally in all Node runtimes)
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+      const parts = [];
+      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
+      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+      parts.push(assembledBuffer);
+      parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+      
+      const payload = Buffer.concat(parts);
+
+      const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`
+        },
+        body: payload
+      });
+
+      if (!catboxRes.ok) {
+        throw new Error('Dosya bulut sunucusuna yüklenemedi. Status: ' + catboxRes.statusText);
+      }
+
+      const fileUrl = await catboxRes.text();
+      const cleanUrl = fileUrl.trim();
+      console.log(`Assembled file successfully uploaded to cloud: ${cleanUrl}`);
+
+      // Update the database URL
       await prisma.lesson.update({
         where: { id: lessonId },
         data: {
-          recordingUrl,
+          recordingUrl: cleanUrl,
           recordingRequested: true
         }
       });
-      console.log(`Successfully saved recording to ${filePath}`);
-      res.json({ success: true, recordingUrl });
-    } catch (err) {
-      console.error('Error updating DB with recording:', err);
-      res.status(500).json({ error: err.message });
-    }
-  });
 
-  writeStream.on('error', (err) => {
-    console.error('File write error:', err);
-    res.status(500).json({ error: 'Dosya kaydedilirken bir hata oluştu.' });
-  });
+      // Clear chunks from database to free database space
+      await prisma.lessonChunk.deleteMany({
+        where: { lessonId }
+      });
+
+      res.json({ success: true, recordingUrl: cleanUrl });
+    } else {
+      res.json({ success: true, status: 'chunk_saved' });
+    }
+  } catch (err) {
+    console.error('Error saving/assembling chunk:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
