@@ -1349,7 +1349,7 @@ const StudentDashboard = () => {
                 />
                 
                 {/* Ders Ekleme Alanı */}
-                <div className="flex gap-2 items-center bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-slate-50 p-4 rounded-3xl border border-slate-100">
                   <input 
                     type="text" 
                     placeholder="Yeni Ders Adı (Örn: Din Kültürü)" 
@@ -1357,27 +1357,29 @@ const StudentDashboard = () => {
                     value={customSubjectName}
                     onChange={(e) => setCustomSubjectName(e.target.value)}
                   />
-                  <button 
-                    type="button"
-                    onClick={handleAddCustomSubject}
-                    className="bg-primary text-white px-5 py-3 rounded-2xl text-xs font-black hover:scale-105 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Ders Ekle
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={loadSubjects}
-                    className="bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer"
-                    title="Varsayılan Dersleri Yükle"
-                  >
-                    <span className="material-symbols-outlined text-sm">restart_alt</span>
-                    Sıfırla
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={handleAddCustomSubject}
+                      className="flex-1 sm:flex-none bg-primary text-white px-5 py-3 rounded-2xl text-xs font-black hover:scale-105 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      Ders Ekle
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={loadSubjects}
+                      className="flex-1 sm:flex-none bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      title="Varsayılan Dersleri Yükle"
+                    >
+                      <span className="material-symbols-outlined text-sm">restart_alt</span>
+                      Sıfırla
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-12 gap-2 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest items-center">
+                  <div className="hidden md:grid grid-cols-12 gap-2 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest items-center">
                     <div className="col-span-3">Ders</div>
                     <div className="col-span-1 text-center">Sil</div>
                     <div className="col-span-2 text-center">Soru S.</div>
@@ -1386,47 +1388,56 @@ const StudentDashboard = () => {
                     <div className="col-span-2 text-right">Net</div>
                   </div>
                   {subjects.map(subject => (
-                    <div key={subject} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                      <div className="col-span-3 font-bold text-slate-700 text-sm truncate" title={subject}>{subject}</div>
-                      <div className="col-span-1 text-center">
+                    <div key={subject} className="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-2 items-stretch md:items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <div className="flex items-center justify-between md:col-span-4">
+                        <div className="font-bold text-slate-700 text-sm truncate" title={subject}>{subject}</div>
                         <button 
                           type="button"
                           onClick={() => handleRemoveSubject(subject)}
-                          className="text-red-400 hover:text-red-600 transition-all flex items-center justify-center mx-auto cursor-pointer"
+                          className="text-red-400 hover:text-red-650 transition-all flex items-center justify-center cursor-pointer p-1"
                           title={`${subject} dersini çıkar`}
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
                       </div>
-                      <div className="col-span-2">
-                        <input 
-                          type="number"
-                          placeholder="Soru"
-                          className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                          value={newTrial.results[subject]?.questionCount ?? ''}
-                          onChange={(e) => handleResultChange(subject, 'questionCount', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input 
-                          type="number"
-                          placeholder="D"
-                          className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                          value={newTrial.results[subject]?.correct ?? ''}
-                          onChange={(e) => handleResultChange(subject, 'correct', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input 
-                          type="number"
-                          placeholder="Y"
-                          className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                          value={newTrial.results[subject]?.wrong ?? ''}
-                          onChange={(e) => handleResultChange(subject, 'wrong', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-2 text-right font-black text-primary text-sm">
-                        {newTrial.results[subject]?.net?.toFixed(2) || "0.00"}
+                      
+                      <div className="grid grid-cols-4 gap-2 md:contents">
+                        <div>
+                          <label className="block md:hidden text-[9px] font-bold text-slate-400 uppercase mb-1">Soru</label>
+                          <input 
+                            type="number"
+                            placeholder="Soru"
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            value={newTrial.results[subject]?.questionCount ?? ''}
+                            onChange={(e) => handleResultChange(subject, 'questionCount', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block md:hidden text-[9px] font-bold text-slate-400 uppercase mb-1">Doğru</label>
+                          <input 
+                            type="number"
+                            placeholder="D"
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            value={newTrial.results[subject]?.correct ?? ''}
+                            onChange={(e) => handleResultChange(subject, 'correct', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block md:hidden text-[9px] font-bold text-slate-400 uppercase mb-1">Yanlış</label>
+                          <input 
+                            type="number"
+                            placeholder="Y"
+                            className="w-full bg-white border border-slate-200 rounded-xl py-2 text-center font-bold text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            value={newTrial.results[subject]?.wrong ?? ''}
+                            onChange={(e) => handleResultChange(subject, 'wrong', e.target.value)}
+                          />
+                        </div>
+                        <div className="text-right flex flex-col justify-end items-end md:block">
+                          <label className="block md:hidden text-[9px] font-bold text-slate-400 uppercase mb-1">Net</label>
+                          <div className="font-black text-primary text-sm h-9 flex items-center justify-end">
+                            {newTrial.results[subject]?.net?.toFixed(2) || "0.00"}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1462,20 +1473,15 @@ const StudentDashboard = () => {
                         <h4 className="font-bold text-slate-900">{t.name}</h4>
                         <p className="text-xs text-slate-400 mt-1">{new Date(t.createdAt).toLocaleDateString('tr-TR')}</p>
                       </div>
-                      <div className="text-right flex items-center gap-4">
-                        <div>
-                          <p className="text-2xl font-black text-slate-900">{t.totalNet.toFixed(2)}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Toplam Net</p>
-                        </div>
-                        <span className="material-symbols-outlined text-slate-400">
-                          {expandedTrialId === t.id ? 'expand_less' : 'expand_more'}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-base font-black text-primary">{t.totalNet?.toFixed(2) || '0.00'} Net</span>
+                        <span className="material-symbols-outlined text-slate-400">{expandedTrialId === t.id ? 'expand_less' : 'expand_more'}</span>
                       </div>
                     </div>
 
                     {expandedTrialId === t.id && (
                       <div className="mt-6 pt-6 border-t border-slate-200/60 space-y-2 animate-in fade-in duration-300">
-                        <div className="grid grid-cols-12 gap-2 text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 pb-2">
+                        <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] font-black text-slate-400 uppercase tracking-wider px-2 pb-2">
                           <div className="col-span-4">Ders</div>
                           <div className="col-span-2 text-center">Soru</div>
                           <div className="col-span-2 text-center">Doğru</div>
@@ -1483,24 +1489,36 @@ const StudentDashboard = () => {
                           <div className="col-span-2 text-right">Net</div>
                         </div>
                         {Object.entries(t.results || {}).map(([subject, res]) => (
-                          <div key={subject} className="grid grid-cols-12 gap-2 py-2 px-2 hover:bg-slate-200/50 rounded-xl transition-all items-center">
-                            <div className="col-span-4 font-bold text-slate-700 text-xs truncate" title={subject}>{subject}</div>
-                            <div className="col-span-2 text-center font-bold text-slate-600 text-xs">{res.questionCount !== undefined ? res.questionCount : '-'}</div>
-                            <div className="col-span-2 text-center font-bold text-green-600 text-xs">{res.correct}</div>
-                            <div className="col-span-2 text-center font-bold text-red-500 text-xs">{res.wrong}</div>
-                            <div className="col-span-2 text-right font-black text-primary text-xs">
-                              {(() => {
-                                const userGrade = user?.grade || "5";
-                                let coef = 0.25;
-                                if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
-                                  const userGradeNum = parseInt(userGrade) || 5;
-                                  if (userGradeNum <= 8) {
-                                    coef = 1/3;
-                                  }
-                                }
-                                const calculatedNet = res.net !== undefined ? res.net : (res.correct - (res.wrong * coef));
-                                return Math.max(0, calculatedNet).toFixed(2);
-                              })()}
+                          <div key={subject} className="flex flex-col md:grid md:grid-cols-12 gap-2 py-3 md:py-2 px-3 md:px-2 hover:bg-slate-200/50 rounded-xl transition-all items-stretch md:items-center border-b border-slate-100 md:border-none">
+                            <div className="font-bold text-slate-700 text-xs md:col-span-4 truncate" title={subject}>{subject}</div>
+                            <div className="grid grid-cols-4 gap-1 text-center md:contents">
+                              <div className="md:col-span-2">
+                                <span className="block md:hidden text-[8px] font-bold text-slate-400 uppercase">Soru</span>
+                                <span className="font-bold text-slate-650 text-xs">{res.questionCount !== undefined ? res.questionCount : '-'}</span>
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="block md:hidden text-[8px] font-bold text-slate-400 uppercase">Doğru</span>
+                                <span className="font-bold text-green-600 text-xs">{res.correct}</span>
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="block md:hidden text-[8px] font-bold text-slate-400 uppercase">Yanlış</span>
+                                <span className="font-bold text-red-500 text-xs">{res.wrong}</span>
+                              </div>
+                              <div className="md:col-span-2 text-right">
+                                <span className="block md:hidden text-[8px] font-bold text-slate-400 uppercase">Net</span>
+                                <span className="font-black text-primary text-xs">
+                                  {(() => {
+                                    const userGrade = user?.grade || "5";
+                                    let coef = 0.25;
+                                    if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
+                                      const userGradeNum = parseInt(userGrade) || 5;
+                                      if (userGradeNum <= 8) coef = 1/3;
+                                    }
+                                    const calculatedNet = res.net !== undefined ? res.net : (res.correct - (res.wrong * coef));
+                                    return Math.max(0, calculatedNet).toFixed(2);
+                                  })()}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1515,7 +1533,7 @@ const StudentDashboard = () => {
 
         {/* AI, LESSONS sekmeleri benzer şekilde... (içerik korunur) */}
         {activeTab === 'ai' && (
-          <div className="flex flex-col h-[calc(100vh-12rem)] md:h-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col h-[calc(100dvh-17rem)] md:h-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex-1 overflow-y-auto space-y-4 pb-4">
               {aiChat.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
@@ -1675,26 +1693,26 @@ const StudentDashboard = () => {
       </div>
 
       {/* BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-primary/10 px-6 py-3 flex justify-between items-center z-50">
-        <button onClick={() => setActiveTab('panel')} className={`flex flex-col items-center gap-1 ${activeTab === 'panel' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">dashboard</span>
-          <span className="text-[10px] font-bold">Panel</span>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-primary/10 px-2 py-2 sm:py-3 flex justify-around items-center z-50">
+        <button onClick={() => setActiveTab('panel')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'panel' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'panel' ? 'scale-110' : ''}`}>dashboard</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Panel</span>
         </button>
-        <button onClick={() => setActiveTab('tracking')} className={`flex flex-col items-center gap-1 ${activeTab === 'tracking' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">task_alt</span>
-          <span className="text-[10px] font-bold">Ders Takip</span>
+        <button onClick={() => setActiveTab('tracking')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'tracking' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'tracking' ? 'scale-110' : ''}`}>task_alt</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Takip</span>
         </button>
-        <button onClick={() => setActiveTab('lessons')} className={`flex flex-col items-center gap-1 ${activeTab === 'lessons' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">school</span>
-          <span className="text-[10px] font-bold">Dersler</span>
+        <button onClick={() => setActiveTab('lessons')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'lessons' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'lessons' ? 'scale-110' : ''}`}>school</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Dersler</span>
         </button>
-        <button onClick={() => setActiveTab('trials')} className={`flex flex-col items-center gap-1 ${activeTab === 'trials' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">monitoring</span>
-          <span className="text-[10px] font-bold">Deneme</span>
+        <button onClick={() => setActiveTab('trials')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'trials' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'trials' ? 'scale-110' : ''}`}>monitoring</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Deneme</span>
         </button>
-        <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center gap-1 ${activeTab === 'ai' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">smart_toy</span>
-          <span className="text-[10px] font-bold">Fulle AI</span>
+        <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'ai' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'ai' ? 'scale-110' : ''}`}>smart_toy</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Fulle AI</span>
         </button>
       </nav>
       {/* Live Class Overlay / Modal */}

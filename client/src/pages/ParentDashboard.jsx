@@ -82,10 +82,10 @@ const ParentDashboard = () => {
   const curPayment = paymentStatusMap[student?.paymentStatus] || { label: 'Belirtilmemiş', color: 'bg-slate-100 text-slate-600 border-slate-200' };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-24 md:pb-6 md:pt-4 font-sans text-slate-800">
+    <div className="min-h-screen bg-slate-50/50 pb-28 md:pb-6 md:pt-4 font-sans text-slate-800">
       {/* Header Banner */}
-      <div className="max-w-4xl mx-auto px-6 pt-6">
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
+        <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
           <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none bg-slate-900"></div>
           
           <div className="flex items-center gap-4 z-10">
@@ -106,7 +106,7 @@ const ParentDashboard = () => {
 
           <button 
             onClick={logout} 
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50/50 transition-all font-bold text-xs cursor-pointer z-10 self-stretch md:self-auto justify-center"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50/50 transition-all font-bold text-xs cursor-pointer z-10 w-full sm:w-auto justify-center"
           >
             <span className="material-symbols-outlined text-base">logout</span>
             Çıkış Yap
@@ -114,7 +114,7 @@ const ParentDashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-6">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -162,25 +162,25 @@ const ParentDashboard = () => {
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                 <h4 className="font-black text-slate-950 text-base border-b pb-3">Öğrenci Bilgileri</h4>
                 <div className="space-y-3.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Öğrenci Adı:</span>
-                    <span className="font-bold text-slate-900">{student?.name}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Öğrenci Adı:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.name}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Sınıf Derecesi:</span>
-                    <span className="font-bold text-slate-900">{(student?.grade === 'KPSS' || student?.grade === 'Mezun') ? student?.grade : `${student?.grade}. Sınıf`}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Sınıf Derecesi:</span>
+                    <span className="font-bold text-slate-900 text-right">{(student?.grade === 'KPSS' || student?.grade === 'Mezun') ? student?.grade : `${student?.grade}. Sınıf`}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Verilen Hizmet:</span>
-                    <span className="font-bold text-slate-900">{student?.serviceProvided || 'Matematik Özel Ders'}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Verilen Hizmet:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.serviceProvided || 'Matematik Özel Ders'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Öğrenci Telefon:</span>
-                    <span className="font-bold text-slate-900">{student?.studentTel || '-'}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Öğrenci Tel:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.studentTel || '-'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Veli Telefon:</span>
-                    <span className="font-bold text-slate-900">{student?.parentTel || '-'}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Veli Tel:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.parentTel || '-'}</span>
                   </div>
                 </div>
               </div>
@@ -189,17 +189,17 @@ const ParentDashboard = () => {
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                 <h4 className="font-black text-slate-950 text-base border-b pb-3">Ödeme Ayrıntıları</h4>
                 <div className="space-y-3.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Aylık Ücret:</span>
-                    <span className="font-bold text-slate-900">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Aylık Ücret:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Ödeme Günü:</span>
-                    <span className="font-bold text-slate-900">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Ödeme Günü:</span>
+                    <span className="font-bold text-slate-900 text-right">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-semibold">Ödeme Durumu:</span>
-                    <span className="font-bold text-slate-900">{curPayment.label}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-400 font-semibold shrink-0">Ödeme Durumu:</span>
+                    <span className="font-bold text-slate-900 text-right">{curPayment.label}</span>
                   </div>
                   <div className="flex flex-col gap-1 mt-2">
                     <span className="text-slate-400 font-semibold">Öğretmen Notu:</span>
@@ -241,12 +241,12 @@ const ParentDashboard = () => {
 
               <div className="space-y-4">
                 <h4 className="font-black text-slate-900">Cari Durum</h4>
-                <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-slate-100 bg-white">
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-slate-400">check_circle</span>
                     <span className="text-sm font-bold text-slate-700">Güncel Dönem Ödeme Durumu</span>
                   </div>
-                  <span className={`border text-xs font-black px-3.5 py-1 rounded-full ${curPayment.color}`}>
+                  <span className={`border text-xs font-black px-3.5 py-1.5 rounded-full self-start sm:self-auto ${curPayment.color}`}>
                     {curPayment.label}
                   </span>
                 </div>
@@ -457,22 +457,22 @@ const ParentDashboard = () => {
       </div>
 
       {/* BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-primary/10 px-6 py-3 flex justify-around items-center z-50">
-        <button onClick={() => setActiveTab('overview')} className={`flex flex-col items-center gap-1 ${activeTab === 'overview' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">dashboard</span>
-          <span className="text-[10px] font-bold">Özet</span>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-primary/10 px-2 py-2 sm:py-3 flex justify-around items-center z-50 safe-area-inset-bottom">
+        <button onClick={() => setActiveTab('overview')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'overview' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'overview' ? 'scale-110' : ''}`}>dashboard</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Özet</span>
         </button>
-        <button onClick={() => setActiveTab('payments')} className={`flex flex-col items-center gap-1 ${activeTab === 'payments' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">payments</span>
-          <span className="text-[10px] font-bold">Ödemeler</span>
+        <button onClick={() => setActiveTab('payments')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'payments' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'payments' ? 'scale-110' : ''}`}>payments</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Ödemeler</span>
         </button>
-        <button onClick={() => setActiveTab('lessons')} className={`flex flex-col items-center gap-1 ${activeTab === 'lessons' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">school</span>
-          <span className="text-[10px] font-bold">Dersler</span>
+        <button onClick={() => setActiveTab('lessons')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'lessons' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'lessons' ? 'scale-110' : ''}`}>school</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Dersler</span>
         </button>
-        <button onClick={() => setActiveTab('performance')} className={`flex flex-col items-center gap-1 ${activeTab === 'performance' ? 'text-primary scale-110' : 'text-slate-400'}`}>
-          <span className="material-symbols-outlined">monitoring</span>
-          <span className="text-[10px] font-bold">Performans</span>
+        <button onClick={() => setActiveTab('performance')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'performance' ? 'text-primary' : 'text-slate-400'}`}>
+          <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'performance' ? 'scale-110' : ''}`}>monitoring</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Performans</span>
         </button>
       </nav>
 

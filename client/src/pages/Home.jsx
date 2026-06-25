@@ -1,8 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const Home = () => {
+  // Testimonials / Success Stories Data
+  const testimonials = [
+    {
+      name: "Y** Y**",
+      content: "Hocam cidden bana çok büyük katkınız oldu 5 netten 21 nete kadar çıkardınız beni cidden emeğiniz üzerimde çok fazla her şey için teşekkür ediyorum ki hocam ders almaya devam edicem o da deneme analizi için",
+      grade: "KPSS Özel Ders"
+    },
+    {
+      name: "F** F**",
+      content: "sağolun hocam valla emeğiniz cok üzerimde emeğinize sağlık çok teşekkür ediyorum siz olmasanız yapamazdım derslerimi yükseltip başarılarımın devam etmesi için elimden geleni yapacağım",
+      grade: "9. Sınıf"
+    },
+    {
+      name: "B**",
+      content: "Günaydın hocam. Sene boyunca derslerimizde gösterdiğiniz rehberlik ve bitmeyen enerjiniz sayesinde bu başarıya ulaştım. Üzerimdeki emeğiniz için sonsuz teşekkürler.",
+      grade: "Fen Lisesi Öğrencimiz"
+    },
+    {
+      name: "S**",
+      content: "Oncelikle çok teşekkür ediyorum çünkü bu güne göndereceğini söylememişti. Dersin çok iyi geçtiğini ,senin ders anlatmanı iyi anladığını ve hatta analitik geometriyle ilgili çok zevkliymiş falan dedi. Dersten çok memnun çıkınca ben de çok takip etmiyorum. Ama seni ödev konusunda yorarsa mutlaka haber ver ki biz de hemen Şimdiye kadar anlıyorum deyip severek dinlediği ilk matematikçi sensin. Tekrardan çok teşekkür ediyorum.",
+      grade: "11 Sınıf Velimiz"
+    },
+    {
+      name: "M** S**",
+      content: "Hocam matematik sınavından 100 almışım.",
+      grade: "11 Sınıf Öğrencimiz"
+    }
+  ];
+
+  // Carousel States
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  // Transition slide helper
+  const handleSlideChange = (newIndex) => {
+    setFade(false);
+    setTimeout(() => {
+      setActiveTestimonial(newIndex);
+      setFade(true);
+    }, 200);
+  };
+
+  // Autoplay Effect
+  useEffect(() => {
+    const timer = setInterval(() => {
+      handleSlideChange((activeTestimonial + 1) % testimonials.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [activeTestimonial]);
+
   // Free Trial Form State
   const [trialType, setTrialType] = useState('SELF'); // SELF, CHILD
   const [trialStudentName, setTrialStudentName] = useState('');
@@ -197,68 +247,87 @@ const Home = () => {
         </section>
 
         {/* Testimonials Section */}
-        <section className="bg-primary/5 py-24" id="referanslar">
-          <div className="mx-auto max-w-7xl px-6 lg:px-10">
-            <h2 className="mb-12 text-center text-3xl font-black text-slate-900">Başarı Hikayeleri</h2>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col gap-6 rounded-xl bg-white p-8 shadow-sm">
-                <div className="flex gap-1 text-primary">
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                </div>
-                <p className="italic text-slate-700">"Sınava 3 ay kala başladım. Matematik netlerim 10'dan 35'e çıktı. Gerçekten hocalarımızın anlatımı çok akılda kalıcı."</p>
-                <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
-                  <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-200">
-                    <img alt="Öğrenci" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpj_A2wyNBbT1czLtCL58R3ZmrkQG1nzxbzmh53yYEjg-R3hsYM-IJklw5z-8eX9-85CKPvmhP_dSUS5awBxzlcGPACrsJL_3Ha3nueMfP3rnSfl22sOgur7WGP2Fy8_ti-6b7sxw09V1QSvlRWYnJuiCNZ8IWs0TX7AOcyyu2CHPtPcYXm9uvjfHhxjuJRS-kYsq-hu3BZjc0oa_19hhpbQgq9UtMZ4BIKFqPvoJSZcfPg77Znd8GY6NsyiZa9Msw-RBsrgCtvw2Q"/>
-                  </div>
+        <section className="bg-gradient-to-b from-slate-50 to-white py-24 border-t border-slate-100" id="referanslar">
+          <div className="mx-auto max-w-5xl px-6 lg:px-10">
+            <div className="text-center mb-16">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
+                Başarı Yolculuklarımız
+              </span>
+              <h2 className="mt-4 text-3xl font-black text-slate-900 md:text-4xl">
+                Öğrenci ve Velilerimizin Başarı Yolculuğu
+              </h2>
+              <p className="mt-4 text-slate-600 max-w-2xl mx-auto">
+                Birlikte çalıştığımız öğrencilerin ve destek olduğumuz velilerimizin başarı hikayeleri ve samimi yorumları.
+              </p>
+            </div>
+
+            <div className="relative mx-auto max-w-3xl">
+              {/* Main Slider Card Container */}
+              <div className="overflow-hidden rounded-3xl bg-white p-8 md:p-12 shadow-xl border border-slate-100/80 transition-all duration-300 hover:shadow-2xl relative min-h-[320px] flex flex-col justify-between">
+                {/* Decorative Quote Icon in background */}
+                <span className="absolute right-8 top-6 text-slate-100 font-serif text-[120px] leading-none pointer-events-none select-none">
+                  ”
+                </span>
+                
+                {/* Active Slide Content with Fade Transition */}
+                <div className={`relative z-10 flex flex-col gap-6 h-full justify-between flex-1 transition-opacity duration-200 ${fade ? 'opacity-100' : 'opacity-0'}`}>
                   <div>
-                    <p className="font-bold text-slate-900">Ahmet Yılmaz</p>
-                    <p className="text-sm text-slate-500">Tıp Fakültesi Öğrencisi</p>
+                    {/* Header: Name and Stars */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                      <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                        {testimonials[activeTestimonial].name}
+                      </h4>
+                      <div className="flex gap-0.5 text-amber-500">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className="material-symbols-outlined fill-1 text-lg">star</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Content: Testimonial Message */}
+                    <p className="mt-6 text-base md:text-lg leading-relaxed text-slate-700 font-medium italic">
+                      "{testimonials[activeTestimonial].content}"
+                    </p>
+                  </div>
+
+                  {/* Footer: Grade/Class */}
+                  <div className="mt-8 flex items-center justify-between pt-4 border-t border-slate-50">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-4 py-2 text-sm font-bold text-primary">
+                      <span className="material-symbols-outlined text-sm">school</span>
+                      {testimonials[activeTestimonial].grade}
+                    </span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleSlideChange((activeTestimonial - 1 + testimonials.length) % testimonials.length)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                        aria-label="Önceki yorum"
+                      >
+                        <span className="material-symbols-outlined">chevron_left</span>
+                      </button>
+                      <button 
+                        onClick={() => handleSlideChange((activeTestimonial + 1) % testimonials.length)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                        aria-label="Sonraki yorum"
+                      >
+                        <span className="material-symbols-outlined">chevron_right</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-              {/* Testimonial 2 */}
-              <div className="flex flex-col gap-6 rounded-xl bg-white p-8 shadow-sm">
-                <div className="flex gap-1 text-primary">
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                </div>
-                <p className="italic text-slate-700">"Soru çözüm videoları hayatımı kurtardı. Anlamadığım her detayı tekrar tekrar izleyebilmek büyük bir lüks."</p>
-                <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
-                  <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-200">
-                    <img alt="Öğrenci" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPC-mqlmFzW_uWV_IrXDNmISh9W854L2Etxv_lrk4BMmCKyLDccUvV-feEjuXjDDsp0ccTvKKws1uiAGHLnjCv2BqbTVVEpwS3895jgR1lZKoDjdNgtdwZThzCB0ZjZFIWhd8FQY3pTiXBC5h5dW9Q9uuuQ_Kaoc3b3jpFaYKqktZaWaeyq7FpHS8rE7hk6M50uCzabYkOJAyu53HJgz8rgx4i_6Fh4nmbTS6tVflEz2ljHpZMxPU-PBNIinOWpPtdcgzX4m0HUm2d"/>
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Selin Kaya</p>
-                    <p className="text-sm text-slate-500">Mühendislik Öğrencisi</p>
-                  </div>
-                </div>
-              </div>
-              {/* Testimonial 3 */}
-              <div className="flex flex-col gap-6 rounded-xl bg-white p-8 shadow-sm">
-                <div className="flex gap-1 text-primary">
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                  <span className="material-symbols-outlined fill-1">star</span>
-                </div>
-                <p className="italic text-slate-700">"Birebir takip sistemi sayesinde disiplin kazandım. Koçumun her hafta verdiği hedefler beni motive etti."</p>
-                <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
-                  <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-200">
-                    <img alt="Öğrenci" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYgfhb0Wzrow0M8VcbFU8goz132gkFv7W0kUGC4YwTpi4exNQKkFLEmMYre96TFDq26Xi6Qj4j_FSpquHv3SIVDADEodP6v6OVjpDG3sf_OBnDuclQ3FcXw0Ka2K5y42C90pA2OvEd7qSuBvQ3SGzfLn_tUtlsYzNrKrgf7V6M8a0-Wo7tDSIbkgwfLMvxmr9ZSURxbd8by9VORzqEgdmEo5cw8qvQ0NcEjuSGY-aAEep8mUPdQFphuxb7DiyOpfzuTgNQmnT7aXRs"/>
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Mert Demir</p>
-                    <p className="text-sm text-slate-500">Lise 12. Sınıf</p>
-                  </div>
-                </div>
+
+              {/* Indicator Dots */}
+              <div className="mt-8 flex justify-center gap-2">
+                {testimonials.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSlideChange(index)}
+                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      index === activeTestimonial ? 'bg-primary w-8' : 'bg-slate-300 w-2.5 hover:bg-slate-400'
+                    }`}
+                    aria-label={`Yorum ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
           </div>
