@@ -135,6 +135,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const startScreenRecording = async () => {
     try {
       chunksRef.current = [];
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        throw new Error("Tarayıcınız veya bağlantı türünüz ekran kaydı özelliğini desteklemiyor. Ekran kaydı başlatabilmek için sitenizin adresinin 'https://' ile başlaması (Güvenli Bağlantı) gerekmektedir.");
+      }
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true
