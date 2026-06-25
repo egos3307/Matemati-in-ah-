@@ -457,23 +457,44 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
       console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Uploading from backend to Catbox...`);
 
-      // Construct multipart/form-data manually (zero-dependency, works globally in all Node runtimes)
-      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-      const parts = [];
-      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
-      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
-      parts.push(assembledBuffer);
-      parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-      
-      const payload = Buffer.concat(parts);
+      let catboxRes;
+      try {
+        // Try native FormData + Blob first (supported in Node 18+)
+        const fileBlob = new Blob([assembledBuffer], { type: 'video/webm' });
+        const formData = new FormData();
+        formData.append('reqtype', 'fileupload');
+        formData.append('fileToUpload', fileBlob, `lesson_${lessonId}.webm`);
 
-      const catboxRes = await fetch('https://catbox.moe/user/api.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`
-        },
-        body: payload
-      });
+        catboxRes = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*'
+          },
+          body: formData
+        });
+      } catch (err) {
+        console.warn("Global FormData failed, falling back to manual boundary buffer:", err);
+        // Fallback: manual buffer multipart construction (zero dependency)
+        const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+        const parts = [];
+        parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
+        parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+        parts.push(assembledBuffer);
+        parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+        
+        const payload = Buffer.concat(parts);
+
+        catboxRes = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*'
+          },
+          body: payload
+        });
+      }
 
       if (!catboxRes.ok) {
         throw new Error('Dosya bulut sunucusuna yüklenemedi. Status: ' + catboxRes.statusText);
