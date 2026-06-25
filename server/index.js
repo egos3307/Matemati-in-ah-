@@ -1218,8 +1218,29 @@ const initParentCodes = async () => {
       });
       console.log(`Updated student ${student.name} with parentCode ${parentCode}`);
     }
+
+    // Clean up legacy YouTube or external URLs in recordingUrl database entries
+    const externalLessons = await prisma.lesson.findMany({
+      where: {
+        OR: [
+          { recordingUrl: { contains: 'youtube.com' } },
+          { recordingUrl: { contains: 'youtu.be' } },
+          { recordingUrl: { contains: 'google.com' } }
+        ]
+      }
+    });
+
+    for (const lesson of externalLessons) {
+      await prisma.lesson.update({
+        where: { id: lesson.id },
+        data: {
+          recordingUrl: `/uploads/lesson_${lesson.id}.webm`
+        }
+      });
+      console.log(`Migrated legacy YouTube/external link to local storage path for lesson ${lesson.id}`);
+    }
   } catch (err) {
-    console.error('Error initializing parent codes:', err);
+    console.error('Error initializing parent codes / cleaning recordings:', err);
   }
 };
 

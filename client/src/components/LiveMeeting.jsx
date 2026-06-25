@@ -136,16 +136,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     try {
       chunksRef.current = [];
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "browser",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 24 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
+        video: true,
+        audio: true
       });
 
       streamRef.current = screenStream;
@@ -230,10 +222,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showMicMenu, setShowMicMenu] = useState(false);
   const [showRecordPrompt, setShowRecordPrompt] = useState(false);
+  const hasPromptedRef = useRef(false);
 
   useEffect(() => {
-    if (role === 'TEACHER' && connectionState === ConnectionState.Connected && recordingStatus === 'idle') {
+    if (role === 'TEACHER' && connectionState === ConnectionState.Connected && recordingStatus === 'idle' && !hasPromptedRef.current) {
       setShowRecordPrompt(true);
+      hasPromptedRef.current = true;
     }
   }, [connectionState, role]);
 
@@ -676,12 +670,18 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             <img src="/logo.png" alt="Fullematematik Logo" className="h-full w-full object-contain" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Canlı Ders Odası</h4>
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
               <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-black tracking-wider ml-1">
                 Sunucu: LiveKit ({connectionState}) | Kamera: {cameraTracks.length}
               </span>
+              {recordingStatus === 'recording' && (
+                <span className="flex items-center gap-1.5 bg-red-600 text-white px-2 py-0.5 rounded border border-red-500 font-black text-[9px] tracking-wider animate-pulse shadow-sm shadow-red-500/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span>
+                  KAYIT AKTİF (REC)
+                </span>
+              )}
             </div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
               {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
