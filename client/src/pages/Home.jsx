@@ -35,6 +35,9 @@ const Home = () => {
   // Carousel States
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [fade, setFade] = useState(true);
+  
+  const prevIndex = (activeTestimonial - 1 + testimonials.length) % testimonials.length;
+  const nextIndex = (activeTestimonial + 1) % testimonials.length;
 
   // Transition slide helper
   const handleSlideChange = (newIndex) => {
@@ -248,72 +251,130 @@ const Home = () => {
 
         {/* Testimonials Section */}
         <section className="bg-gradient-to-b from-slate-50 to-white py-24 border-t border-slate-100" id="referanslar">
-          <div className="mx-auto max-w-5xl px-6 lg:px-10">
+          <div className="mx-auto max-w-7xl px-6 lg:px-10">
             <div className="text-center mb-16">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
-                Başarı Yolculuklarımız
+                Görüşleriniz
               </span>
               <h2 className="mt-4 text-3xl font-black text-slate-900 md:text-4xl">
-                Öğrenci ve Velilerimizin Başarı Yolculuğu
+                Aldığımız Geri Dönüşler
               </h2>
               <p className="mt-4 text-slate-600 max-w-2xl mx-auto">
                 Birlikte çalıştığımız öğrencilerin ve destek olduğumuz velilerimizin başarı hikayeleri ve samimi yorumları.
               </p>
             </div>
 
-            <div className="relative mx-auto max-w-3xl">
-              {/* Main Slider Card Container */}
-              <div className="overflow-hidden rounded-3xl bg-white p-8 md:p-12 shadow-xl border border-slate-100/80 transition-all duration-300 hover:shadow-2xl relative min-h-[320px] flex flex-col justify-between">
-                {/* Decorative Quote Icon in background */}
-                <span className="absolute right-8 top-6 text-slate-100 font-serif text-[120px] leading-none pointer-events-none select-none">
-                  ”
-                </span>
+            <div className="relative mx-auto max-w-6xl">
+              {/* Carousel Track: 3 cards on desktop, 1 on mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                 
-                {/* Active Slide Content with Fade Transition */}
-                <div className={`relative z-10 flex flex-col gap-6 h-full justify-between flex-1 transition-opacity duration-200 ${fade ? 'opacity-100' : 'opacity-0'}`}>
+                {/* Left Faded Card */}
+                <div 
+                  onClick={() => handleSlideChange(prevIndex)}
+                  className="hidden md:flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-100 shadow-md opacity-35 scale-90 transition-all duration-500 cursor-pointer hover:opacity-60 min-h-[285px]"
+                >
                   <div>
-                    {/* Header: Name and Stars */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
-                      <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                        {testimonials[activeTestimonial].name}
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <h4 className="text-base font-extrabold text-slate-800 tracking-tight">
+                        {testimonials[prevIndex].name}
                       </h4>
-                      <div className="flex gap-0.5 text-amber-500">
+                      <div className="flex gap-0.5 text-amber-500/60">
                         {[...Array(5)].map((_, i) => (
-                          <span key={i} className="material-symbols-outlined fill-1 text-lg">star</span>
+                          <span key={i} className="material-symbols-outlined fill-1 text-sm">star</span>
                         ))}
                       </div>
                     </div>
-
-                    {/* Content: Testimonial Message */}
-                    <p className="mt-6 text-base md:text-lg leading-relaxed text-slate-700 font-medium italic">
-                      "{testimonials[activeTestimonial].content}"
+                    <p className="mt-4 text-xs md:text-sm leading-relaxed text-slate-500 font-medium italic line-clamp-4">
+                      "{testimonials[prevIndex].content}"
                     </p>
                   </div>
-
-                  {/* Footer: Grade/Class */}
-                  <div className="mt-8 flex items-center justify-between pt-4 border-t border-slate-50">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-4 py-2 text-sm font-bold text-primary">
-                      <span className="material-symbols-outlined text-sm">school</span>
-                      {testimonials[activeTestimonial].grade}
+                  <div className="mt-4 pt-3 border-t border-slate-50">
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">
+                      {testimonials[prevIndex].grade}
                     </span>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleSlideChange((activeTestimonial - 1 + testimonials.length) % testimonials.length)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
-                        aria-label="Önceki yorum"
-                      >
-                        <span className="material-symbols-outlined">chevron_left</span>
-                      </button>
-                      <button 
-                        onClick={() => handleSlideChange((activeTestimonial + 1) % testimonials.length)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
-                        aria-label="Sonraki yorum"
-                      >
-                        <span className="material-symbols-outlined">chevron_right</span>
-                      </button>
+                  </div>
+                </div>
+
+                {/* Center Highlighted Card */}
+                <div className={`flex flex-col justify-between p-8 rounded-3xl bg-white border-2 border-primary/20 shadow-2xl scale-100 md:scale-105 z-10 transition-all duration-300 min-h-[320px] relative ${fade ? 'opacity-100' : 'opacity-80'}`}>
+                  {/* Decorative Quote Icon in background */}
+                  <span className="absolute right-6 top-4 text-slate-100 font-serif text-[120px] leading-none pointer-events-none select-none">
+                    ”
+                  </span>
+                  
+                  <div className="relative z-10 flex flex-col gap-6 h-full justify-between flex-1">
+                    <div>
+                      {/* Header: Name and Stars */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                        <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                          {testimonials[activeTestimonial].name}
+                        </h4>
+                        <div className="flex gap-0.5 text-amber-500">
+                          {[...Array(5)].map((_, i) => (
+                            <span key={i} className="material-symbols-outlined fill-1 text-lg">star</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Content: Testimonial Message */}
+                      <p className="mt-6 text-base md:text-lg leading-relaxed text-slate-700 font-medium italic">
+                        "{testimonials[activeTestimonial].content}"
+                      </p>
+                    </div>
+
+                    {/* Footer: Grade/Class & Navigation */}
+                    <div className="mt-8 flex items-center justify-between pt-4 border-t border-slate-50">
+                      <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-4 py-2 text-sm font-bold text-primary">
+                        <span className="material-symbols-outlined text-sm">school</span>
+                        {testimonials[activeTestimonial].grade}
+                      </span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleSlideChange(prevIndex); }}
+                          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                          aria-label="Önceki yorum"
+                        >
+                          <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleSlideChange(nextIndex); }}
+                          className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                          aria-label="Sonraki yorum"
+                        >
+                          <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Right Faded Card */}
+                <div 
+                  onClick={() => handleSlideChange(nextIndex)}
+                  className="hidden md:flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-100 shadow-md opacity-35 scale-90 transition-all duration-500 cursor-pointer hover:opacity-60 min-h-[285px]"
+                >
+                  <div>
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <h4 className="text-base font-extrabold text-slate-800 tracking-tight">
+                        {testimonials[nextIndex].name}
+                      </h4>
+                      <div className="flex gap-0.5 text-amber-500/60">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className="material-symbols-outlined fill-1 text-sm">star</span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mt-4 text-xs md:text-sm leading-relaxed text-slate-500 font-medium italic line-clamp-4">
+                      "{testimonials[nextIndex].content}"
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-50">
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">
+                      {testimonials[nextIndex].grade}
+                    </span>
+                  </div>
+                </div>
+
               </div>
 
               {/* Indicator Dots */}
