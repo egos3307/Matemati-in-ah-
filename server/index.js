@@ -416,7 +416,7 @@ app.post('/api/teacher/lessons/:id/upload-recording', auth, checkRole('TEACHER')
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  const fileName = `lesson_${lessonId}_${Date.now()}.webm`;
+  const fileName = `lesson_${lessonId}.webm`;
   const filePath = path.join(uploadDir, fileName);
   const writeStream = fs.createWriteStream(filePath);
 
@@ -493,6 +493,28 @@ app.get('/api/student/lessons', auth, checkRole('STUDENT'), async (req, res) => 
   }
 });
 
+app.get('/api/student/lessons/:id', auth, checkRole('STUDENT'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID' });
+  }
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: { teacher: { select: { name: true } } }
+    });
+    if (!lesson) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+    if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
+      return res.status(403).json({ error: 'Bu derse erişim yetkiniz yok.' });
+    }
+    res.json(lesson);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
@@ -505,15 +527,10 @@ app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT')
     if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
       return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
     }
-    
-    // Automatically set a default mathematics lesson recording URL so it's instantly available
-    const defaultRecordingUrl = 'https://www.youtube.com/watch?v=840Vl3v5_Gg';
-    
     const updated = await prisma.lesson.update({
       where: { id },
       data: { 
-        recordingRequested: true,
-        recordingUrl: lesson.recordingUrl || defaultRecordingUrl
+        recordingRequested: true
       }
     });
     res.json(updated);

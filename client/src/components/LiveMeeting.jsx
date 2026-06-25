@@ -229,6 +229,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const [audioDevices, setAudioDevices] = useState([]);
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showMicMenu, setShowMicMenu] = useState(false);
+  const [showRecordPrompt, setShowRecordPrompt] = useState(false);
+
+  useEffect(() => {
+    if (role === 'TEACHER' && connectionState === ConnectionState.Connected && recordingStatus === 'idle') {
+      setShowRecordPrompt(true);
+    }
+  }, [connectionState, role]);
 
   useEffect(() => {
     const loadDevices = async () => {
@@ -1062,6 +1069,38 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       
       {/* Play incoming audio streams from other participants */}
       <RoomAudioRenderer />
+
+      {/* Record Prompt Modal */}
+      {showRecordPrompt && (
+        <div className="fixed inset-0 z-[100000] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 text-center">
+            <div className="h-16 w-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto shadow-inner animate-bounce">
+              <span className="material-symbols-outlined text-4xl">fiber_manual_record</span>
+            </div>
+            <h3 className="font-black text-slate-100 text-lg">Ders Kaydını Başlatın</h3>
+            <p className="text-xs text-slate-405 leading-relaxed">
+              Öğrencilerin bu dersi daha sonra izleyebilmesi için ders kaydını başlatmanız gerekmektedir. Kayıt otomatik olarak bizim sunucumuza kaydedilecektir.
+            </p>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowRecordPrompt(false);
+                  startScreenRecording();
+                }}
+                className="bg-primary hover:bg-primary/90 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-primary/20 transition-all cursor-pointer"
+              >
+                Kaydı Başlat ve Derse Dön
+              </button>
+              <button
+                onClick={() => setShowRecordPrompt(false)}
+                className="bg-slate-850 hover:bg-slate-800 text-slate-350 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Daha Sonra Başlat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

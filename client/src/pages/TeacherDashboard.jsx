@@ -1272,7 +1272,12 @@ const TeacherDashboard = () => {
                         <div key={lesson.id} className="p-4 bg-white rounded-2xl border border-slate-100 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="font-bold text-slate-900 text-sm">{lesson.title}</h5>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h5 className="font-bold text-slate-900 text-sm">{lesson.title}</h5>
+                                <span className="bg-slate-100 text-slate-650 px-2 py-0.5 rounded-md text-[10px] font-extrabold border border-slate-200 shadow-sm">
+                                  ID: {lesson.id}
+                                </span>
+                              </div>
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <span className="text-[10px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded-md">
                                   {new Date(lesson.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
@@ -1292,7 +1297,7 @@ const TeacherDashboard = () => {
                             <div className="flex items-center gap-2">
                               <button 
                                 onClick={() => setActiveMeeting(lesson)}
-                                className="bg-primary hover:bg-primary/95 text-white px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer"
+                                className="bg-primary hover:bg-primary/95 text-white px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
                               >
                                 Derse Başla
                               </button>
@@ -1326,11 +1331,11 @@ const TeacherDashboard = () => {
 
                           {editingRecordingId === lesson.id && (
                             <div className="bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-100 animate-in fade-in duration-200">
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ders Kayıt Bağlantısı (Drive, Zoom, vb.)</label>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ders Kayıt Yolu veya Bağlantısı (Otomatik Kayıt: /uploads/lesson_{lesson.id}.webm)</label>
                               <div className="flex gap-2">
                                 <input 
-                                  type="url"
-                                  placeholder="https://drive.google.com/..."
+                                  type="text"
+                                  placeholder={`/uploads/lesson_${lesson.id}.webm`}
                                   value={recordingUrlInput}
                                   onChange={(e) => setRecordingUrlInput(e.target.value)}
                                   className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-primary text-slate-700 font-bold"
@@ -1350,6 +1355,9 @@ const TeacherDashboard = () => {
                                   İptal
                                 </button>
                               </div>
+                              <p className="text-[9px] text-slate-400 leading-normal">
+                                Canlı ders sonlandırıldığında sistem bu kaydı otomatik oluşturur. İhtiyacınız olursa manuel dosya yolu veya harici link düzenleyebilirsiniz.
+                              </p>
                             </div>
                           )}
                         </div>

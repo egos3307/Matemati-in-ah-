@@ -60,6 +60,9 @@ const StudentDashboard = () => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [activeRecordingUrl, setActiveRecordingUrl] = useState(null);
+  const [searchLessonId, setSearchLessonId] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const { user, logout } = useAuth();
 
   const [activeSubTab, setActiveSubTab] = useState('topics'); 
@@ -412,6 +415,38 @@ const StudentDashboard = () => {
     } catch (err) {
       console.error('Error requesting recording:', err);
       alert('Ders kaydı talep edilirken bir hata oluştu.');
+    }
+  };
+
+  const handleSearchLessonById = async (e) => {
+    e.preventDefault();
+    setSearchError('');
+    const idVal = parseInt(searchLessonId.trim());
+    if (isNaN(idVal)) {
+      setSearchError('Lütfen geçerli bir sayısal Ders ID girin.');
+      return;
+    }
+    
+    setSearchLoading(true);
+    try {
+      const response = await axios.get(`/api/student/lessons/${idVal}`);
+      const lesson = response.data;
+      if (lesson.recordingUrl) {
+        setActiveRecordingUrl(lesson.recordingUrl);
+      } else {
+        setSearchError('Bu derse ait bir ders kaydı bulunamadı.');
+      }
+    } catch (err) {
+      console.error(err);
+      if (err.response && err.response.status === 404) {
+        setSearchError('Bu ID numarasına sahip ders bulunamadı.');
+      } else if (err.response && err.response.status === 403) {
+        setSearchError('Bu ders kaydını izleme yetkiniz bulunmamaktadır.');
+      } else {
+        setSearchError('Ders aranırken bir hata oluştu.');
+      }
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -1556,13 +1591,54 @@ const StudentDashboard = () => {
         {activeTab === 'lessons' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-black text-slate-900">Derslerin</h2>
+
+            {/* Ders ID ile Kayıt İzle Card */}
+            <div className="p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-2xl">movie</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-100">Ders ID'si ile Kayıt İzle</h3>
+                  <p className="text-xs text-slate-400">Veritabanımızda kayıtlı olan derslerin ID'sini girerek doğrudan izleyin.</p>
+                </div>
+              </div>
+              <form onSubmit={handleSearchLessonById} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ders ID girin (Örn: 42)"
+                  value={searchLessonId}
+                  onChange={(e) => setSearchLessonId(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-primary text-slate-100 placeholder-slate-500"
+                />
+                <button
+                  type="submit"
+                  disabled={searchLoading}
+                  className="bg-primary hover:bg-primary/95 text-white px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {searchLoading ? 'Aranıyor...' : 'Kaydı Oynat'}
+                </button>
+              </form>
+              {searchError && (
+                <p className="text-xs text-red-400 font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">error</span>
+                  {searchError}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-4">
               {lessons.map(lesson => {
                 const isPast = new Date(lesson.date).getTime() + 7200000 < Date.now();
                 return (
                   <div key={lesson.id} className="p-6 bg-white rounded-3xl border border-primary/10 flex items-center justify-between shadow-sm">
                     <div>
-                      <h4 className="font-bold text-slate-900">{lesson.title}</h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-slate-900">{lesson.title}</h4>
+                        <span className="bg-slate-150 text-slate-600 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border border-slate-200 shadow-sm">
+                          ID: {lesson.id}
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-500 mt-1">{new Date(lesson.date).toLocaleString('tr-TR')}</p>
                     </div>
                     <div className="flex gap-2 items-center">
@@ -1575,13 +1651,19 @@ const StudentDashboard = () => {
                       </button>
 
                       {isPast && (
-                        <button 
-                          onClick={() => setActiveRecordingUrl(lesson.recordingUrl || 'https://www.youtube.com/watch?v=840Vl3v5_Gg')} 
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">play_circle</span>
-                          Kaydı İzle
-                        </button>
+                        lesson.recordingUrl ? (
+                          <button 
+                            onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-base">play_circle</span>
+                            Kaydı İzle
+                          </button>
+                        ) : (
+                          <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                            Kayıt Yok
+                          </span>
+                        )
                       )}
                     </div>
                   </div>
@@ -1659,45 +1741,13 @@ const StudentDashboard = () => {
               </button>
             </div>
             <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
-              {activeRecordingUrl.includes('youtube.com') || activeRecordingUrl.includes('youtu.be') ? (
-                (() => {
-                  let videoId = '';
-                  if (activeRecordingUrl.includes('youtube.com/watch?v=')) {
-                    videoId = activeRecordingUrl.split('watch?v=')[1].split('&')[0];
-                  } else if (activeRecordingUrl.includes('youtu.be/')) {
-                    videoId = activeRecordingUrl.split('youtu.be/')[1].split('?')[0];
-                  } else if (activeRecordingUrl.includes('youtube.com/embed/')) {
-                    return (
-                      <iframe 
-                        src={activeRecordingUrl} 
-                        title="Ders Kaydı" 
-                        frameBorder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowFullScreen
-                        className="w-full h-full rounded-2xl"
-                      />
-                    );
-                  }
-                  return (
-                    <iframe 
-                      src={`https://www.youtube.com/embed/${videoId}`} 
-                      title="Ders Kaydı" 
-                      frameBorder="0" 
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                      allowFullScreen
-                      className="w-full h-full rounded-2xl"
-                    />
-                  );
-                })()
-              ) : (
-                <video 
-                  src={activeRecordingUrl} 
-                  controls 
-                  playsInline 
-                  autoPlay
-                  className="w-full h-full object-contain"
-                />
-              )}
+              <video 
+                src={activeRecordingUrl} 
+                controls 
+                playsInline 
+                autoPlay
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
         </div>
