@@ -481,6 +481,10 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
   const totalChunks = parseInt(req.headers['x-total-chunks']);
 
+  if (isNaN(lessonId)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID' });
+  }
+
   if (isNaN(chunkIndex) || isNaN(totalChunks)) {
     return res.status(400).json({ error: 'Geçersiz dilim (chunk) bilgileri.' });
   }

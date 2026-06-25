@@ -607,7 +607,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
           const tokenVal = localStorage.getItem('token');
           
-          const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
+          const CHUNK_SIZE = 512 * 1024; // 512KB chunks
           const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
           
           console.log(`Uploading video blob of size ${blob.size} bytes in ${totalChunks} chunks...`);
