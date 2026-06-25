@@ -11,6 +11,7 @@ enum Role {
   TEACHER
   STUDENT
   PARENT
+  HEAD_TEACHER
 }
 
 model User {
@@ -32,6 +33,10 @@ model User {
   paymentNote     String?  // Ödeme notları
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  teacherId Int?
+  teacher   User?    @relation("TeacherStudents", fields: [teacherId], references: [id])
+  students  User[]   @relation("TeacherStudents")
 
   lessons   Lesson[] @relation("TeacherLessons")
   lessonsAsStudent Lesson[] @relation("StudentLessons")

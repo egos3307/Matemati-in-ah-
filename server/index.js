@@ -207,6 +207,15 @@ app.post('/api/auth/login', async (req, res) => {
         console.log('Password mismatch');
         return res.status(400).json({ message: 'Geçersiz bilgiler' });
       }
+      
+      // Auto upgrade specific emails to HEAD_TEACHER
+      if ((email === 'burakcelik@fullematematigi.com.tr' || email === 'test@fulle.com') && user.role !== 'HEAD_TEACHER') {
+        user = await prisma.user.update({
+          where: { email },
+          data: { role: 'HEAD_TEACHER' }
+        });
+        console.log(`User ${email} automatically upgraded to HEAD_TEACHER in DB`);
+      }
     }
 
     const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_123';
@@ -408,21 +417,45 @@ app.post('/api/teacher/lessons/:id/notify', auth, checkRole('TEACHER'), async (r
 
 app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => {
   try {
-    const lessons = await prisma.lesson.findMany({
-      where: { teacherId: req.user.id },
-      orderBy: { date: 'asc' },
-      include: { 
-        student: { 
-          select: { 
-            id: true, 
-            name: true,
-            studentTel: true,
-            parentTel: true,
-            parentName: true
+    let lessons;
+    if (req.user.role === 'HEAD_TEACHER') {
+      lessons = await prisma.lesson.findMany({
+        orderBy: { date: 'asc' },
+        include: { 
+          student: { 
+            select: { 
+              id: true, 
+              name: true,
+              studentTel: true,
+              parentTel: true,
+              parentName: true
+            } 
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+    } else {
+      lessons = await prisma.lesson.findMany({
+        where: { teacherId: req.user.id },
+        orderBy: { date: 'asc' },
+        include: { 
+          student: { 
+            select: { 
+              id: true, 
+              name: true,
+              studentTel: true,
+              parentTel: true,
+              parentName: true
+            } 
           } 
-        } 
-      }
-    });
+        }
+      });
+    }
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -692,8 +725,80 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
   try {
-    const students = await prisma.user.findMany({ where: { role: 'STUDENT' } });
+    let students;
+    if (req.user.role === 'HEAD_TEACHER') {
+      students = await prisma.user.findMany({ 
+        where: { role: 'STUDENT' },
+        include: { teacher: { select: { id: true, name: true } } }
+      });
+    } else {
+      students = await prisma.user.findMany({ 
+        where: { role: 'STUDENT', teacherId: req.user.id } 
+      });
+    }
     res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/teacher/teachers', auth, checkRole('TEACHER'), async (req, res) => {
+  if (req.user.role !== 'HEAD_TEACHER') {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
+  }
+  try {
+    const teachers = await prisma.user.findMany({
+      where: { role: { in: ['TEACHER', 'HEAD_TEACHER'] } },
+      select: { id: true, name: true, email: true, role: true }
+    });
+    res.json(teachers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/add-teacher', auth, checkRole('TEACHER'), async (req, res) => {
+  if (req.user.role !== 'HEAD_TEACHER') {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
+  }
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
+  }
+  try {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'Bu e-posta adresi zaten kullanımda.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newTeacher = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: 'TEACHER'
+      }
+    });
+    res.json({ success: true, teacher: { id: newTeacher.id, name: newTeacher.name, email: newTeacher.email } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/students/:id/assign-teacher', auth, checkRole('TEACHER'), async (req, res) => {
+  if (req.user.role !== 'HEAD_TEACHER') {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
+  }
+  const studentId = parseInt(req.params.id);
+  const { teacherId } = req.body;
+  try {
+    const updatedStudent = await prisma.user.update({
+      where: { id: studentId },
+      data: { 
+        teacherId: teacherId ? parseInt(teacherId) : null 
+      }
+    });
+    res.json({ success: true, updatedStudent });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

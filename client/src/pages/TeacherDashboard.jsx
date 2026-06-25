@@ -80,7 +80,10 @@ const TeacherDashboard = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [insertImgOpen, setInsertImgOpen] = useState(false);
   const [editingRecordingId, setEditingRecordingId] = useState(null);
-  const [recordingUrlInput, setRecordingUrlInput] = useState('');
+  const [teachers, setTeachers] = useState([]);
+  const [newTeacher, setNewTeacher] = useState({ name: '', email: '', password: '' });
+  const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
+  const [assigningStudentId, setAssigningStudentId] = useState(null);
 
   // Form submission and question states
   const [trialRequests, setTrialRequests] = useState([]);
@@ -154,7 +157,10 @@ const TeacherDashboard = () => {
     fetchTrialRequests();
     fetchContactMessages();
     fetchCamps();
-  }, []);
+    if (user?.role === 'HEAD_TEACHER') {
+      fetchTeachers();
+    }
+  }, [user]);
 
   const fetchStudents = async () => {
     try {
@@ -171,6 +177,40 @@ const TeacherDashboard = () => {
       setLessons(res.data);
     } catch (err) {
       console.error('Error fetching lessons:', err);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await axios.get('/api/teacher/teachers');
+      setTeachers(res.data);
+    } catch (err) {
+      console.error('Error fetching teachers:', err);
+    }
+  };
+
+  const handleAddTeacher = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/teacher/add-teacher', newTeacher);
+      setNewTeacher({ name: '', email: '', password: '' });
+      fetchTeachers();
+      setShowAddTeacherModal(false);
+      alert('Öğretmen başarıyla eklendi!');
+    } catch (err) {
+      alert('Öğretmen eklenirken hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleAssignTeacher = async (studentId, teacherId) => {
+    try {
+      await axios.post(`/api/teacher/students/${studentId}/assign-teacher`, { teacherId });
+      fetchStudents();
+      fetchTeachers();
+      setAssigningStudentId(null);
+      alert('Öğrenci öğretmen ataması güncellendi!');
+    } catch (err) {
+      alert('Atama yapılırken hata oluştu: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -617,34 +657,45 @@ const TeacherDashboard = () => {
             <span className="material-symbols-outlined">calendar_month</span>
             <span>Derslerim</span>
           </button>
-          <button 
-            onClick={() => { setActiveTab('blog'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'blog' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">edit_note</span>
-            <span>Blog Yönetimi</span>
-          </button>
-          <button 
-            onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'camps' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">school</span>
-            <span>Eğitim Kampları</span>
-          </button>
-          <button 
-            onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">forum</span>
-            <span>Formdan Gelenler</span>
-          </button>
-          <button 
-            onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">payments</span>
-            <span>Ödemeler</span>
-          </button>
+          {user?.role === 'HEAD_TEACHER' && (
+            <>
+              <button 
+                onClick={() => { setActiveTab('teachers'); setSelectedStudent(null); }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'teachers' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+              >
+                <span className="material-symbols-outlined">badge</span>
+                <span>Öğretmenler</span>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('blog'); setSelectedStudent(null); }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'blog' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+              >
+                <span className="material-symbols-outlined">edit_note</span>
+                <span>Blog Yönetimi</span>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'camps' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+              >
+                <span className="material-symbols-outlined">school</span>
+                <span>Eğitim Kampları</span>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+              >
+                <span className="material-symbols-outlined">forum</span>
+                <span>Formdan Gelenler</span>
+              </button>
+              <button 
+                onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
+                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+              >
+                <span className="material-symbols-outlined">payments</span>
+                <span>Ödemeler</span>
+              </button>
+            </>
+          )}
         </nav>
       </aside>
 
@@ -657,18 +708,29 @@ const TeacherDashboard = () => {
                activeTab === 'camps' ? `Kamp Yönetimi` :
                activeTab === 'forms' ? `Form Başvuruları & Sorular` :
                activeTab === 'payments' ? `Ödeme Takip Sistemi` :
+               activeTab === 'teachers' ? `Öğretmen Yönetimi` :
                `Hoş Geldiniz, ${user?.name.split(' ')[0]}`}
             </h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematiği Yönetim Sistemi</p>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">person_add</span>
-              Yeni Öğrenci
-            </button>
+            {activeTab === 'teachers' ? (
+              <button 
+                onClick={() => setShowAddTeacherModal(true)}
+                className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">badge</span>
+                Yeni Öğretmen
+              </button>
+            ) : (
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">person_add</span>
+                Yeni Öğrenci
+              </button>
+            )}
           </div>
         </header>
 
@@ -2512,6 +2574,174 @@ const TeacherDashboard = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'teachers' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Header and Actions */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-3xl font-black text-slate-900 font-display">Öğretmen Yönetimi</h3>
+                  <p className="text-slate-500 font-bold text-sm mt-1">Sistemdeki öğretmenleri görün, yenilerini ekleyin ve öğrencileri atayın.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddTeacherModal(true)}
+                  className="bg-primary hover:bg-primary/95 text-white font-black text-sm px-6 py-3 rounded-2xl shadow-lg shadow-primary/20 flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined">add</span>
+                  Öğretmen Ekle
+                </button>
+              </div>
+
+              {/* Teachers List Grid */}
+              <div className="grid grid-cols-1 gap-6">
+                {teachers.map((teacher) => {
+                  const teacherStudents = students.filter(s => s.teacherId === teacher.id);
+                  const teacherLessons = lessons.filter(l => l.teacherId === teacher.id);
+
+                  return (
+                    <div key={teacher.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-50 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg uppercase">
+                            {teacher.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <h4 className="font-black text-slate-900 text-lg flex items-center gap-2">
+                              {teacher.name}
+                              {teacher.role === 'HEAD_TEACHER' && (
+                                <span className="text-[10px] font-black text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  Baş Öğretmen
+                                </span>
+                              )}
+                            </h4>
+                            <p className="text-slate-400 text-xs font-medium">{teacher.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+                          <div>
+                            <span className="text-slate-400">Atanan Öğrenci:</span> <span className="text-slate-800 font-extrabold">{teacherStudents.length}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">Toplam Canlı Ders:</span> <span className="text-slate-800 font-extrabold">{teacherLessons.length}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Assigned Students */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-xs font-black text-slate-400 uppercase tracking-wider">Atanmış Öğrenciler</h5>
+                        </div>
+                        {teacherStudents.length === 0 ? (
+                          <p className="text-slate-400 text-xs font-bold italic">Bu öğretmene henüz bir öğrenci atanmamış.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {teacherStudents.map(student => (
+                              <div key={student.id} className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl">
+                                <span className="text-xs font-bold text-slate-700">{student.name}</span>
+                                <button
+                                  onClick={() => {
+                                    if(window.confirm(`${student.name} isimli öğrencinin bu öğretmenle olan atamasını kaldırmak istiyor musunuz?`)) {
+                                      handleAssignTeacher(student.id, null);
+                                    }
+                                  }}
+                                  className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
+                                  title="Atamayı Kaldır"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">close</span>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Planned Lessons */}
+                      <div>
+                        <h5 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Planlanan Canlı Dersler</h5>
+                        {teacherLessons.length === 0 ? (
+                          <p className="text-slate-400 text-xs font-bold italic">Planlanmış bir ders bulunmuyor.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {teacherLessons.slice(0, 6).map(lesson => (
+                              <div key={lesson.id} className="p-3 bg-slate-50/50 rounded-xl border border-slate-100 flex flex-col justify-between gap-2">
+                                <div>
+                                  <h6 className="font-bold text-slate-800 text-xs truncate" title={lesson.title}>{lesson.title}</h6>
+                                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                                    Öğrenci: <span className="text-slate-650">{lesson.student?.name || 'Genel'}</span>
+                                  </p>
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium text-right">
+                                  {new Date(lesson.date).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            ))}
+                            {teacherLessons.length > 6 && (
+                              <div className="p-3 bg-slate-50/30 rounded-xl border border-slate-100 border-dashed flex items-center justify-center text-slate-400 text-xs font-bold">
+                                +{teacherLessons.length - 6} ders daha
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Student Assignments Table */}
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mt-8">
+                <h4 className="font-black text-slate-900 text-lg mb-2">Öğrenci - Öğretmen Atama Paneli</h4>
+                <p className="text-slate-400 font-bold text-sm mb-6">Öğrencilerin atanacağı öğretmenleri seçebilirsiniz.</p>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 font-black text-xs uppercase tracking-wider">
+                        <th className="py-4">Öğrenci Adı</th>
+                        <th className="py-4">Sınıfı</th>
+                        <th className="py-4">Mevcut Öğretmen</th>
+                        <th className="py-4 text-right pr-2">Öğretmen Ataması Yap</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {students.map((student) => (
+                        <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
+                          <td className="py-4 font-bold text-slate-900 text-sm">{student.name}</td>
+                          <td className="py-4 font-bold text-slate-500 text-sm">
+                            {(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}
+                          </td>
+                          <td className="py-4">
+                            {student.teacher ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                                {student.teacher.name}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-400 italic">
+                                Atanmamış
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-right pr-2">
+                            <select
+                              value={student.teacherId || ''}
+                              onChange={(e) => handleAssignTeacher(student.id, e.target.value || null)}
+                              className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-primary focus:bg-white transition-all"
+                            >
+                              <option value="">Seçiniz (Atamayı Kaldır)</option>
+                              {teachers.filter(t => t.role === 'TEACHER').map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -2570,6 +2800,59 @@ const TeacherDashboard = () => {
               </div>
 
               <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Kaydı Tamamla</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Teacher Modal */}
+      {showAddTeacherModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setShowAddTeacherModal(false)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900 transition-colors cursor-pointer">
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+            <h3 className="text-3xl font-black text-slate-900 mb-2 font-display">Yeni Öğretmen Ekle</h3>
+            <p className="text-slate-400 font-bold text-sm mb-8 uppercase tracking-widest">Sisteme öğretmen tanımlayın</p>
+            
+            <form onSubmit={handleAddTeacher} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Ad Soyad</label>
+                <input 
+                  type="text"
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={newTeacher.name} 
+                  onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})} 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">E-posta Adresi</label>
+                <input 
+                  type="email" 
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={newTeacher.email} 
+                  onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})} 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Giriş Şifresi</label>
+                <input 
+                  type="password" 
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={newTeacher.password} 
+                  onChange={(e) => setNewTeacher({...newTeacher, password: e.target.value})} 
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/95 text-white font-black text-sm py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all mt-4 cursor-pointer"
+              >
+                Öğretmeni Kaydet
+              </button>
             </form>
           </div>
         </div>

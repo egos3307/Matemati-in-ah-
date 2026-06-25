@@ -19,6 +19,9 @@ const auth = (req, res, next) => {
 
 const checkRole = (role) => {
   return (req, res, next) => {
+    if (role === 'TEACHER' && (req.user.role === 'TEACHER' || req.user.role === 'HEAD_TEACHER')) {
+      return next();
+    }
     if (req.user.role !== role) {
       return res.status(403).json({ message: 'Access denied' });
     }
