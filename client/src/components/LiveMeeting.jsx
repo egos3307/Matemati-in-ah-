@@ -310,22 +310,46 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
         try {
           const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
-          const tokenVal = localStorage.getItem('token');
-          const response = await fetch(`/api/teacher/lessons/${lessonId}/upload-recording`, {
+          
+          // Create form data for catbox.moe direct browser upload
+          const formData = new FormData();
+          formData.append('reqtype', 'fileupload');
+          
+          const fileExtension = recorder.mimeType && recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+          const file = new File([blob], `lesson_${lessonId}.${fileExtension}`, { type: blob.type });
+          formData.append('fileToUpload', file);
+
+          // Direct browser POST request to Catbox (bypassing Vercel 4.5MB gateway limit and read-only filesystem)
+          const response = await fetch('https://catbox.moe/user/api.php', {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${tokenVal}`,
-              'Content-Type': recorder.mimeType || 'video/webm'
-            },
-            body: blob
+            body: formData
           });
 
           if (!response.ok) {
-            throw new Error('Yükleme başarısız oldu.');
+            throw new Error('Dosya yükleme sunucusu (Catbox) hata verdi.');
           }
 
-          const data = await response.json();
-          alert('Ders kaydı başarıyla kaydedildi ve sisteme yüklendi!');
+          const fileUrl = await response.text();
+          if (!fileUrl || !fileUrl.startsWith('http')) {
+            throw new Error('Dosya yükleme sunucusundan geçersiz yanıt alındı: ' + fileUrl);
+          }
+
+          // Save the URL to our PostgreSQL database
+          const tokenVal = localStorage.getItem('token');
+          const saveResponse = await fetch(`/api/teacher/lessons/${lessonId}/recording`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${tokenVal}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ recordingUrl: fileUrl.trim() })
+          });
+
+          if (!saveResponse.ok) {
+            throw new Error('Ders kaydı veritabanına kaydedilemedi.');
+          }
+
+          alert('Ders kaydı başarıyla bulut veritabanına kaydedildi ve yüklendi!');
         } catch (err) {
           console.error('Error saving recording:', err);
           alert('Ders kaydı yüklenirken bir hata oluştu: ' + err.message);
