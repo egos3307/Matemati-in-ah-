@@ -8,7 +8,8 @@ import {
   VideoTrack, 
   useConnectionState,
   useParticipants,
-  useMaybeRoomContext
+  useMaybeRoomContext,
+  AudioConference
 } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
@@ -162,9 +163,15 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   useEffect(() => {
     if (connectionState === ConnectionState.Connected && localParticipant) {
       const startStreams = async () => {
+        // 1. Gracefully try to enable microphone
         try {
           await localParticipant.setMicrophoneEnabled(true);
-          
+        } catch (err) {
+          console.warn("Could not auto-enable microphone (blocked permissions or device missing):", err);
+        }
+        
+        // 2. Gracefully try to enable camera
+        try {
           // Get the best standard (non-wide angle, front-facing) camera device ID if available
           const getBestCameraDeviceId = async () => {
             try {
@@ -209,7 +216,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
             });
           }
         } catch (err) {
-          console.warn("Could not auto-enable devices (blocked permissions or device missing):", err);
+          console.warn("Could not auto-enable camera (blocked permissions or device missing):", err);
         }
       };
       startStreams();
@@ -820,6 +827,9 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
           </button>
         </div>
       </div>
+      
+      {/* Play incoming audio streams from other participants */}
+      <AudioConference />
     </div>
   );
 };
