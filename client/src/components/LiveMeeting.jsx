@@ -216,35 +216,39 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       const drawFrame = () => {
         if (!ctx) return;
 
-        // Draw solid dark background
-        ctx.fillStyle = '#080b11';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        try {
+          // Draw solid dark background
+          ctx.fillStyle = '#080b11';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Fetch all active, playing videos on the DOM
-        const videoElements = Array.from(document.querySelectorAll('video')).filter(video => {
-          return video.readyState >= 2 && !video.paused;
-        });
+          // Fetch all active, playing videos on the DOM
+          const videoElements = Array.from(document.querySelectorAll('video')).filter(video => {
+            return video.readyState >= 2 && !video.paused;
+          });
 
-        if (videoElements.length === 1) {
-          ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
-        } else if (videoElements.length === 2) {
-          const w = canvas.width / 2;
-          const h = canvas.height;
-          ctx.drawImage(videoElements[0], 0, 0, w, h);
-          ctx.drawImage(videoElements[1], w, 0, w, h);
-        } else if (videoElements.length > 2) {
-          const w = canvas.width / 2;
-          const h = canvas.height / 2;
-          ctx.drawImage(videoElements[0], 0, 0, w, h);
-          ctx.drawImage(videoElements[1], w, 0, w, h);
-          if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
-          if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
-        } else {
-          // If no videos are currently active, show a placeholder
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '24px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('Canlı Ders Görüntüsü Bekleniyor...', canvas.width / 2, canvas.height / 2);
+          if (videoElements.length === 1) {
+            ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
+          } else if (videoElements.length === 2) {
+            const w = canvas.width / 2;
+            const h = canvas.height;
+            ctx.drawImage(videoElements[0], 0, 0, w, h);
+            ctx.drawImage(videoElements[1], w, 0, w, h);
+          } else if (videoElements.length > 2) {
+            const w = canvas.width / 2;
+            const h = canvas.height / 2;
+            ctx.drawImage(videoElements[0], 0, 0, w, h);
+            ctx.drawImage(videoElements[1], w, 0, w, h);
+            if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
+            if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
+          } else {
+            // If no videos are currently active, show a placeholder
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Canlı Ders Görüntüsü Bekleniyor...', canvas.width / 2, canvas.height / 2);
+          }
+        } catch (drawErr) {
+          console.warn("Canvas draw frame warning:", drawErr);
         }
 
         animationFrameRef.current = requestAnimationFrame(drawFrame);
@@ -374,8 +378,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   const stopScreenRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      } else {
+        setRecordingStatus('idle');
+      }
+    } catch (err) {
+      console.error("Error stopping MediaRecorder:", err);
+      setRecordingStatus('idle');
     }
   };
 
