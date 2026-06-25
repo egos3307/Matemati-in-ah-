@@ -1650,16 +1650,16 @@ const StudentDashboard = () => {
                         Katıl
                       </button>
 
-                      {isPast && (
-                        lesson.recordingUrl ? (
-                          <button 
-                            onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-base">play_circle</span>
-                            Kaydı İzle
-                          </button>
-                        ) : (
+                      {lesson.recordingUrl ? (
+                        <button 
+                          onClick={() => setActiveRecordingUrl(lesson.recordingUrl)} 
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-base">play_circle</span>
+                          Kaydı İzle
+                        </button>
+                      ) : (
+                        isPast && (
                           <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
                             Kayıt Yok
                           </span>
