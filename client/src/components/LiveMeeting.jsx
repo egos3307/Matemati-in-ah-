@@ -13,7 +13,6 @@ import {
 } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
-import bgImage from './canli-ders-bg.png';
 
 // Helper to determine if a participant is a teacher
 const checkIsTeacher = (participant) => {
@@ -90,7 +89,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
   }, [roomName, userName, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[99999] flex flex-col bg-[#0b0f19] font-sans text-slate-100 overflow-hidden">
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-gradient-to-b from-[#ea580c] to-[#c2410c] font-sans text-slate-100 overflow-hidden">
       {/* Header */}
       <div className="bg-slate-900/90 backdrop-blur px-5 py-3 flex items-center justify-between border-b border-slate-800/80 z-10">
         <div className="flex items-center gap-3">
@@ -523,15 +522,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   }
 
   return (
-    <div 
-      className="w-full h-full flex flex-col font-sans text-slate-100 overflow-hidden bg-[#080b11]"
-      style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(8, 11, 17, 0.85), rgba(5, 7, 10, 0.9)), url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
-      }}
-    >
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-gradient-to-b from-[#ea580c] to-[#c2410c] font-sans text-slate-100 overflow-hidden">
       {/* Top Header */}
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
         <div className="flex items-center gap-3">
