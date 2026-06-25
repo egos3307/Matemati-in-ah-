@@ -95,7 +95,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Logo" className="h-7 w-7 object-contain animate-pulse" />
           <div>
-            <h4 className="font-bold text-xs md:text-sm text-slate-100">Canlı Ders Odası <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded ml-2">Yedek Sunucu</span></h4>
+            <h4 className="font-bold text-xs md:text-sm text-slate-100">Canlı Ders Odası <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded ml-2">Yedek Sunucu (Jitsi)</span></h4>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
               {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
             </p>
@@ -514,6 +514,9 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
             <div className="flex items-center gap-2">
               <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Canlı Ders Odası</h4>
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
+              <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-black tracking-wider ml-1">
+                Sunucu: LiveKit ({connectionState}) | Kamera: {cameraTracks.length}
+              </span>
             </div>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
               {role === 'TEACHER' ? 'Öğretmen' : 'Öğrenci'} • {userName}
