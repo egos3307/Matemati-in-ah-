@@ -20,7 +20,7 @@ const Login = () => {
         studentCode, 
         loginType 
       });
-      if (user.role === 'TEACHER') {
+      if (user.role === 'TEACHER' || user.role === 'HEAD_TEACHER') {
         navigate('/ogretmen');
       } else if (user.role === 'PARENT') {
         navigate('/veli');

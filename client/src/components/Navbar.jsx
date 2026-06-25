@@ -28,7 +28,13 @@ const Navbar = () => {
           {user ? (
             <>
               <Link 
-                to={user.role === 'TEACHER' ? '/ogretmen' : '/ogrenci'} 
+                to={
+                  (user.role === 'TEACHER' || user.role === 'HEAD_TEACHER') 
+                    ? '/ogretmen' 
+                    : user.role === 'PARENT' 
+                      ? '/veli' 
+                      : '/ogrenci'
+                } 
                 className="text-xs md:text-sm font-bold whitespace-nowrap"
               >
                 Panel
