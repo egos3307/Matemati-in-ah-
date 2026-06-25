@@ -522,15 +522,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   }
 
   return (
-    <div 
-      className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
-      style={{
-        backgroundImage: "linear-gradient(to bottom, rgba(8, 11, 17, 0.85), rgba(5, 7, 10, 0.9)), url('/canli-ders-bg.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
-      }}
-    >
+    <div className="w-full h-full flex flex-col font-sans text-slate-100 overflow-hidden bg-transparent">
       {/* Top Header */}
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
         <div className="flex items-center gap-3">
@@ -931,7 +923,13 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
         handleLiveKitError();
       }}
       connectOptions={{ autoSubscribe: true }}
-      className="fixed inset-0 z-[99999] w-screen h-screen bg-slate-950 overflow-hidden"
+      className="fixed inset-0 z-[99999] w-screen h-screen overflow-hidden"
+      style={{
+        backgroundImage: "linear-gradient(to bottom, rgba(8, 11, 17, 0.85), rgba(5, 7, 10, 0.9)), url('/canli-ders-bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
     >
       <MeetingSession 
         role={role} 
