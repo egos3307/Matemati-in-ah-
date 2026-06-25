@@ -175,10 +175,23 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     let user;
     if (loginType === 'STUDENT') {
-      user = await prisma.user.findUnique({ where: { studentCode } });
-      if (!user) {
-        console.log('User not found');
-        return res.status(400).json({ message: 'Geçersiz bilgiler' });
+      const normalizedCode = (studentCode || '').trim().toUpperCase();
+      if (normalizedCode.startsWith('FMV')) {
+        // Parent login via parent code
+        user = await prisma.user.findUnique({ where: { parentCode: normalizedCode } });
+        if (!user) {
+          console.log('Parent user not found');
+          return res.status(400).json({ message: 'Geçersiz bilgiler' });
+        }
+        // Force role to PARENT for session
+        user = { ...user, role: 'PARENT' };
+      } else {
+        // Student login
+        user = await prisma.user.findUnique({ where: { studentCode: normalizedCode } });
+        if (!user) {
+          console.log('Student user not found');
+          return res.status(400).json({ message: 'Geçersiz bilgiler' });
+        }
       }
     } else {
       user = await prisma.user.findUnique({ where: { email } });
@@ -200,7 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    console.log('Login successful for:', user.email || user.studentCode);
+    console.log('Login successful for:', user.email || user.studentCode || user.parentCode);
     res.json({ 
       token, 
       user: { 
@@ -209,6 +222,7 @@ app.post('/api/auth/login', async (req, res) => {
         role: user.role, 
         email: user.email,
         studentCode: user.studentCode,
+        parentCode: user.parentCode,
         grade: user.grade,
         parentName: user.parentName,
         parentTel: user.parentTel,
@@ -226,13 +240,22 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
   try {
     const hashedPassword = await bcrypt.hash(password || 'student', 10);
     
-    // Generate unique FMXXX code
+    // Generate unique FMXXX and FMVXXX codes
     let studentCode;
+    let parentCode;
     let isUnique = false;
     while (!isUnique) {
       const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
       studentCode = `FM${randomNum}`;
-      const existing = await prisma.user.findUnique({ where: { studentCode } });
+      parentCode = `FMV${randomNum}`;
+      const existing = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { studentCode },
+            { parentCode }
+          ]
+        }
+      });
       if (!existing) isUnique = true;
     }
 
@@ -248,6 +271,7 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
         parentTel, 
         studentTel,
         studentCode,
+        parentCode,
         serviceProvided,
         paymentStatus: paymentStatus || 'UNPAID',
         paymentDay,
@@ -1034,9 +1058,112 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
+// Parent Routes
+app.get('/api/parent/student', auth, checkRole('PARENT'), async (req, res) => {
+  try {
+    const student = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'Öğrenci bulunamadı.' });
+    }
+    res.json({
+      id: student.id,
+      name: student.name,
+      studentCode: student.studentCode,
+      parentCode: student.parentCode,
+      grade: student.grade,
+      parentName: student.parentName,
+      parentTel: student.parentTel,
+      studentTel: student.studentTel,
+      serviceProvided: student.serviceProvided,
+      paymentStatus: student.paymentStatus,
+      paymentDay: student.paymentDay,
+      paymentAmount: student.paymentAmount,
+      paymentNote: student.paymentNote
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/parent/lessons', auth, checkRole('PARENT'), async (req, res) => {
+  try {
+    const lessons = await prisma.lesson.findMany({
+      where: {
+        OR: [
+          { studentId: req.user.id },
+          { studentId: null }
+        ]
+      },
+      orderBy: { date: 'asc' },
+      include: { teacher: { select: { name: true } } }
+    });
+    res.json(lessons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/parent/homeworks', auth, checkRole('PARENT'), async (req, res) => {
+  try {
+    const homeworks = await prisma.studentHomework.findMany({
+      where: { studentId: req.user.id },
+      include: { homework: true }
+    });
+    res.json(homeworks);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/parent/trials', auth, checkRole('PARENT'), async (req, res) => {
+  try {
+    const trials = await prisma.trial.findMany({
+      where: { studentId: req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    const parsedTrials = trials.map(t => ({
+      ...t,
+      results: JSON.parse(t.results)
+    }));
+    res.json(parsedTrials);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const initParentCodes = async () => {
+  try {
+    const studentsWithoutParentCode = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        parentCode: null,
+        studentCode: { not: null }
+      }
+    });
+
+    for (const student of studentsWithoutParentCode) {
+      const numMatch = student.studentCode.match(/\d+/);
+      const randomNum = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
+      const parentCode = `FMV${randomNum}`;
+      
+      await prisma.user.update({
+        where: { id: student.id },
+        data: { parentCode }
+      });
+      console.log(`Updated student ${student.name} with parentCode ${parentCode}`);
+    }
+  } catch (err) {
+    console.error('Error initializing parent codes:', err);
+  }
+};
+
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+  initParentCodes().then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
   });
 }
 

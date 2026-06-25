@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   TEACHER
   STUDENT
+  PARENT
 }
 
 model User {
@@ -19,6 +20,7 @@ model User {
   name      String
   role      Role     @default(STUDENT)
   studentCode String? @unique // FMXXX formatında
+  parentCode  String? @unique // FMVXXX formatında
   grade     String?  // Sınıf (5, 6, ..., 12)
   parentName String? // Veli Ad Soyad
   parentTel  String? // Veli Tel No

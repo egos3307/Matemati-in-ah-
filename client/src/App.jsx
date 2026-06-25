@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import TeacherDashboard from './pages/TeacherDashboard';
 import StudentDashboard from './pages/StudentDashboard';
+import ParentDashboard from './pages/ParentDashboard';
 import Derslerimiz from './pages/Derslerimiz';
 import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
@@ -17,7 +18,7 @@ const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullema
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/ogretmen') || location.pathname.startsWith('/ogrenci');
+  const hideNavbar = location.pathname.startsWith('/ogretmen') || location.pathname.startsWith('/ogrenci') || location.pathname.startsWith('/veli');
 
   return (
     <div className="min-h-screen">
@@ -42,6 +43,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute role="STUDENT">
               <StudentDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/veli" 
+          element={
+            <ProtectedRoute role="PARENT">
+              <ParentDashboard />
             </ProtectedRoute>
           } 
         />

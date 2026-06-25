@@ -188,7 +188,7 @@ const TeacherDashboard = () => {
       setNewStudent({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
       fetchStudents();
       setShowAddModal(false);
-      alert(`Öğrenci Kaydedildi!\nKod: ${res.data.studentCode}`);
+      alert(`Öğrenci Kaydedildi!\nÖğrenci Giriş Kodu: ${res.data.studentCode}\nVeli Giriş Kodu: ${res.data.parentCode}`);
     } catch (err) {
       console.error('Error adding student:', err);
       const message = err.response?.data?.error || err.response?.data?.message || 'Öğrenci eklenirken bir hata oluştu.';
@@ -955,7 +955,10 @@ const TeacherDashboard = () => {
                           >
                             <span className="material-symbols-outlined text-base">delete</span>
                           </button>
-                          <code className="text-[10px] font-black bg-slate-50 px-2 py-1 rounded text-slate-400">{student.studentCode}</code>
+                          <div className="flex flex-col items-end gap-1">
+                            <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">Ö: {student.studentCode}</code>
+                            <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">V: {student.parentCode || 'Yok'}</code>
+                          </div>
                         </div>
                       </div>
                       <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
@@ -980,7 +983,8 @@ const TeacherDashboard = () => {
                     <h3 className="text-3xl font-black text-slate-900">{selectedStudent.name}</h3>
                     <div className="flex gap-4 mt-1">
                       <span className="text-xs font-bold text-primary uppercase tracking-widest">{(selectedStudent.grade === 'KPSS' || selectedStudent.grade === 'Mezun') ? selectedStudent.grade : `${selectedStudent.grade}. Sınıf`}</span>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kod: {selectedStudent.studentCode}</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Öğrenci Kodu: {selectedStudent.studentCode}</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Veli Kodu: {selectedStudent.parentCode || 'Yok'}</span>
                     </div>
                   </div>
                 </div>

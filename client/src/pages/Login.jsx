@@ -22,6 +22,8 @@ const Login = () => {
       });
       if (user.role === 'TEACHER') {
         navigate('/ogretmen');
+      } else if (user.role === 'PARENT') {
+        navigate('/veli');
       } else {
         navigate('/ogrenci');
       }
@@ -71,11 +73,11 @@ const Login = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             {loginType === 'STUDENT' ? (
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Kodu</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci veya Veli Kodu</label>
                 <input
                   type="text"
                   required
-                  placeholder="FMXXX"
+                  placeholder="FMXXX veya FMVXXX"
                   className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
