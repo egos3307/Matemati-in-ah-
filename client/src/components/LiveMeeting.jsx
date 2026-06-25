@@ -163,16 +163,60 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   useEffect(() => {
     if (connectionState === ConnectionState.Connected && localParticipant) {
       const startStreams = async () => {
+        // 1. Gracefully try to enable microphone
         try {
           await localParticipant.setMicrophoneEnabled(true);
         } catch (err) {
-          console.warn("Could not auto-enable microphone:", err);
+          console.warn("Could not auto-enable microphone (blocked permissions or device missing):", err);
         }
-
+        
+        // 2. Gracefully try to enable camera
         try {
-          await localParticipant.setCameraEnabled(true);
+          // Get the best standard (non-wide angle, front-facing) camera device ID if available
+          const getBestCameraDeviceId = async () => {
+            try {
+              if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                return null;
+              }
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const videoDevices = devices.filter(device => device.kind === 'videoinput');
+              if (videoDevices.length <= 1) return null;
+
+              // Filter out wide-angle, virtual and back cameras to default to standard front camera
+              const frontCameras = videoDevices.filter(d => {
+                const label = d.label.toLowerCase();
+                return !label.includes('back') && 
+                       !label.includes('ark') && 
+                       !label.includes('wide') && 
+                       !label.includes('geniş') && 
+                       !label.includes('ultra') && 
+                       !label.includes('virtual');
+              });
+
+              if (frontCameras.length > 0) {
+                return frontCameras[0].deviceId;
+              }
+              return videoDevices[0].deviceId;
+            } catch (e) {
+              console.warn('Error enumerating video devices:', e);
+              return null;
+            }
+          };
+
+          const deviceId = await getBestCameraDeviceId();
+          if (deviceId) {
+            await localParticipant.setCameraEnabled(true, {
+              deviceId: deviceId,
+              resolution: { width: 1280, height: 720, frameRate: 24 }
+            });
+          } else {
+            await localParticipant.setCameraEnabled(true, {
+              facingMode: 'user',
+              resolution: { width: 1280, height: 720, frameRate: 24 }
+            });
+          }
         } catch (err) {
-          console.warn("Could not auto-enable camera:", err);
+          console.warn("Could not auto-enable camera (blocked permissions or device missing):", err);
         }
       };
       startStreams();
@@ -392,12 +436,6 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
       console.error("Audio toggle failed:", err);
-      alert(
-        "Mikrofon Başlatılamadı!\n\n" +
-        "Lütfen şunları kontrol edin:\n" +
-        "1. Tarayıcınızın adres çubuğundaki kilit (güvenlik) simgesine tıklayarak mikrofon izninin 'İzin Ver' (Allow) olarak ayarlandığından emin olun.\n" +
-        "2. Mikrofonunuzun başka bir uygulama (Zoom, Teams, Skype vb.) veya başka bir tarayıcı sekmesi tarafından kullanılmadığından emin olun."
-      );
     }
   };
 
@@ -407,13 +445,6 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
       console.error("Camera toggle failed:", err);
-      alert(
-        "Kamera Başlatılamadı!\n\n" +
-        "Lütfen şunları kontrol edin:\n" +
-        "1. Tarayıcınızın adres çubuğundaki kilit (güvenlik) simgesine tıklayarak kamera izninin 'İzin Ver' (Allow) olarak ayarlandığından emin olun.\n" +
-        "2. Kameranızın başka bir uygulama (Zoom, Teams, Skype vb.) veya başka bir tarayıcı sekmesi tarafından kullanılmadığından emin olun.\n" +
-        "3. macOS (Macbook) kullanıyorsanız: 'Sistem Ayarları' -> 'Gizlilik ve Güvenlik' -> 'Kamera' kısmından tarayıcınıza izin verildiğini kontrol edin."
-      );
     }
   };
 
