@@ -524,7 +524,43 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         }
       }
 
-      // Attempt 3: transfer.sh upload fallback (Keeps files for 14 days, direct link supported)
+      // Attempt 3: Uguu.se upload fallback (Highly stable, accessible in Turkey, keeps for 24-48 hours)
+      if (!uploadSuccess) {
+        try {
+          console.log("Attempting Uguu.se upload fallback...");
+          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+          const parts = [];
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="files[]"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+          parts.push(assembledBuffer);
+          parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+          
+          const payload = Buffer.concat(parts);
+
+          const uguuRes = await fetch('https://uguu.se/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': `multipart/form-data; boundary=${boundary}`,
+              'Content-Length': String(payload.length),
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': '*/*'
+            },
+            body: payload
+          });
+
+          const resJson = await uguuRes.json();
+          if (uguuRes.ok && resJson.success && resJson.files && resJson.files[0]) {
+            uploadSuccess = true;
+            finalUrl = resJson.files[0].url;
+            console.log(`Successfully uploaded to Uguu.se: ${finalUrl}`);
+          } else {
+            console.warn(`Uguu.se returned non-OK status: ${uguuRes.status}. Response: ${JSON.stringify(resJson)}`);
+          }
+        } catch (uguuErr) {
+          console.error("Uguu.se fallback upload failed with error:", uguuErr);
+        }
+      }
+
+      // Attempt 4: transfer.sh upload fallback (Keeps files for 14 days, direct link supported)
       if (!uploadSuccess) {
         try {
           console.log("Attempting transfer.sh upload fallback...");
@@ -551,7 +587,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         }
       }
 
-      // Attempt 4: Litterbox upload fallback (Keeps files for 72 hours temporary)
+      // Attempt 5: Litterbox upload fallback (Keeps files for 72 hours temporary)
       if (!uploadSuccess) {
         try {
           console.log("Attempting Litterbox upload fallback...");
