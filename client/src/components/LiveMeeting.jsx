@@ -524,7 +524,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
 
   return (
     <div 
-      className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden bg-[#080b11]"
+      className="w-full h-full flex flex-col font-sans text-slate-100 overflow-hidden bg-[#080b11]"
       style={{
         backgroundImage: `linear-gradient(to bottom, rgba(8, 11, 17, 0.85), rgba(5, 7, 10, 0.9)), url(${bgImage})`,
         backgroundSize: "cover",
