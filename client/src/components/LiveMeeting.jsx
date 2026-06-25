@@ -823,6 +823,46 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const isLeavingRef = useRef(false);
 
+  // Pre-flight check: Trigger browser camera and microphone permissions prompt first
+  useEffect(() => {
+    const requestPermissionsFirst = async () => {
+      try {
+        let hasVideo = false;
+        let hasAudio = false;
+        
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          hasVideo = devices.some(d => d.kind === 'videoinput');
+          hasAudio = devices.some(d => d.kind === 'audioinput');
+        } else {
+          hasVideo = true;
+          hasAudio = true;
+        }
+
+        const constraints = {
+          audio: hasAudio,
+          video: hasVideo
+        };
+
+        if (constraints.audio || constraints.video) {
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          stream.getTracks().forEach(track => track.stop());
+        }
+      } catch (err) {
+        console.warn("Pre-flight media capture failed:", err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          alert(
+            "Kamera ve Mikrofon İzni Engellendi!\n\n" +
+            "Canlı derse katılabilmek için tarayıcınızdan kamera ve mikrofon erişimine izin vermelisiniz.\n" +
+            "Lütfen adres çubuğunun solundaki kilit simgesine tıklayıp izinleri açın ve sayfayı yenileyin."
+          );
+        }
+      }
+    };
+    
+    requestPermissionsFirst();
+  }, []);
+
   useEffect(() => {
     const fetchToken = async () => {
       try {
