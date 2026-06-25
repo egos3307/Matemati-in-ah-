@@ -14,7 +14,6 @@ import {
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
 
-// Helper to determine if a participant is a teacher
 const checkIsTeacher = (participant) => {
   try {
     if (participant.metadata) {
@@ -25,6 +24,201 @@ const checkIsTeacher = (participant) => {
     // metadata is not JSON
   }
   return participant.identity.includes('Öğretmen') || participant.identity.includes('TEACHER');
+};
+
+// WHITEBOARD COMPONENT
+const Whiteboard = ({ room, role, whiteboardCanvasRef }) => {
+  const isTeacher = role === 'TEACHER';
+  const canvasElRef = useRef(null);
+  const [color, setColor] = useState('#ff0000'); // Default to red
+  const [penSize, setPenSize] = useState(3);
+  const [isEraser, setIsEraser] = useState(false);
+  const drawingRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const canvas = canvasElRef.current;
+    if (!canvas) return;
+    whiteboardCanvasRef.current = canvas;
+    
+    // Set fixed resolution
+    canvas.width = 1280;
+    canvas.height = 720;
+    
+    // Setup default styles
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+  }, [whiteboardCanvasRef]);
+
+  const getCoordinates = (e) => {
+    const canvas = canvasElRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    
+    // Touch support
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) / rect.width;
+    const y = (clientY - rect.top) / rect.height;
+    return { x, y };
+  };
+
+  const startDrawing = (e) => {
+    if (!isTeacher) return;
+    const pos = getCoordinates(e);
+    if (!pos) return;
+    drawingRef.current = true;
+    lastPosRef.current = pos;
+  };
+
+  const draw = (e) => {
+    if (!drawingRef.current || !isTeacher) return;
+    const canvas = canvasElRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const currentPos = getCoordinates(e);
+    if (!currentPos) return;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = penSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    if (isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(lastPosRef.current.x * canvas.width, lastPosRef.current.y * canvas.height);
+    ctx.lineTo(currentPos.x * canvas.width, currentPos.y * canvas.height);
+    ctx.stroke();
+
+    // Publish to LiveKit
+    if (room) {
+      const packet = {
+        type: 'draw',
+        x0: lastPosRef.current.x,
+        y0: lastPosRef.current.y,
+        x1: currentPos.x,
+        y1: currentPos.y,
+        color,
+        size: penSize,
+        isEraser
+      };
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(packet));
+      room.localParticipant.publishData(data, { reliable: true });
+    }
+
+    lastPosRef.current = currentPos;
+  };
+
+  const stopDrawing = () => {
+    drawingRef.current = false;
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasElRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (room) {
+      const packet = { type: 'clear' };
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(packet));
+      room.localParticipant.publishData(data, { reliable: true });
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col bg-white rounded-3xl overflow-hidden relative border border-slate-200 shadow-2xl">
+      {/* Draw Tools Header */}
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4 select-none animate-in fade-in duration-300">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-slate-800 font-bold">edit_note</span>
+          <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Matematik Beyaz Tahta</span>
+        </div>
+
+        {isTeacher && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Color options */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-sm">
+              {['#000000', '#ff0000', '#0000ff', '#008000', '#eab308'].map((c) => (
+                <button
+                  key={c}
+                  onClick={() => { setColor(c); setIsEraser(false); }}
+                  className={`w-6 h-6 rounded-full border transition-all hover:scale-110 cursor-pointer ${
+                    color === c && !isEraser ? 'scale-110 ring-2 ring-primary ring-offset-1 border-transparent' : 'border-slate-200'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+
+            {/* Eraser */}
+            <button
+              onClick={() => setIsEraser(!isEraser)}
+              className={`p-1.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+                isEraser 
+                  ? 'bg-primary text-white border-primary shadow-md' 
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title="Silgi"
+            >
+              <span className="material-symbols-outlined text-base">auto_eraser</span>
+            </button>
+
+            {/* Thick / thin slider */}
+            <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1 rounded-xl shadow-sm">
+              <span className="material-symbols-outlined text-slate-400 text-sm">line_weight</span>
+              <input
+                type="range"
+                min="1"
+                max="15"
+                value={penSize}
+                onChange={(e) => setPenSize(parseInt(e.target.value))}
+                className="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+            </div>
+
+            {/* Clear button */}
+            <button
+              onClick={clearCanvas}
+              className="bg-white hover:bg-red-50 hover:text-red-600 text-slate-700 border border-slate-200 hover:border-red-200 px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-xs">delete</span>
+              Temizle
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Drawing Area */}
+      <div className="flex-1 bg-white relative cursor-crosshair overflow-hidden">
+        <canvas
+          ref={canvasElRef}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      </div>
+    </div>
+  );
 };
 
 // 1. JITSI FALLBACK COMPONENT
@@ -128,6 +322,65 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const room = useMaybeRoomContext();
 
   const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, recording, saving
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const showWhiteboardRef = useRef(false);
+  const whiteboardCanvasRef = useRef(null);
+
+  useEffect(() => {
+    showWhiteboardRef.current = showWhiteboard;
+  }, [showWhiteboard]);
+
+  // Handle incoming LiveKit data channel messages (Whiteboard sync)
+  useEffect(() => {
+    if (!room) return;
+    const handleData = (payload, participant, kind) => {
+      try {
+        const text = new TextDecoder().decode(payload);
+        const data = JSON.parse(text);
+        
+        if (data.type === 'toggle_whiteboard') {
+          setShowWhiteboard(data.visible);
+        } else if (data.type === 'draw') {
+          const canvas = whiteboardCanvasRef.current;
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.strokeStyle = data.color;
+              ctx.lineWidth = data.size;
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              
+              if (data.isEraser) {
+                ctx.globalCompositeOperation = 'destination-out';
+              } else {
+                ctx.globalCompositeOperation = 'source-over';
+              }
+              
+              ctx.beginPath();
+              ctx.moveTo(data.x0 * canvas.width, data.y0 * canvas.height);
+              ctx.lineTo(data.x1 * canvas.width, data.y1 * canvas.height);
+              ctx.stroke();
+            }
+          }
+        } else if (data.type === 'clear') {
+          const canvas = whiteboardCanvasRef.current;
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to parse data message:", err);
+      }
+    };
+
+    room.on('dataReceived', handleData);
+    return () => {
+      room.off('dataReceived', handleData);
+    };
+  }, [room]);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -226,26 +479,42 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             return video.readyState >= 2 && !video.paused;
           });
 
-          if (videoElements.length === 1) {
-            ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
-          } else if (videoElements.length === 2) {
-            const w = canvas.width / 2;
-            const h = canvas.height;
-            ctx.drawImage(videoElements[0], 0, 0, w, h);
-            ctx.drawImage(videoElements[1], w, 0, w, h);
-          } else if (videoElements.length > 2) {
-            const w = canvas.width / 2;
-            const h = canvas.height / 2;
-            ctx.drawImage(videoElements[0], 0, 0, w, h);
-            ctx.drawImage(videoElements[1], w, 0, w, h);
-            if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
-            if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
+          if (showWhiteboardRef.current && whiteboardCanvasRef.current) {
+            // Draw whiteboard canvas first
+            ctx.drawImage(whiteboardCanvasRef.current, 0, 0, canvas.width, canvas.height);
+            
+            // Draw first active video (typically the teacher) in a PiP corner
+            if (videoElements.length > 0) {
+              const pipW = 240;
+              const pipH = 135;
+              const pipX = canvas.width - pipW - 20;
+              const pipY = 20;
+              ctx.fillStyle = '#0f172a';
+              ctx.fillRect(pipX - 2, pipY - 2, pipW + 4, pipH + 4);
+              ctx.drawImage(videoElements[0], pipX, pipY, pipW, pipH);
+            }
           } else {
-            // If no videos are currently active, show a placeholder
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '24px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Canlı Ders Görüntüsü Bekleniyor...', canvas.width / 2, canvas.height / 2);
+            if (videoElements.length === 1) {
+              ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
+            } else if (videoElements.length === 2) {
+              const w = canvas.width / 2;
+              const h = canvas.height;
+              ctx.drawImage(videoElements[0], 0, 0, w, h);
+              ctx.drawImage(videoElements[1], w, 0, w, h);
+            } else if (videoElements.length > 2) {
+              const w = canvas.width / 2;
+              const h = canvas.height / 2;
+              ctx.drawImage(videoElements[0], 0, 0, w, h);
+              ctx.drawImage(videoElements[1], w, 0, w, h);
+              if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
+              if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
+            } else {
+              // If no videos are currently active, show a placeholder
+              ctx.fillStyle = '#ffffff';
+              ctx.font = '24px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText('Canlı Ders Görüntüsü Bekleniyor...', canvas.width / 2, canvas.height / 2);
+            }
           }
         } catch (drawErr) {
           console.warn("Canvas draw frame warning:", drawErr);
@@ -795,6 +1064,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
+  const handleToggleWhiteboard = () => {
+    const nextVal = !showWhiteboard;
+    setShowWhiteboard(nextVal);
+    if (room) {
+      const packet = { type: 'toggle_whiteboard', visible: nextVal };
+      const encoder = new TextEncoder();
+      const data = encoder.encode(JSON.stringify(packet));
+      room.localParticipant.publishData(data, { reliable: true });
+    }
+  };
+
   const handleLeave = async () => {
     if (recordingStatus === 'saving') {
       alert('Ders kaydı şu anda sisteme yükleniyor, lütfen birkaç saniye bekleyin.');
@@ -895,7 +1175,61 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         
         {/* VIDEO DISPLAY WINDOW */}
         <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
-          {isScreenSharing ? (
+          {showWhiteboard ? (
+            // C. LAYOUT: WHITEBOARD ACTIVE
+            <div className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900">
+              <Whiteboard room={room} role={role} whiteboardCanvasRef={whiteboardCanvasRef} />
+              
+              {/* Webcams Float Box (Draggable) */}
+              <div 
+                onMouseDown={handleMouseDown}
+                className="absolute z-20 bg-slate-900/95 backdrop-blur-md border border-slate-750/70 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
+                style={{
+                  left: `${floatingPos.x}px`,
+                  top: `${floatingPos.y}px`,
+                  width: '210px',
+                }}
+              >
+                {/* Header */}
+                <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
+                  <span className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px] text-primary">group</span>
+                    Katılımcılar
+                  </span>
+                  <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+                </div>
+                
+                {/* Videos */}
+                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-drag pr-0.5">
+                  {cameraTracks.map((trackRef) => {
+                    const isTeacher = checkIsTeacher(trackRef.participant);
+                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
+                    return (
+                      <div 
+                        key={trackKey} 
+                        className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
+                          isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
+                        }`}
+                      >
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
+                        
+                        {/* Status name tags */}
+                        <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
+                          {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
+                          <span className="text-white truncate">{trackRef.participant.name || trackRef.participant.identity}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {cameraTracks.length === 0 && (
+                    <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                      Aktif kamera yok
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : isScreenSharing ? (
             // A. LAYOUT: SCREEN SHARING ACTIVE
             <div className="w-full h-full flex items-center justify-center p-3 relative bg-black">
               <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950">
@@ -1219,6 +1553,24 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
               <span className="hidden md:inline">
                 {recordingStatus === 'recording' ? 'Kaydı Durdur' : recordingStatus === 'saving' ? `Yükleniyor (%${uploadProgress})...` : 'Dersi Kaydet'}
               </span>
+            </button>
+          )}
+
+          {/* Whiteboard Button - Only teacher can toggle, student just follows the teacher's board state */}
+          {role === 'TEACHER' && (
+            <button 
+              onClick={handleToggleWhiteboard}
+              className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md hover:scale-102 ${
+                showWhiteboard 
+                  ? 'bg-primary hover:bg-primary/95 text-white border-primary shadow-primary/10' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
+              }`}
+              title="Beyaz Tahta"
+            >
+              <span className="material-symbols-outlined text-base">
+                edit_document
+              </span>
+              <span className="hidden md:inline">{showWhiteboard ? 'Tahtayı Kapat' : 'Beyaz Tahta'}</span>
             </button>
           )}
 
