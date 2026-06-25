@@ -381,13 +381,47 @@ app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, r
   }
 });
 
+app.post('/api/teacher/lessons/:id/notify', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const { notifyLessonStart } = require('./services/notificationService');
+    const lesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: { student: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+
+    if (!lesson.student) {
+      return res.status(400).json({ error: 'Bu derse atanmış bir öğrenci bulunmamaktadır.' });
+    }
+
+    const results = await notifyLessonStart(lesson.student, lesson);
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({
       where: { teacherId: req.user.id },
       orderBy: { date: 'asc' },
-      include: { student: { select: { id: true, name: true } } }
+      include: { 
+        student: { 
+          select: { 
+            id: true, 
+            name: true,
+            studentTel: true,
+            parentTel: true,
+            parentName: true
+          } 
+        } 
+      }
     });
     res.json(lessons);
   } catch (err) {

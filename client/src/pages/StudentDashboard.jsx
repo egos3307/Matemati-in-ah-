@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import LiveMeeting from '../components/LiveMeeting';
@@ -49,6 +49,7 @@ const compressImage = (file, callback) => {
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('panel'); 
   const [lessons, setLessons] = useState([]);
+  const notifiedLessonsRef = useRef(new Set());
   const [homeworks, setHomeworks] = useState([]);
   const [trials, setTrials] = useState([]);
   const [newTrial, setNewTrial] = useState({ name: '', type: 'GENEL', results: {} });
@@ -150,6 +151,40 @@ const StudentDashboard = () => {
       }
     }
   }, [user]);
+
+  // Request Notification Permission & Check for starting lessons
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!lessons || lessons.length === 0) return;
+
+    const checkLessonsForNotification = () => {
+      const now = new Date().getTime();
+      lessons.forEach(lesson => {
+        const lessonTime = new Date(lesson.date).getTime();
+        const diffMinutes = (lessonTime - now) / (1000 * 60);
+
+        // If lesson starts in next 5 minutes and hasn't been notified yet in this session
+        if (diffMinutes > 0 && diffMinutes <= 5 && !notifiedLessonsRef.current.has(lesson.id)) {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification("Canlı Dersiniz Başlıyor!", {
+              body: `"${lesson.title}" dersiniz 5 dakika içinde başlayacaktır. Katılmak için tıklayınız.`,
+              icon: '/logo.png'
+            });
+            notifiedLessonsRef.current.add(lesson.id);
+          }
+        }
+      });
+    };
+
+    checkLessonsForNotification();
+    const interval = setInterval(checkLessonsForNotification, 60000);
+    return () => clearInterval(interval);
+  }, [lessons]);
 
   const handleAddGoal = (e) => {
     if (e) e.preventDefault();

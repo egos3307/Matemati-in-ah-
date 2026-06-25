@@ -119,12 +119,17 @@ const TeacherDashboard = () => {
   ];
   const trDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
-  const getWhatsAppLink = (phone) => {
+  const getWhatsAppLink = (phone, message = '') => {
     if (!phone) return '#';
     const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 10) return `https://wa.me/90${cleaned}`;
-    if (cleaned.length === 11 && cleaned.startsWith('0')) return `https://wa.me/90${cleaned.substring(1)}`;
-    return `https://wa.me/${cleaned}`;
+    let formatted = cleaned;
+    if (cleaned.length === 10) formatted = `90${cleaned}`;
+    else if (cleaned.length === 11 && cleaned.startsWith('0')) formatted = `90${cleaned.substring(1)}`;
+    
+    if (message) {
+      return `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
+    }
+    return `https://wa.me/${formatted}`;
   };
 
   const getGradeDistribution = () => {
@@ -485,6 +490,19 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleAutoNotify = async (lessonId) => {
+    try {
+      const res = await axios.post(`/api/teacher/lessons/${lessonId}/notify`);
+      if (res.data.success) {
+        alert("Otomatik Bildirim (SMS / WhatsApp) başarıyla gönderildi!");
+      } else {
+        alert("Bildirim gönderilemedi: " + JSON.stringify(res.data.results));
+      }
+    } catch (err) {
+      alert("Bildirim gönderilirken bir hata oluştu: " + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleDeleteCamp = async (id) => {
     try {
       await axios.delete(`/api/teacher/camps/${id}`);
@@ -739,7 +757,7 @@ const TeacherDashboard = () => {
                             </p>
                           </div>
                           
-                          <div className="flex gap-2 w-full sm:w-auto">
+                          <div className="flex gap-1.5 w-full sm:w-auto items-center">
                             <button
                               onClick={() => setActiveMeeting(lesson)}
                               className="flex-1 sm:flex-none bg-primary hover:bg-primary/95 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-primary/10 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
@@ -749,15 +767,39 @@ const TeacherDashboard = () => {
                             </button>
                             {lesson.student?.studentTel && (
                               <a
-                                href={getWhatsAppLink(lesson.student.studentTel)}
+                                href={getWhatsAppLink(
+                                  lesson.student.studentTel, 
+                                  `Merhaba ${lesson.student.name || 'Öğrencimiz'}, "${lesson.title}" canlı dersimiz başlamak üzere. Derse katılmak için tıklayınız: ${window.location.origin}/ogrenci`
+                                )}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl flex items-center justify-center transition-colors"
-                                title="Öğrenciye WhatsApp'tan yaz"
+                                title="Öğrenciye WhatsApp'tan Ders Başladı Bildirimi Gönder"
                               >
                                 <span className="material-symbols-outlined text-base">chat</span>
                               </a>
                             )}
+                            {lesson.student?.parentTel && (
+                              <a
+                                href={getWhatsAppLink(
+                                  lesson.student.parentTel,
+                                  `Merhaba ${lesson.student.parentName || 'Velimiz'}, öğrencimiz ${lesson.student.name || 'Öğrencimiz'}'in "${lesson.title}" canlı dersi başlamak üzere. Canlı ders takibi için panelinize giriş yapabilirsiniz: ${window.location.origin}/`
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-teal-600 hover:bg-teal-700 text-white p-2.5 rounded-xl flex items-center justify-center transition-colors"
+                                title="Veliye WhatsApp'tan Ders Başladı Bildirimi Gönder"
+                              >
+                                <span className="material-symbols-outlined text-base">group</span>
+                              </a>
+                            )}
+                            <button
+                              onClick={() => handleAutoNotify(lesson.id)}
+                              className="bg-amber-500 hover:bg-amber-600 text-white p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+                              title="Sistem Üzerinden Otomatik SMS/WhatsApp Gönder"
+                            >
+                              <span className="material-symbols-outlined text-base font-bold">notifications_active</span>
+                            </button>
                             <button
                               onClick={() => handleDeleteLesson(lesson.id)}
                               className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
@@ -1294,12 +1336,48 @@ const TeacherDashboard = () => {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <button 
                                 onClick={() => setActiveMeeting(lesson)}
                                 className="bg-primary hover:bg-primary/95 text-white px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
                               >
                                 Derse Başla
+                              </button>
+
+                              {lesson.student?.studentTel && (
+                                <a
+                                  href={getWhatsAppLink(
+                                    lesson.student.studentTel, 
+                                    `Merhaba ${lesson.student.name || 'Öğrencimiz'}, "${lesson.title}" canlı dersimiz başlamak üzere. Derse katılmak için tıklayınız: ${window.location.origin}/ogrenci`
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-xl flex items-center justify-center transition-colors"
+                                  title="Öğrenciye WhatsApp'tan Ders Başladı Bildirimi Gönder"
+                                >
+                                  <span className="material-symbols-outlined text-base">chat</span>
+                                </a>
+                              )}
+                              {lesson.student?.parentTel && (
+                                <a
+                                  href={getWhatsAppLink(
+                                    lesson.student.parentTel,
+                                    `Merhaba ${lesson.student.parentName || 'Velimiz'}, öğrencimiz ${lesson.student.name || 'Öğrencimiz'}'in "${lesson.title}" canlı dersi başlamak üzere. Canlı ders takibi için panelinize giriş yapabilirsiniz: ${window.location.origin}/`
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-teal-600 hover:bg-teal-700 text-white p-2 rounded-xl flex items-center justify-center transition-colors"
+                                  title="Veliye WhatsApp'tan Ders Başladı Bildirimi Gönder"
+                                >
+                                  <span className="material-symbols-outlined text-base">group</span>
+                                </a>
+                              )}
+                              <button
+                                onClick={() => handleAutoNotify(lesson.id)}
+                                className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+                                title="Sistem Üzerinden Otomatik SMS/WhatsApp Gönder"
+                              >
+                                <span className="material-symbols-outlined text-base font-bold">notifications_active</span>
                               </button>
                               
                               <button 
