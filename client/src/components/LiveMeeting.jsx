@@ -9,7 +9,7 @@ import {
   useConnectionState,
   useParticipants,
   useMaybeRoomContext,
-  AudioConference
+  RoomAudioRenderer
 } from '@livekit/components-react';
 import { Track, ConnectionState } from 'livekit-client';
 import '@livekit/components-styles';
@@ -937,7 +937,7 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
       </div>
       
       {/* Play incoming audio streams from other participants */}
-      <AudioConference />
+      <RoomAudioRenderer />
     </div>
   );
 };
