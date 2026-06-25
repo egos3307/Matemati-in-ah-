@@ -134,6 +134,62 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   const [showParticipants, setShowParticipants] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Device selectors state
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [showCameraMenu, setShowCameraMenu] = useState(false);
+  const [showMicMenu, setShowMicMenu] = useState(false);
+
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setVideoDevices(devices.filter(d => d.kind === 'videoinput' && d.label));
+        setAudioDevices(devices.filter(d => d.kind === 'audioinput' && d.label));
+      } catch (err) {
+        console.warn("Error loading devices:", err);
+      }
+    };
+    
+    if (connectionState === ConnectionState.Connected) {
+      loadDevices();
+    }
+  }, [connectionState]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.device-menu-container')) {
+        setShowCameraMenu(false);
+        setShowMicMenu(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  const selectMicrophone = async (deviceId) => {
+    if (!localParticipant) return;
+    try {
+      await localParticipant.setMicrophoneEnabled(false);
+      await localParticipant.setMicrophoneEnabled(true, { deviceId });
+      setShowMicMenu(false);
+    } catch (err) {
+      console.error("Failed to select microphone:", err);
+    }
+  };
+
+  const selectCamera = async (deviceId) => {
+    if (!localParticipant) return;
+    try {
+      await localParticipant.setCameraEnabled(false);
+      await localParticipant.setCameraEnabled(true, { deviceId });
+      setShowCameraMenu(false);
+    } catch (err) {
+      console.error("Failed to select camera:", err);
+    }
+  };
+
   // Dragging state for camera feeds when screen sharing is active
   const [floatingPos, setFloatingPos] = useState({ x: window.innerWidth - 230, y: window.innerHeight - 360 });
   const [isDragging, setIsDragging] = useState(false);
@@ -740,35 +796,103 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
         
         {/* 1. Mic & Cam Toggles */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Audio Button */}
-          <button 
-            onClick={toggleMicrophone}
-            className={`p-2.5 sm:p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
-              isMicrophoneEnabled 
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750 hover:scale-102' 
-                : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
-            }`}
-            title={isMicrophoneEnabled ? "Sesi Kapat" : "Sesi Aç"}
-          >
-            <span className="material-symbols-outlined text-base sm:text-lg">
-              {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-            </span>
-          </button>
+          {/* Audio Button Group */}
+          <div className="relative flex items-center gap-0.5 device-menu-container">
+            <button 
+              onClick={toggleMicrophone}
+              className={`p-2.5 sm:p-3 rounded-l-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-l ${
+                isMicrophoneEnabled 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750' 
+                  : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
+              }`}
+              title={isMicrophoneEnabled ? "Sesi Kapat" : "Sesi Aç"}
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">
+                {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+              </span>
+            </button>
+            <button
+              onClick={() => setShowMicMenu(!showMicMenu)}
+              className={`p-2.5 sm:p-3 rounded-r-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-r ${
+                isMicrophoneEnabled
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border-slate-750'
+                  : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
+              }`}
+              title="Mikrofon Seç"
+            >
+              <span className="material-symbols-outlined text-[10px] sm:text-xs">
+                keyboard_arrow_up
+              </span>
+            </button>
 
-          {/* Camera Button */}
-          <button 
-            onClick={toggleCamera}
-            className={`p-2.5 sm:p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
-              isCameraEnabled 
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750 hover:scale-102' 
-                : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
-            }`}
-            title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
-          >
-            <span className="material-symbols-outlined text-base sm:text-lg">
-              {isCameraEnabled ? 'videocam' : 'videocam_off'}
-            </span>
-          </button>
+            {showMicMenu && audioDevices.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
+                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1">
+                  Mikrofonlar
+                </div>
+                <div className="flex flex-col max-h-40 overflow-y-auto">
+                  {audioDevices.map((device) => (
+                    <button
+                      key={device.deviceId}
+                      onClick={() => selectMicrophone(device.deviceId)}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-semibold truncate"
+                    >
+                      {device.label || `Mikrofon ${device.deviceId.substring(0, 4)}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Camera Button Group */}
+          <div className="relative flex items-center gap-0.5 device-menu-container">
+            <button 
+              onClick={toggleCamera}
+              className={`p-2.5 sm:p-3 rounded-l-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-l ${
+                isCameraEnabled 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750' 
+                  : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
+              }`}
+              title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">
+                {isCameraEnabled ? 'videocam' : 'videocam_off'}
+              </span>
+            </button>
+            <button
+              onClick={() => setShowCameraMenu(!showCameraMenu)}
+              className={`p-2.5 sm:p-3 rounded-r-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-r ${
+                isCameraEnabled
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border-slate-750'
+                  : 'bg-red-500/15 text-red-400 border-red-500/20 hover:bg-red-500/25'
+              }`}
+              title="Kamera Seç"
+            >
+              <span className="material-symbols-outlined text-[10px] sm:text-xs">
+                keyboard_arrow_up
+              </span>
+            </button>
+
+            {showCameraMenu && videoDevices.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
+                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1">
+                  Kameralar
+                </div>
+                <div className="flex flex-col max-h-40 overflow-y-auto">
+                  {videoDevices.map((device) => (
+                    <button
+                      key={device.deviceId}
+                      onClick={() => selectCamera(device.deviceId)}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-semibold truncate"
+                    >
+                      {device.label || `Kamera ${device.deviceId.substring(0, 4)}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 2. Custom Middle: Participants List Toggle */}
