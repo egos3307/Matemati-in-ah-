@@ -163,60 +163,16 @@ const MeetingSession = ({ role, userName, onClose, onLiveKitError }) => {
   useEffect(() => {
     if (connectionState === ConnectionState.Connected && localParticipant) {
       const startStreams = async () => {
-        // 1. Gracefully try to enable microphone
         try {
           await localParticipant.setMicrophoneEnabled(true);
         } catch (err) {
-          console.warn("Could not auto-enable microphone (blocked permissions or device missing):", err);
+          console.warn("Could not auto-enable microphone:", err);
         }
-        
-        // 2. Gracefully try to enable camera
+
         try {
-          // Get the best standard (non-wide angle, front-facing) camera device ID if available
-          const getBestCameraDeviceId = async () => {
-            try {
-              if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                return null;
-              }
-              const devices = await navigator.mediaDevices.enumerateDevices();
-              const videoDevices = devices.filter(device => device.kind === 'videoinput');
-              if (videoDevices.length <= 1) return null;
-
-              // Filter out wide-angle, virtual and back cameras to default to standard front camera
-              const frontCameras = videoDevices.filter(d => {
-                const label = d.label.toLowerCase();
-                return !label.includes('back') && 
-                       !label.includes('ark') && 
-                       !label.includes('wide') && 
-                       !label.includes('geniş') && 
-                       !label.includes('ultra') && 
-                       !label.includes('virtual');
-              });
-
-              if (frontCameras.length > 0) {
-                return frontCameras[0].deviceId;
-              }
-              return videoDevices[0].deviceId;
-            } catch (e) {
-              console.warn('Error enumerating video devices:', e);
-              return null;
-            }
-          };
-
-          const deviceId = await getBestCameraDeviceId();
-          if (deviceId) {
-            await localParticipant.setCameraEnabled(true, {
-              deviceId: deviceId,
-              resolution: { width: 1280, height: 720, frameRate: 24 }
-            });
-          } else {
-            await localParticipant.setCameraEnabled(true, {
-              facingMode: 'user',
-              resolution: { width: 1280, height: 720, frameRate: 24 }
-            });
-          }
+          await localParticipant.setCameraEnabled(true);
         } catch (err) {
-          console.warn("Could not auto-enable camera (blocked permissions or device missing):", err);
+          console.warn("Could not auto-enable camera:", err);
         }
       };
       startStreams();
