@@ -104,6 +104,8 @@ const StudentDashboard = () => {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const userGrade = user?.grade || "5";
+
   const loadStudyHistory = () => {
     if (!user) return;
     const savedLogs = localStorage.getItem(`fulle_logs_${user?.id}`);
@@ -115,6 +117,35 @@ const StudentDashboard = () => {
       setStudyHistory(sortedHistory);
     } else {
       setStudyHistory([]);
+    }
+  };
+
+
+
+  const fetchLessons = async () => {
+    try {
+      const res = await axios.get('/api/student/lessons');
+      setLessons(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchHomeworks = async () => {
+    try {
+      const res = await axios.get('/api/student/homeworks');
+      setHomeworks(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchTrials = async () => {
+    try {
+      const res = await axios.get('/api/student/trials');
+      setTrials(res.data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -434,14 +465,7 @@ const StudentDashboard = () => {
     });
   };
 
-  const fetchLessons = async () => {
-    try {
-      const res = await axios.get('/api/student/lessons');
-      setLessons(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const handleRequestRecording = async (lessonId) => {
     try {
@@ -486,23 +510,7 @@ const StudentDashboard = () => {
     }
   };
 
-  const fetchHomeworks = async () => {
-    try {
-      const res = await axios.get('/api/student/homeworks');
-      setHomeworks(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  const fetchTrials = async () => {
-    try {
-      const res = await axios.get('/api/student/trials');
-      setTrials(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleResultChange = (subject, field, value) => {
     const val = parseInt(value) || 0;
@@ -731,7 +739,7 @@ const StudentDashboard = () => {
     ]
   };
 
-  const userGrade = user?.grade || "5";
+
   const mathTopics = topicsByGrade[userGrade] || topicsByGrade["5"];
 
 
