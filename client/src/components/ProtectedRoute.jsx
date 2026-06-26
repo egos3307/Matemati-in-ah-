@@ -3,9 +3,22 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, role }) => {
-  const { user, loading } = useAuth();
+  const { user: contextUser, loading } = useAuth();
 
-  if (loading) {
+  // localStorage'dan fallback: React state henüz commit edilmemişse bile kullan
+  const savedUser = React.useMemo(() => {
+    if (contextUser) return contextUser;
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [contextUser]);
+
+  const user = savedUser;
+
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">

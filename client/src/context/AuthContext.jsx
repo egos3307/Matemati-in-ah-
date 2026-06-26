@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import axios from 'axios';
 
 // Set initial Authorization header synchronously to prevent request race conditions on component mount
@@ -27,11 +28,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const res = await axios.post('/api/auth/login', credentials);
-    setToken(res.data.token);
-    setUser(res.data.user);
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+    // flushSync: navigate() çağrılmadan önce state kesinlikle commit edilir
+    flushSync(() => {
+      setToken(res.data.token);
+      setUser(res.data.user);
+    });
     return res.data.user;
   };
 
