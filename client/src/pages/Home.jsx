@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const Home = () => {
   // Testimonials / Success Stories Data
@@ -104,6 +105,10 @@ const Home = () => {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
+      <SEO
+        description="Fullematematik ile online matematik özel dersi alın. LGS, YKS, KPSS ve okul matematiği için uzman eğitim. Hemen kayıt olun!"
+        path="/"
+      />
       <main className="flex-1">
         {/* Hero Section */}
         <section className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-24" id="ana-sayfa">

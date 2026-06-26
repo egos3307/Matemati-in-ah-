@@ -161,15 +161,33 @@ const WatchRecording = () => {
       {/* Video Viewport */}
       <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
 
-        {/* Safari + Google Drive uyarı banner'ı (video yüklemeden önce göster) */}
-        {isSafari && player.type === 'iframe' && !videoError && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-slate-950 text-xs font-black px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 max-w-sm text-center">
-            <span className="material-symbols-outlined text-sm shrink-0">info</span>
-            Safari'de video açılmazsa aşağıdaki "Google Drive'da Aç" butonunu kullanın.
+        {/* Safari + iframe: Google Drive / YouTube iframe'i Safari ITP engeli nedeniyle yüklenemiyor */}
+        {isSafari && player.type === 'iframe' ? (
+          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
+            <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
+              <span className="material-symbols-outlined text-5xl text-amber-400">play_circle</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white mb-2">Ders Kaydını Açın</h2>
+              <p className="text-slate-400 text-sm max-w-md leading-relaxed">
+                Safari tarayıcısı güvenlik politikaları nedeniyle video oynatıcıyı doğrudan gösteremiyor.
+                Kaydı izlemek için aşağıdaki butona tıklayın.
+              </p>
+            </div>
+            <a
+              href={decodeURIComponent(videoUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-2xl text-sm font-black transition-all shadow-lg shadow-amber-500/20 hover:scale-[1.02]"
+            >
+              <span className="material-symbols-outlined text-lg">open_in_new</span>
+              {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da İzle" : "Yeni Sekmede Aç"}
+            </a>
+            <p className="text-slate-600 text-xs max-w-xs">
+              Chrome veya Firefox tarayıcıyla açarsanız video doğrudan burada oynar.
+            </p>
           </div>
-        )}
-
-        {videoError ? (
+        ) : videoError ? (
           <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
             <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
             <div>

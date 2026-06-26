@@ -17,7 +17,8 @@
     "material-symbols": "^0.45.4",
     "peerjs": "^1.5.5",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-helmet-async": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

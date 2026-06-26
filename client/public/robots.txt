@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /ogretmen
+Disallow: /ogrenci
+Disallow: /veli
+Disallow: /giris
+
+Sitemap: https://fullematematigi.com.tr/sitemap.xml

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const BlogPostDetail = () => {
   const { slug } = useParams();
@@ -51,6 +52,12 @@ const BlogPostDetail = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
+      <SEO
+        title={post.title}
+        description={post.excerpt || post.title}
+        path={`/blog/${slug}`}
+        image={post.coverImage || undefined}
+      />
       <div className="mx-auto max-w-4xl px-6 lg:px-10">
         {/* Back Link */}
         <Link 

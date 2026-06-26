@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 const Blog = () => {
   const [posts, setPosts] = useState([]);
@@ -28,6 +29,11 @@ const Blog = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
+      <SEO
+        title="Blog"
+        description="Matematik öğrenme tüyoları, sınav stratejileri ve eğitim haberleri. Fullematematik blogu ile matematiği keşfedin!"
+        path="/blog"
+      />
       {/* Header Section */}
       <div className="bg-white py-16 text-center border-b border-primary/10 shadow-sm">
         <div className="mx-auto max-w-7xl px-6 lg:px-10">

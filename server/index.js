@@ -7,6 +7,10 @@ const { PrismaClient } = require('@prisma/client');
 const { auth, checkRole } = require('./middleware/auth');
 const crypto = require('crypto');
 const { AccessToken } = require('livekit-server-sdk');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+const ffmpeg = require('fluent-ffmpeg');
 
 
 async function createDailyRoom() {
@@ -581,6 +585,35 @@ async function getGoogleDriveAccessToken() {
   return data.access_token;
 }
 
+async function convertToMp4(inputBuffer) {
+  const tmpDir = os.tmpdir();
+  const inputPath = path.join(tmpDir, `input_${Date.now()}.webm`);
+  const outputPath = path.join(tmpDir, `output_${Date.now()}.mp4`);
+
+  fs.writeFileSync(inputPath, inputBuffer);
+
+  await new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions([
+        '-c:v libx264',
+        '-preset fast',
+        '-crf 23',
+        '-c:a aac',
+        '-b:a 128k',
+        '-movflags +faststart',
+      ])
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', reject)
+      .run();
+  });
+
+  const outputBuffer = fs.readFileSync(outputPath);
+  fs.unlinkSync(inputPath);
+  fs.unlinkSync(outputPath);
+  return outputBuffer;
+}
+
 async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
   const accessToken = await getGoogleDriveAccessToken();
   if (!accessToken) {
@@ -649,8 +682,8 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
   const lessonId = parseInt(req.params.id);
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
   const totalChunks = parseInt(req.headers['x-total-chunks']);
-  const mimeType = req.headers['x-mime-type'] || 'video/webm';
-  const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
+  let mimeType = req.headers['x-mime-type'] || 'video/webm';
+  let fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
 
   if (isNaN(lessonId)) {
     return res.status(400).json({ error: 'Geçersiz ders ID' });
@@ -693,9 +726,23 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         orderBy: { index: 'asc' }
       });
 
-      // Concat the chunks buffer in memory (zero filesystem write!)
+      // Concat the chunks buffer in memory
       const buffersToConcat = chunks.map(c => c.data);
-      const assembledBuffer = Buffer.concat(buffersToConcat);
+      let assembledBuffer = Buffer.concat(buffersToConcat);
+
+      // WebM → MP4 dönüştürme (Safari uyumluluğu için)
+      const isWebm = mimeType.includes('webm');
+      if (isWebm) {
+        try {
+          console.log(`Converting WebM (${assembledBuffer.length} bytes) to MP4 for Safari compatibility...`);
+          assembledBuffer = await convertToMp4(assembledBuffer);
+          mimeType = 'video/mp4';
+          fileExt = 'mp4';
+          console.log(`Conversion done. MP4 size: ${assembledBuffer.length} bytes.`);
+        } catch (convErr) {
+          console.error('WebM→MP4 conversion failed, uploading original WebM:', convErr);
+        }
+      }
 
       console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Starting upload chain...`);
 
@@ -718,10 +765,10 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
       // Attempt 1: Native FormData + Blob first (supported in Node 18+)
       try {
-        const fileBlob = new Blob([assembledBuffer], { type: 'video/webm' });
+        const fileBlob = new Blob([assembledBuffer], { type: mimeType });
         const formData = new FormData();
         formData.append('reqtype', 'fileupload');
-        formData.append('fileToUpload', fileBlob, `lesson_${lessonId}.webm`);
+        formData.append('fileToUpload', fileBlob, `lesson_${lessonId}.${fileExt}`);
 
         catboxRes = await fetch('https://catbox.moe/user/api.php', {
           method: 'POST',
@@ -750,10 +797,10 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
           const parts = [];
           parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
           parts.push(assembledBuffer);
           parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-          
+
           const payload = Buffer.concat(parts);
 
           catboxRes = await fetch('https://catbox.moe/user/api.php', {
@@ -785,7 +832,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           console.log("Attempting Uguu.se upload fallback...");
           const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
           const parts = [];
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="files[]"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="files[]"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
           parts.push(assembledBuffer);
           parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
           
@@ -819,10 +866,10 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       if (!uploadSuccess) {
         try {
           console.log("Attempting transfer.sh upload fallback...");
-          const transferRes = await fetch(`https://transfer.sh/lesson_${lessonId}.webm`, {
+          const transferRes = await fetch(`https://transfer.sh/lesson_${lessonId}.${fileExt}`, {
             method: 'PUT',
             headers: {
-              'Content-Type': 'video/webm',
+              'Content-Type': mimeType,
               'Content-Length': String(assembledBuffer.length),
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             },
@@ -850,7 +897,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           const parts = [];
           parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
           parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="time"\r\n\r\n72h\r\n`));
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.webm"\r\nContent-Type: video/webm\r\n\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
           parts.push(assembledBuffer);
           parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
           
