@@ -331,7 +331,9 @@ const TeacherDashboard = () => {
       paymentStatus: student.paymentStatus || 'UNPAID',
       paymentDay: student.paymentDay || '',
       paymentAmount: student.paymentAmount || '',
-      paymentNote: student.paymentNote || ''
+      paymentNote: student.paymentNote || '',
+      paymentType: student.paymentType || 'MONTHLY',
+      totalLessons: student.totalLessons || 0
     });
     setShowPaymentEditModal(true);
   };
@@ -1312,15 +1314,26 @@ const TeacherDashboard = () => {
                           </div>
                           {selectedStudent.paymentAmount && (
                             <div className="flex justify-between items-center text-xs">
-                              <span className="text-slate-400 font-medium">Aylık Ücret</span>
+                              <span className="text-slate-400 font-medium">
+                                {selectedStudent.paymentType === 'LESSON' ? 'Paket Ücreti' : 'Aylık Ücret'}
+                              </span>
                               <span className="font-black text-slate-200">{selectedStudent.paymentAmount}</span>
                             </div>
                           )}
-                          {selectedStudent.paymentDay && (
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-slate-400 font-medium">Ödeme Günü</span>
-                              <span className="font-black text-slate-200">{selectedStudent.paymentDay}</span>
-                            </div>
+                          {selectedStudent.paymentType === 'LESSON' ? (
+                            selectedStudent.totalLessons > 0 && (
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-400 font-medium">Toplam Ders</span>
+                                <span className="font-black text-slate-200">{selectedStudent.totalLessons} Ders</span>
+                              </div>
+                            )
+                          ) : (
+                            selectedStudent.paymentDay && (
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-400 font-medium">Ödeme Günü</span>
+                                <span className="font-black text-slate-200">{selectedStudent.paymentDay}</span>
+                              </div>
+                            )
                           )}
                         </div>
                       </div>
@@ -2549,8 +2562,8 @@ const TeacherDashboard = () => {
                       <tr className="border-b border-slate-100">
                         <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Öğrenci</th>
                         <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Sınıf/Seviye</th>
-                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Aylık Ücret</th>
-                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Ödeme Günü</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Ücret Tipi & Tutar</th>
+                        <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Detay (Gün/Ders)</th>
                         <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Durum</th>
                         <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Açıklama / Not</th>
                         <th className="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right pr-2">Eylemler</th>
@@ -2579,8 +2592,17 @@ const TeacherDashboard = () => {
                                 {(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}
                               </span>
                             </td>
-                            <td className="py-4 font-bold text-slate-700 text-sm">{student.paymentAmount || '-'}</td>
-                            <td className="py-4 font-bold text-slate-700 text-sm">{student.paymentDay || '-'}</td>
+                            <td className="py-4 font-bold text-slate-700 text-sm">
+                              {student.paymentAmount ? `${student.paymentAmount} ₺` : '-'} 
+                              <span className="text-[10px] font-black text-slate-450 ml-1 block">
+                                ({student.paymentType === 'LESSON' ? 'Paket Ders' : 'Aylık'})
+                              </span>
+                            </td>
+                            <td className="py-4 font-bold text-slate-700 text-sm">
+                              {student.paymentType === 'LESSON' 
+                                ? `${student.totalLessons || 0} Ders` 
+                                : (student.paymentDay || '-')}
+                            </td>
                             <td className="py-4">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
                                 student.paymentStatus === 'PAID' ? 'bg-emerald-50 text-emerald-600' :
@@ -3123,27 +3145,60 @@ const TeacherDashboard = () => {
             <p className="text-slate-400 font-bold text-sm mb-8 uppercase tracking-widest">{paymentEditingStudent.name} ({paymentEditingStudent.studentCode})</p>
             
             <form onSubmit={handlePaymentEditSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Ödeme Tipi</label>
+                <select
+                  className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                  value={paymentEditingStudent.paymentType || 'MONTHLY'}
+                  onChange={(e) => setPaymentEditingStudent({
+                    ...paymentEditingStudent, 
+                    paymentType: e.target.value,
+                    totalLessons: e.target.value === 'MONTHLY' ? 0 : paymentEditingStudent.totalLessons || 8
+                  })}
+                  required
+                >
+                  <option value="MONTHLY">Aylık Düz Ücret</option>
+                  <option value="LESSON">Derslik Paket</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Aylık Ücret</label>
+                  <label className="text-xs font-black text-slate-400 uppercase ml-1">
+                    {paymentEditingStudent.paymentType === 'LESSON' ? 'Paket Ücreti' : 'Aylık Ücret'}
+                  </label>
                   <input
                     type="text"
                     className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Örn: 5000 TL"
+                    placeholder={paymentEditingStudent.paymentType === 'LESSON' ? "Örn: 8000 TL" : "Örn: 5000 TL"}
                     value={paymentEditingStudent.paymentAmount}
                     onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentAmount: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Ödeme Günü</label>
-                  <input
-                    type="text"
-                    className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Örn: Her ayın 15'i"
-                    value={paymentEditingStudent.paymentDay}
-                    onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentDay: e.target.value})}
-                  />
-                </div>
+                {paymentEditingStudent.paymentType === 'LESSON' ? (
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase ml-1">Ders Sayısı</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                      placeholder="Örn: 8"
+                      value={paymentEditingStudent.totalLessons || ''}
+                      onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, totalLessons: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-400 uppercase ml-1">Ödeme Günü</label>
+                    <input
+                      type="text"
+                      className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                      placeholder="Örn: Her ayın 15'i"
+                      value={paymentEditingStudent.paymentDay}
+                      onChange={(e) => setPaymentEditingStudent({...paymentEditingStudent, paymentDay: e.target.value})}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -31,6 +31,8 @@ model User {
   paymentDay      String?  // Ödeme günü
   paymentAmount   String?  // Aylık ücret
   paymentNote     String?  // Ödeme notları
+  paymentType     String?  @default("MONTHLY") // MONTHLY, LESSON
+  totalLessons    Int?     @default(0) // Toplam ders sayısı (derslik ödeme tipi için)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

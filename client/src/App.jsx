@@ -64,6 +64,14 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/veli/kayit-izle" 
+          element={
+            <ProtectedRoute role="PARENT">
+              <WatchRecording />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </div>
   );

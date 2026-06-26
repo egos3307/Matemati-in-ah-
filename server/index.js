@@ -300,7 +300,7 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
 
 app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { email, name, grade, parentName, parentTel, studentTel, serviceProvided, paymentStatus, paymentDay, paymentAmount, paymentNote } = req.body;
+  const { email, name, grade, parentName, parentTel, studentTel, serviceProvided, paymentStatus, paymentDay, paymentAmount, paymentNote, paymentType, totalLessons } = req.body;
   try {
     const updated = await prisma.user.update({
       where: { id },
@@ -315,7 +315,9 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
         paymentStatus,
         paymentDay,
         paymentAmount,
-        paymentNote
+        paymentNote,
+        paymentType: paymentType || 'MONTHLY',
+        totalLessons: totalLessons ? parseInt(totalLessons) : 0
       }
     });
     res.json(updated);
@@ -1061,6 +1063,14 @@ app.get('/api/teacher/student/:id/trials', auth, checkRole('TEACHER'), async (re
   }
 });
 
+// Helper function to censor bad words in incoming inputs
+function censorText(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Replace case-insensitive: siktir, siktiri, aiktiri, kpss (including common Turkish character variations)
+  return text.replace(/(siktir|siktiri|aiktiri|kpss|s\u0131ktir|s\u0131ktiri|s\u0130kt\u0130r|s\u0130kt\u0130r\u0130)/gi, 's* s*');
+}
+
 // Trial Lesson Request Routes
 app.post('/api/trial-requests', async (req, res) => {
   const { type, studentName, email, phone, grade } = req.body;
@@ -1071,10 +1081,10 @@ app.post('/api/trial-requests', async (req, res) => {
     const request = await prisma.trialLessonRequest.create({
       data: {
         type: type || 'SELF',
-        studentName,
+        studentName: censorText(studentName),
         email,
         phone,
-        grade,
+        grade: censorText(grade),
         status: 'PENDING'
       }
     });
@@ -1197,10 +1207,10 @@ app.post('/api/contact-messages', async (req, res) => {
   try {
     const contactMsg = await prisma.contactMessage.create({
       data: {
-        name,
+        name: censorText(name),
         phone,
         email,
-        message: message || ''
+        message: message ? censorText(message) : ''
       }
     });
     res.json(contactMsg);

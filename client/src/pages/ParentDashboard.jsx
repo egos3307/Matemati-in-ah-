@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const ParentDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview'); // overview, payments, lessons, performance
   const [student, setStudent] = useState(null);
   const [lessons, setLessons] = useState([]);
@@ -189,14 +191,29 @@ const ParentDashboard = () => {
               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
                 <h4 className="font-black text-slate-950 text-base border-b pb-3">Ödeme Ayrıntıları</h4>
                 <div className="space-y-3.5 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Aylık Ücret:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Ödeme Günü:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</span>
-                  </div>
+                  {student?.paymentType === 'LESSON' ? (
+                    <>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-slate-400 font-semibold shrink-0">Paket Ücreti ({student?.totalLessons || 0} Ders):</span>
+                        <span className="font-bold text-slate-900 text-right">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-slate-400 font-semibold shrink-0">Ders Tamamlanma:</span>
+                        <span className="font-bold text-slate-900 text-right">{student?.totalLessons ? `${student.totalLessons} derste ${completedLessons} tamamlandı` : 'Belirtilmemiş'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-slate-400 font-semibold shrink-0">Aylık Ücret:</span>
+                        <span className="font-bold text-slate-900 text-right">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</span>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-slate-400 font-semibold shrink-0">Ödeme Günü:</span>
+                        <span className="font-bold text-slate-900 text-right">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between gap-2">
                     <span className="text-slate-400 font-semibold shrink-0">Ödeme Durumu:</span>
                     <span className="font-bold text-slate-900 text-right">{curPayment.label}</span>
@@ -228,16 +245,29 @@ const ParentDashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Aylık Toplam Ücret</span>
-                  <h2 className="text-3xl font-black text-slate-900">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</h2>
+              {student?.paymentType === 'LESSON' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Paket Ücreti ({student?.totalLessons || 0} Derslik)</span>
+                    <h2 className="text-3xl font-black text-slate-900">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</h2>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Ders Tamamlanma Durumu</span>
+                    <h2 className="text-2xl font-black text-slate-800 mt-1">{student?.totalLessons ? `${student.totalLessons} derste ${completedLessons} tamamlandı` : 'Belirtilmemiş'}</h2>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Periyodik Ödeme Tarihi</span>
-                  <h2 className="text-xl font-black text-slate-800 mt-1">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</h2>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Aylık Toplam Ücret</span>
+                    <h2 className="text-3xl font-black text-slate-900">{student?.paymentAmount ? `${student?.paymentAmount} ₺` : 'Belirtilmemiş'}</h2>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Periyodik Ödeme Tarihi</span>
+                    <h2 className="text-xl font-black text-slate-800 mt-1">{student?.paymentDay ? `Her Ayın ${student?.paymentDay}. Günü` : 'Belirtilmemiş'}</h2>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-4">
                 <h4 className="font-black text-slate-900">Cari Durum</h4>
@@ -314,7 +344,15 @@ const ParentDashboard = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {isCompleted ? (
+                        {lesson.recordingUrl ? (
+                          <button 
+                            onClick={() => navigate(`/veli/kayit-izle?url=${encodeURIComponent(lesson.recordingUrl)}&title=${encodeURIComponent(lesson.title || 'Ders Kaydı')}`)} 
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-base">play_circle</span>
+                            Kaydı İzle
+                          </button>
+                        ) : isCompleted ? (
                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                             Ders Tamamlandı
                           </span>
