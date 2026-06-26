@@ -500,28 +500,56 @@ function generateGoogleAccessToken(clientEmail, privateKey) {
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive',
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
-    iat: now,
+    iat: now
   };
 
-  const base64Header = base64url(Buffer.from(JSON.stringify(header)));
-  const base64Claim = base64url(Buffer.from(JSON.stringify(claim)));
-  const signatureInput = `${base64Header}.${base64Claim}`;
-  
+  const headerEnc = base64url(Buffer.from(JSON.stringify(header)));
+  const claimEnc = base64url(Buffer.from(JSON.stringify(claim)));
+  const jwtVal = `${headerEnc}.${claimEnc}`;
+  const crypto = require('crypto');
   const sign = crypto.createSign('RSA-SHA256');
-  sign.update(signatureInput);
+  sign.update(jwtVal);
   const signature = base64url(sign.sign(formattedKey));
-  
-  return `${signatureInput}.${signature}`;
+  return `${jwtVal}.${signature}`;
 }
 
 async function getGoogleDriveAccessToken() {
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (refreshToken && clientId && clientSecret) {
+    console.log("Using Google OAuth2 User Refresh Token to authenticate...");
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Google OAuth2 User Token retrieval failed: ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data.access_token;
+  }
+
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   if (!email || !privateKey) {
-    console.warn('Google Service Account credentials (GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) are not set. Skipping Google Drive upload.');
+    console.warn('Google credentials (OAuth2 or Service Account) are not set. Skipping Google Drive upload.');
     return null;
   }
 
+  console.log("Using Google Service Account to authenticate...");
   const jwt = generateGoogleAccessToken(email, privateKey);
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -536,30 +564,23 @@ async function getGoogleDriveAccessToken() {
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Google OAuth token retrieval failed: ${errorText}`);
+    throw new Error(`Google OAuth Service Account token retrieval failed: ${errorText}`);
   }
 
   const data = await res.json();
   return data.access_token;
 }
 
-async function uploadToGoogleDrive(assembledBuffer, filename, folderId) {
+async function uploadToGoogleDrive(assembledBuffer, fileName, folderId) {
   const accessToken = await getGoogleDriveAccessToken();
   if (!accessToken) {
     return null;
   }
-  
+  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
   const metadata = {
-    name: filename,
-    mimeType: 'video/webm'
+    name: fileName,
+    parents: folderId ? [folderId] : []
   };
-  
-  if (folderId) {
-    metadata.parents = [folderId];
-  }
-  
-  const boundary = '----GoogleDriveMultipartBoundary' + Math.random().toString(36).substring(2);
-  
   const parts = [];
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: video/webm\r\n\r\n`));
