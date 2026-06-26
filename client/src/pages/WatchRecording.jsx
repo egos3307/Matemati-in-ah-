@@ -15,6 +15,62 @@ const WatchRecording = () => {
     return '/ogrenci';
   };
 
+  const getPlayerTypeAndUrl = (url) => {
+    if (!url) return { type: 'native', url: '' };
+    
+    const decodedUrl = decodeURIComponent(url);
+    
+    // 1. Google Drive Link Detector
+    if (decodedUrl.includes('drive.google.com')) {
+      let fileId = '';
+      const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileDMatch) {
+        fileId = fileDMatch[1];
+      } else {
+        const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (idParamMatch) {
+          fileId = idParamMatch[1];
+        }
+      }
+      
+      if (fileId) {
+        return {
+          type: 'iframe',
+          url: `https://drive.google.com/file/d/${fileId}/preview`
+        };
+      }
+    }
+    
+    // 2. YouTube Link Detector
+    if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
+      let videoId = '';
+      const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+      if (watchMatch) {
+        videoId = watchMatch[1];
+      } else {
+        const shortMatch = decodedUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+        if (shortMatch) {
+          videoId = shortMatch[1];
+        } else {
+          const embedMatch = decodedUrl.match(/\/embed\/([a-zA-Z0-9_-]+)/);
+          if (embedMatch) {
+            videoId = embedMatch[1];
+          }
+        }
+      }
+      
+      if (videoId) {
+        return {
+          type: 'iframe',
+          url: `https://www.youtube.com/embed/${videoId}`
+        };
+      }
+    }
+    
+    // Default to native HTML5 video tag
+    return { type: 'native', url: decodedUrl };
+  };
+
   if (!videoUrl) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
@@ -32,6 +88,8 @@ const WatchRecording = () => {
       </div>
     );
   }
+
+  const player = getPlayerTypeAndUrl(videoUrl);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
@@ -61,17 +119,30 @@ const WatchRecording = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <a 
-            href={decodeURIComponent(videoUrl)} 
-            download={`ders_kaydi.webm`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-emerald-950/20"
-            title="Donma problemi yaşarsanız indirip izleyebilirsiniz"
-          >
-            <span className="material-symbols-outlined text-sm">download</span>
-            Donuyorsa İndir
-          </a>
+          {player.type === 'native' ? (
+            <a 
+              href={player.url} 
+              download="ders_kaydi.webm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-emerald-950/20"
+              title="Donma problemi yaşarsanız indirip izleyebilirsiniz"
+            >
+              <span className="material-symbols-outlined text-sm">download</span>
+              Donuyorsa İndir
+            </a>
+          ) : (
+            <a 
+              href={decodeURIComponent(videoUrl)} 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-indigo-950/20"
+              title="Kaydı yeni sekmede aç"
+            >
+              <span className="material-symbols-outlined text-sm">open_in_new</span>
+              {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da Aç" : "Dış Kaynakta Aç"}
+            </a>
+          )}
           <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm hidden md:block">
             Fulle Matematik
           </div>
@@ -80,14 +151,23 @@ const WatchRecording = () => {
 
       {/* Video Viewport */}
       <div className="flex-1 w-full h-full flex items-center justify-center bg-black relative">
-        <video 
-          src={decodeURIComponent(videoUrl)} 
-          controls 
-          playsInline 
-          autoPlay
-          preload="auto"
-          className="w-full h-full max-h-screen object-contain z-10"
-        />
+        {player.type === 'iframe' ? (
+          <iframe 
+            src={player.url} 
+            className="w-full h-full max-h-screen border-0 z-10" 
+            allow="autoplay; encrypted-media; picture-in-picture" 
+            allowFullScreen
+          />
+        ) : (
+          <video 
+            src={player.url} 
+            controls 
+            playsInline 
+            autoPlay
+            preload="auto"
+            className="w-full h-full max-h-screen object-contain z-10"
+          />
+        )}
         
         {/* Abstract background glow for premium glassmorphism vibe */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] pointer-events-none" />
