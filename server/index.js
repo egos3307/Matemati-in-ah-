@@ -486,7 +486,10 @@ function base64url(buf) {
 }
 
 function generateGoogleAccessToken(clientEmail, privateKey) {
-  const formattedKey = privateKey.replace(/\\n/g, '\n');
+  let formattedKey = privateKey.replace(/\\n/g, '\n').trim();
+  if (!formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    formattedKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----\n`;
+  }
   const header = {
     alg: 'RS256',
     typ: 'JWT',
