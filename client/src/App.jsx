@@ -38,35 +38,28 @@ const WhatsAppButton = () => {
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        justifyContent: 'center',
         background: '#25D366',
-        color: '#fff',
-        borderRadius: '50px',
-        padding: '10px 14px 10px 12px',
-        boxShadow: '0 4px 16px rgba(37,211,102,0.30)',
+        borderRadius: '50%',
+        width: '60px',
+        height: '60px',
+        boxShadow: '0 4px 20px rgba(37,211,102,0.40)',
         textDecoration: 'none',
-        fontSize: '13px',
-        fontWeight: '700',
-        lineHeight: '1',
-        maxWidth: '44px',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        transition: 'max-width 0.35s cubic-bezier(.4,0,.2,1), box-shadow 0.2s',
+        transition: 'transform 0.2s, box-shadow 0.2s',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.maxWidth = '220px';
-        e.currentTarget.style.boxShadow = '0 6px 24px rgba(37,211,102,0.40)';
+        e.currentTarget.style.transform = 'scale(1.12)';
+        e.currentTarget.style.boxShadow = '0 6px 28px rgba(37,211,102,0.55)';
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.maxWidth = '44px';
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,211,102,0.30)';
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,211,102,0.40)';
       }}
     >
-      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M16 3C9.373 3 4 8.373 4 15c0 2.385.668 4.61 1.832 6.5L4 29l7.697-1.813A12.94 12.94 0 0016 28c6.627 0 12-5.373 12-12S22.627 3 16 3z" fill="white"/>
         <path d="M21.537 18.93c-.306-.153-1.81-.893-2.09-.996-.28-.102-.484-.153-.688.153-.204.306-.79.996-.97 1.2-.178.204-.357.23-.663.077-.306-.154-1.29-.476-2.456-1.515-.908-.81-1.52-1.81-1.698-2.116-.178-.306-.019-.471.134-.624.137-.136.306-.357.459-.535.153-.178.204-.306.306-.51.102-.204.051-.382-.026-.535-.077-.153-.688-1.66-.943-2.272-.249-.597-.5-.516-.688-.526l-.587-.01c-.204 0-.535.077-.815.382-.28.306-1.07 1.046-1.07 2.55 0 1.505 1.096 2.96 1.249 3.163.153.204 2.155 3.29 5.223 4.614.73.315 1.3.503 1.744.644.733.233 1.4.2 1.927.122.588-.088 1.81-.74 2.065-1.455.255-.714.255-1.326.178-1.455-.076-.128-.28-.204-.587-.357z" fill="#25D366"/>
       </svg>
-      <span style={{opacity: 1, fontSize: '13px', letterSpacing: '0.01em'}}>Bize Yazın</span>
     </a>
   );
 };
