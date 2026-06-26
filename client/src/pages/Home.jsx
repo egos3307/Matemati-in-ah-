@@ -6,16 +6,23 @@ import SEO from '../components/SEO';
 const YT_CHANNEL_URL = 'https://www.youtube.com/@FULLEMATEM%C4%B0T%C4%B0G%C4%B0';
 const IG_URL = 'https://www.instagram.com/fullematematigi';
 
-const SocialFeed = () => {
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
+const IgIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+);
 
-  useEffect(() => {
-    axios.get('/api/social/youtube-feed')
-      .then(r => setVideos(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+const YtIcon = ({ size = 4 }) => (
+  <svg viewBox="0 0 24 24" className={`w-${size} h-${size} fill-current`}><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+);
+
+const SHOWCASE_VIDEOS = [
+  { id: 'ig1', type: 'instagram', url: 'https://www.instagram.com/reel/DaArbnxMWD8/' },
+  { id: 'yt1', type: 'youtube', videoId: 'JtNQS74nez0', url: 'https://www.youtube.com/shorts/JtNQS74nez0' },
+  { id: 'yt2', type: 'youtube', videoId: 'PF-dAUN06dA', url: 'https://www.youtube.com/shorts/PF-dAUN06dA' },
+  { id: 'ig2', type: 'instagram', url: 'https://www.instagram.com/reel/DaDs07vMLy9/' },
+];
+
+const SocialFeed = () => {
+  const [playing, setPlaying] = useState(null);
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10" id="sosyal-medya">
@@ -24,68 +31,85 @@ const SocialFeed = () => {
           Sosyal Medya
         </span>
         <h2 className="text-2xl font-black text-slate-900 md:text-3xl mb-4">Bizi Takip Edin</h2>
-        <div className="flex items-center gap-4">
-          <a
-            href={YT_CHANNEL_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 text-sm font-bold transition-all shadow-sm hover:shadow-md"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
-            YouTube
+        <div className="flex items-center gap-3">
+          <a href={YT_CHANNEL_URL} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 text-sm font-bold transition-all shadow-sm">
+            <YtIcon size={4} /> YouTube
           </a>
-          <a
-            href={IG_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 hover:opacity-90 text-white px-5 py-2.5 text-sm font-bold transition-all shadow-sm hover:shadow-md"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-            Instagram
+          <a href={IG_URL} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 hover:opacity-90 text-white px-5 py-2.5 text-sm font-bold transition-all shadow-sm">
+            <IgIcon /> Instagram
           </a>
         </div>
       </div>
 
-      {loading ? (
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[1,2,3].map(i => (
-            <div key={i} className="rounded-2xl bg-slate-100 animate-pulse aspect-video" />
-          ))}
-        </div>
-      ) : videos.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-3">
-          {videos.map(video => (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {SHOWCASE_VIDEOS.map(video => {
+          const isPlaying = playing === video.id;
+
+          if (video.type === 'youtube') {
+            return (
+              <div key={video.id} className="relative rounded-2xl overflow-hidden bg-black shadow-md" style={{ aspectRatio: '9/16' }}>
+                {isPlaying ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1&rel=0`}
+                    className="absolute inset-0 w-full h-full border-0"
+                    allow="autoplay; encrypted-media; fullscreen"
+                    allowFullScreen
+                  />
+                ) : (
+                  <button
+                    onClick={() => setPlaying(video.id)}
+                    className="absolute inset-0 w-full h-full group"
+                  >
+                    <img
+                      src={`https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`}
+                      alt="YouTube video"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/25 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center shadow-xl transition-transform group-hover:scale-110">
+                        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                      <YtIcon size={3} /> Shorts
+                    </div>
+                  </button>
+                )}
+              </div>
+            );
+          }
+
+          return (
             <a
-              key={video.videoId}
+              key={video.id}
               href={video.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-xl transition-all hover:-translate-y-1"
+              className="relative rounded-2xl overflow-hidden shadow-md group"
+              style={{ aspectRatio: '9/16' }}
             >
-              <div className="relative aspect-video overflow-hidden bg-slate-100">
-                <img
-                  src={video.thumbnail}
-                  alt={video.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                  <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
+                  <IgIcon />
+                  <span className="sr-only">Instagram</span>
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-black text-sm">Instagram Reels</p>
+                  <p className="text-white/80 text-xs font-medium mt-0.5">@fullematematigi</p>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+                  Reels'ta İzle
                 </div>
               </div>
-              <div className="p-4">
-                <p className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug">{video.title}</p>
-                <span className="mt-2 inline-flex items-center gap-1 text-xs text-red-500 font-bold">
-                  <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
-                  YouTube
-                </span>
-              </div>
             </a>
-          ))}
-        </div>
-      ) : null}
+          );
+        })}
+      </div>
     </section>
   );
 };
