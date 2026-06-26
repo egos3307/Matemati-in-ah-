@@ -72,6 +72,7 @@ const TeacherDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [lessonTime, setLessonTime] = useState('12:00');
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [newLessonZoomUrl, setNewLessonZoomUrl] = useState('');
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [blogs, setBlogs] = useState([]);
@@ -1577,8 +1578,17 @@ const TeacherDashboard = () => {
                   <form onSubmit={handleCreateLesson} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi (Birden fazla seçebilirsiniz)</label>
+                      <input 
+                        type="text"
+                        placeholder="Öğrenci adı ile ara..."
+                        className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-2.5 text-slate-900 font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-xs mb-2"
+                        value={studentSearchQuery}
+                        onChange={(e) => setStudentSearchQuery(e.target.value)}
+                      />
                       <div className="max-h-48 overflow-y-auto border border-primary/10 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
-                        {students.map(student => {
+                        {students.filter(student => 
+                          student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+                        ).map(student => {
                           const isChecked = selectedStudentIds.includes(student.id);
                           return (
                             <label key={student.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
