@@ -15,10 +15,10 @@ const YtIcon = ({ size = 4 }) => (
 );
 
 const SHOWCASE_VIDEOS = [
-  { id: 'ig1', type: 'instagram', url: 'https://www.instagram.com/reel/DaArbnxMWD8/' },
+  { id: 'ig1', type: 'instagram', url: 'https://www.instagram.com/reel/DaArbnxMWD8/', cover: '/IMG_3041.jpeg' },
   { id: 'yt1', type: 'youtube', videoId: 'JtNQS74nez0', url: 'https://www.youtube.com/shorts/JtNQS74nez0' },
   { id: 'yt2', type: 'youtube', videoId: 'PF-dAUN06dA', url: 'https://www.youtube.com/shorts/PF-dAUN06dA' },
-  { id: 'ig2', type: 'instagram', url: 'https://www.instagram.com/reel/DaDs07vMLy9/' },
+  { id: 'ig2', type: 'instagram', url: 'https://www.instagram.com/reel/DaDs07vMLy9/', cover: '/IMG_3042.jpeg' },
 ];
 
 const SocialFeed = () => {
@@ -91,19 +91,21 @@ const SocialFeed = () => {
               className="relative rounded-2xl overflow-hidden shadow-md group"
               style={{ aspectRatio: '9/16' }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4">
-                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
+              <img
+                src={video.cover}
+                alt="Instagram Reels"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/45 transition-colors" />
+              <div className="absolute inset-0 flex flex-col items-end justify-between p-3">
+                <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
                   <IgIcon />
-                  <span className="sr-only">Instagram</span>
+                  Reels
                 </div>
-                <div className="text-center">
-                  <p className="text-white font-black text-sm">Instagram Reels</p>
-                  <p className="text-white/80 text-xs font-medium mt-0.5">@fullematematigi</p>
-                </div>
-                <div className="mt-2 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all">
+                <div className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-xs font-bold px-4 py-2 rounded-full transition-all self-center">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white ml-0.5"><path d="M8 5v14l11-7z"/></svg>
-                  Reels'ta İzle
+                  İzle
                 </div>
               </div>
             </a>
