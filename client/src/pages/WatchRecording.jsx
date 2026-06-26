@@ -8,6 +8,7 @@ const WatchRecording = () => {
   const { user } = useAuth();
   const videoUrl = searchParams.get('url');
   const lessonTitle = searchParams.get('title') || 'Ders Kaydı';
+  const [isBuffering, setIsBuffering] = React.useState(false);
 
   const getBackPath = () => {
     if (user?.role === 'PARENT') return '/veli';
@@ -165,10 +166,21 @@ const WatchRecording = () => {
             playsInline 
             autoPlay
             preload="auto"
+            onWaiting={() => setIsBuffering(true)}
+            onPlaying={() => setIsBuffering(false)}
+            onCanPlay={() => setIsBuffering(false)}
+            onSeeked={() => setIsBuffering(false)}
             className="w-full h-full max-h-screen object-contain z-10"
           />
         )}
         
+        {isBuffering && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-4 transition-all">
+            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm font-semibold text-slate-200 tracking-wider">Video Yükleniyor...</p>
+          </div>
+        )}
+
         {/* Abstract background glow for premium glassmorphism vibe */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] pointer-events-none" />
       </div>

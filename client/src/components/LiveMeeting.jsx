@@ -571,16 +571,31 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       streamRef.current = combinedStream;
 
-      // 6. Initialize MediaRecorder with standard fallbacks
-      const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+      // 6. Initialize MediaRecorder with standard fallbacks and optimized bitrates
+      const options = { 
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 800000, // 800 Kbps (extremely clear for math whiteboards/slides, 3-4x smaller files)
+        audioBitsPerSecond: 64000   // 64 Kbps (perfect voice quality)
+      };
       let recorder;
       try {
         recorder = new MediaRecorder(combinedStream, options);
       } catch (e) {
         try {
-          recorder = new MediaRecorder(combinedStream, { mimeType: 'video/mp4' });
+          recorder = new MediaRecorder(combinedStream, { 
+            mimeType: 'video/mp4',
+            videoBitsPerSecond: 800000,
+            audioBitsPerSecond: 64000
+          });
         } catch (e2) {
-          recorder = new MediaRecorder(combinedStream);
+          try {
+            recorder = new MediaRecorder(combinedStream, {
+              videoBitsPerSecond: 800000,
+              audioBitsPerSecond: 64000
+            });
+          } catch (e3) {
+            recorder = new MediaRecorder(combinedStream);
+          }
         }
       }
 
