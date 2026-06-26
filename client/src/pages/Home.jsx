@@ -212,10 +212,10 @@ const Home = () => {
           </div>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { id: 1, name: 'YKS / TYT MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
+              { id: 1, name: 'DGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
               { id: 2, name: 'YKS / AYT MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
               { id: 3, name: 'KPSS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 4, name: 'LGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '199 TL', image: '/IMG_2943.jpeg' }
+              { id: 4, name: 'LGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '150 TL', image: '/IMG_2943.jpeg' }
             ].map((product) => (
               <div key={product.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white transition-all hover:shadow-xl">
                 <div className="aspect-[3/4] overflow-hidden">
