@@ -10,18 +10,20 @@ if (initialToken) {
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const savedUser = localStorage.getItem('user');
+  const [user, setUser] = useState(savedUser ? JSON.parse(savedUser) : null);
   const [token, setToken] = useState(initialToken);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Token varsa axios header'ı güncelle
     if (token) {
-      const savedUser = JSON.parse(localStorage.getItem('user'));
-      setUser(savedUser);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
-    setLoading(false);
-  }, [token]);
+    // Kısa gecikme ile loading'i kapat (state flush için)
+    const timer = setTimeout(() => setLoading(false), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const login = async (credentials) => {
     const res = await axios.post('/api/auth/login', credentials);
