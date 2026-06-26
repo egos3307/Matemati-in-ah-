@@ -349,10 +349,8 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
   try {
     let finalUrl = zoomJoinUrl;
     if (!finalUrl) {
-      // Try to create a Daily.co room
       finalUrl = await createDailyRoom();
     }
-    // Fallback to Jitsi Meet if no Daily.co API key or call fails
     if (!finalUrl) {
       const uniqueId = Math.random().toString(36).substring(2, 9);
       finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
@@ -363,45 +361,28 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
       targetIds = studentIds.map(id => parseInt(id)).filter(id => !isNaN(id));
     } else if (studentId) {
       const parsedId = parseInt(studentId);
-      if (!isNaN(parsedId)) {
-        targetIds.push(parsedId);
-      }
+      if (!isNaN(parsedId)) targetIds.push(parsedId);
     }
 
-    if (targetIds.length === 0) {
-      const lesson = await prisma.lesson.create({
-        data: {
-          title,
-          description,
-          date: new Date(date),
-          teacherId: req.user.id,
-          studentId: null,
-          zoomJoinUrl: finalUrl, 
-        },
-      });
-      return res.json(lesson);
-    }
+    // Her zaman TEK bir ders oluştur
+    const lesson = await prisma.lesson.create({
+      data: {
+        title,
+        description,
+        date: new Date(date),
+        teacherId: req.user.id,
+        studentId: targetIds.length > 0 ? targetIds[0] : null,
+        studentIds: targetIds.length > 0 ? JSON.stringify(targetIds) : null,
+        zoomJoinUrl: finalUrl,
+      },
+    });
 
-    const lessonsCreated = [];
-    for (const sId of targetIds) {
-      const lesson = await prisma.lesson.create({
-        data: {
-          title,
-          description,
-          date: new Date(date),
-          teacherId: req.user.id,
-          studentId: sId,
-          zoomJoinUrl: finalUrl,
-        },
-      });
-      lessonsCreated.push(lesson);
-    }
-
-    res.json(lessonsCreated[0]);
+    res.json(lesson);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
@@ -1117,21 +1098,29 @@ app.post('/api/teacher/assign-homework', auth, checkRole('TEACHER'), async (req,
 // Student Routes
 app.get('/api/student/lessons', auth, checkRole('STUDENT'), async (req, res) => {
   try {
-    const lessons = await prisma.lesson.findMany({
-      where: {
-        OR: [
-          { studentId: req.user.id },
-          { studentId: null }
-        ]
-      },
+    const userId = req.user.id;
+    const allLessons = await prisma.lesson.findMany({
       orderBy: { date: 'asc' },
       include: { teacher: { select: { name: true } } }
+    });
+    // Öğrenci dersini görebilir: studentId eşleşiyorsa, studentIds içinde ID'si varsa veya herkese açıksa
+    const lessons = allLessons.filter(lesson => {
+      if (lesson.studentId === userId) return true;
+      if (lesson.studentId === null && !lesson.studentIds) return true;
+      if (lesson.studentIds) {
+        try {
+          const ids = JSON.parse(lesson.studentIds);
+          return ids.includes(userId);
+        } catch { return false; }
+      }
+      return false;
     });
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.get('/api/student/lessons/:id', auth, checkRole('STUDENT'), async (req, res) => {
   const id = parseInt(req.params.id);
@@ -1146,7 +1135,12 @@ app.get('/api/student/lessons/:id', auth, checkRole('STUDENT'), async (req, res)
     if (!lesson) {
       return res.status(404).json({ error: 'Ders bulunamadı.' });
     }
-    if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
+    const userId = req.user.id;
+    let hasAccess = lesson.studentId === userId || lesson.studentId === null;
+    if (!hasAccess && lesson.studentIds) {
+      try { hasAccess = JSON.parse(lesson.studentIds).includes(userId); } catch {}
+    }
+    if (!hasAccess) {
       return res.status(403).json({ error: 'Bu derse erişim yetkiniz yok.' });
     }
     res.json(lesson);
@@ -1155,28 +1149,32 @@ app.get('/api/student/lessons/:id', auth, checkRole('STUDENT'), async (req, res)
   }
 });
 
+
 app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    const lesson = await prisma.lesson.findUnique({
-      where: { id }
-    });
+    const lesson = await prisma.lesson.findUnique({ where: { id } });
     if (!lesson) {
       return res.status(404).json({ error: 'Ders bulunamadı.' });
     }
-    if (lesson.studentId !== req.user.id && lesson.studentId !== null) {
+    const userId = req.user.id;
+    let hasAccess = lesson.studentId === userId || lesson.studentId === null;
+    if (!hasAccess && lesson.studentIds) {
+      try { hasAccess = JSON.parse(lesson.studentIds).includes(userId); } catch {}
+    }
+    if (!hasAccess) {
       return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
     }
     const updated = await prisma.lesson.update({
       where: { id },
-      data: { 
-        recordingRequested: true
-      }
+      data: { recordingRequested: true }
     });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
 });
 
 app.get('/api/student/homeworks', auth, checkRole('STUDENT'), async (req, res) => {
@@ -1810,23 +1808,31 @@ app.get('/api/parent/student', auth, checkRole('PARENT'), async (req, res) => {
   }
 });
 
+
 app.get('/api/parent/lessons', auth, checkRole('PARENT'), async (req, res) => {
   try {
-    const lessons = await prisma.lesson.findMany({
-      where: {
-        OR: [
-          { studentId: req.user.id },
-          { studentId: null }
-        ]
-      },
+    const userId = req.user.id;
+    const allLessons = await prisma.lesson.findMany({
       orderBy: { date: 'asc' },
       include: { teacher: { select: { name: true } } }
+    });
+    const lessons = allLessons.filter(lesson => {
+      if (lesson.studentId === userId) return true;
+      if (lesson.studentId === null && !lesson.studentIds) return true;
+      if (lesson.studentIds) {
+        try {
+          const ids = JSON.parse(lesson.studentIds);
+          return ids.includes(userId);
+        } catch { return false; }
+      }
+      return false;
     });
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.get('/api/parent/homeworks', auth, checkRole('PARENT'), async (req, res) => {
   try {

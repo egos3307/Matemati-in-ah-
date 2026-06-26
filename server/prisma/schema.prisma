@@ -71,6 +71,7 @@ model Lesson {
   teacher        User     @relation("TeacherLessons", fields: [teacherId], references: [id])
   studentId      Int?
   student        User?    @relation("StudentLessons", fields: [studentId], references: [id])
+  studentIds     String?  // JSON array of student IDs for group lessons, e.g. "[1,2,3]"
   homeworks      Homework[]
   createdAt      DateTime @default(now())
 }

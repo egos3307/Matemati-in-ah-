@@ -1213,7 +1213,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Canlı Ders Odası</h4>
+              <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Fulle Matematiği Canlı Ders Platformu</h4>
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
               <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-black tracking-wider ml-1">
                 Sunucu: LiveKit ({connectionState}) | Kamera: {cameraTracks.length}

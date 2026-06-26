@@ -154,6 +154,21 @@ const TeacherDashboard = () => {
       .slice(0, 4);
   };
 
+  const getLessonStudentNames = (lesson) => {
+    if (!lesson) return 'Genel';
+    let ids = [];
+    if (lesson.studentIds) {
+      try { ids = JSON.parse(lesson.studentIds); } catch {}
+    } else if (lesson.studentId) {
+      ids = [lesson.studentId];
+    }
+    if (ids.length === 0) return lesson.student?.name || 'Tüm Sınıf';
+    const names = ids
+      .map(id => students.find(s => s.id === id)?.name)
+      .filter(Boolean);
+    return names.length > 0 ? names.join(', ') : (lesson.student?.name || 'Tüm Sınıf');
+  };
+
   useEffect(() => {
     fetchStudents();
     fetchLessons();
@@ -864,7 +879,7 @@ const TeacherDashboard = () => {
                             </span>
                             <h4 className="font-black text-slate-955 text-sm mt-1">{lesson.title}</h4>
                             <p className="text-xs text-slate-500 font-bold mt-1">
-                              Öğrenci: <span className="text-slate-800">{lesson.student?.name || 'Tüm Sınıf'}</span>
+                              Öğrenci: <span className="text-slate-800">{getLessonStudentNames(lesson)}</span>
                             </p>
                             <p className="text-xs text-slate-400 font-medium mt-0.5">
                               {new Date(lesson.date).toLocaleString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -1449,11 +1464,11 @@ const TeacherDashboard = () => {
                                 <span className="text-[10px] text-primary font-black bg-primary/5 px-2 py-0.5 rounded-md">
                                   {new Date(lesson.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
-                                {lesson.student && (
+                                {(lesson.studentId || lesson.studentIds) ? (
                                   <span className="text-[10px] text-slate-400 font-bold">
-                                    Öğrenci: {lesson.student.name}
+                                    Öğrenci: {getLessonStudentNames(lesson)}
                                   </span>
-                                )}
+                                ) : null}
                                 {lesson.recordingRequested && !lesson.recordingUrl && (
                                   <span className="text-[10px] text-red-600 font-black bg-red-50 border border-red-100 px-2 py-0.5 rounded-md animate-pulse">
                                     Kayıt İstendi!
@@ -2782,7 +2797,7 @@ const TeacherDashboard = () => {
                                 <div>
                                   <h6 className="font-bold text-slate-800 text-xs truncate" title={lesson.title}>{lesson.title}</h6>
                                   <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                                    Öğrenci: <span className="text-slate-650">{lesson.student?.name || 'Genel'}</span>
+                                    Öğrenci: <span className="text-slate-650">{getLessonStudentNames(lesson)}</span>
                                   </p>
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-medium text-right">
