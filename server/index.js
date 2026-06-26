@@ -1175,8 +1175,6 @@ app.put('/api/student/lessons/:id/request-recording', auth, checkRole('STUDENT')
   }
 });
 
-});
-
 app.get('/api/student/homeworks', auth, checkRole('STUDENT'), async (req, res) => {
   try {
     const homeworks = await prisma.studentHomework.findMany({
