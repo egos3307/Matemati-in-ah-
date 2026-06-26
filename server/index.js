@@ -581,7 +581,7 @@ async function getGoogleDriveAccessToken() {
   return data.access_token;
 }
 
-async function uploadToGoogleDrive(assembledBuffer, fileName, folderId) {
+async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
   const accessToken = await getGoogleDriveAccessToken();
   if (!accessToken) {
     return null;
@@ -593,7 +593,7 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId) {
   };
   const parts = [];
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
-  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: video/webm\r\n\r\n`));
+  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`));
   parts.push(assembledBuffer);
   parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
   
@@ -649,6 +649,8 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
   const lessonId = parseInt(req.params.id);
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
   const totalChunks = parseInt(req.headers['x-total-chunks']);
+  const mimeType = req.headers['x-mime-type'] || 'video/webm';
+  const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
 
   if (isNaN(lessonId)) {
     return res.status(400).json({ error: 'Geçersiz ders ID' });
@@ -704,7 +706,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       // Attempt 0: Google Drive Upload (Priority)
       try {
         const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        const driveUrl = await uploadToGoogleDrive(assembledBuffer, `lesson_${lessonId}.webm`, driveFolderId);
+        const driveUrl = await uploadToGoogleDrive(assembledBuffer, `lesson_${lessonId}.${fileExt}`, driveFolderId, mimeType);
         if (driveUrl) {
           uploadSuccess = true;
           finalUrl = driveUrl;

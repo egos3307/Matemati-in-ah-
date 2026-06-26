@@ -571,31 +571,25 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       streamRef.current = combinedStream;
 
-      // 6. Initialize MediaRecorder with standard fallbacks and optimized bitrates
-      const options = { 
-        mimeType: 'video/webm;codecs=vp9,opus',
-        videoBitsPerSecond: 800000, // 800 Kbps (extremely clear for math whiteboards/slides, 3-4x smaller files)
-        audioBitsPerSecond: 64000   // 64 Kbps (perfect voice quality)
-      };
+      // 6. Initialize MediaRecorder — prefer H.264/MP4 (Safari-compatible), fall back to WebM
+      const BITRATES = { videoBitsPerSecond: 800000, audioBitsPerSecond: 64000 };
+      const MIME_PRIORITY = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2', // H.264+AAC — Safari + Chrome macOS 108+
+        'video/mp4;codecs=h264,aac',
+        'video/mp4',
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+      ];
+      const chosenMime = MIME_PRIORITY.find(m => MediaRecorder.isTypeSupported(m)) || '';
       let recorder;
       try {
-        recorder = new MediaRecorder(combinedStream, options);
+        recorder = new MediaRecorder(combinedStream, { mimeType: chosenMime, ...BITRATES });
       } catch (e) {
         try {
-          recorder = new MediaRecorder(combinedStream, { 
-            mimeType: 'video/mp4',
-            videoBitsPerSecond: 800000,
-            audioBitsPerSecond: 64000
-          });
+          recorder = new MediaRecorder(combinedStream, BITRATES);
         } catch (e2) {
-          try {
-            recorder = new MediaRecorder(combinedStream, {
-              videoBitsPerSecond: 800000,
-              audioBitsPerSecond: 64000
-            });
-          } catch (e3) {
-            recorder = new MediaRecorder(combinedStream);
-          }
+          recorder = new MediaRecorder(combinedStream);
         }
       }
 
@@ -627,14 +621,18 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
 
         try {
-          let blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
-          
-          try {
-            console.log("Fixing WebM recording duration metadata (Duration:", duration, "ms)...");
-            blob = await fixWebmDuration(blob, duration);
-            console.log("WebM duration metadata fixed successfully.");
-          } catch (fixErr) {
-            console.warn("Failed to fix WebM duration metadata:", fixErr);
+          const actualMime = recorder.mimeType || 'video/webm';
+          const isMp4 = actualMime.includes('mp4');
+          let blob = new Blob(chunksRef.current, { type: actualMime });
+
+          if (!isMp4) {
+            try {
+              console.log("Fixing WebM recording duration metadata (Duration:", duration, "ms)...");
+              blob = await fixWebmDuration(blob, duration);
+              console.log("WebM duration metadata fixed successfully.");
+            } catch (fixErr) {
+              console.warn("Failed to fix WebM duration metadata:", fixErr);
+            }
           }
 
           const tokenVal = localStorage.getItem('token');
@@ -658,7 +656,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 'Authorization': `Bearer ${tokenVal}`,
                 'Content-Type': 'application/octet-stream',
                 'x-chunk-index': index.toString(),
-                'x-total-chunks': totalChunks.toString()
+                'x-total-chunks': totalChunks.toString(),
+                'x-mime-type': actualMime,
               },
               body: chunkBlob
             });
@@ -1299,8 +1298,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                         }`}
                       >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
-                        
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={{ transform: 'scaleX(-1)' }} />
+
                         {/* Speaking indicator overlay */}
                         {p.isSpeaking && (
                           <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
@@ -1317,7 +1316,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     );
                   } else {
                     return (
-                      <div 
+                      <div
                         key={`${p.identity}_placeholder`}
                         className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950/80 border shadow-sm flex flex-col items-center justify-center p-2 camera-item ${
                           isTeacher ? 'border-primary/30' : 'border-slate-900'
@@ -1368,94 +1367,61 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   />
                 </div>
 
-                {/* Webcams Float Box (Draggable) */}
-                <div 
+                {/* Webcams Float Box (Draggable) - only active cameras */}
+                <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
                   className="fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: '210px',
+                    width: '200px',
                   }}
                 >
                   {/* Header */}
                   <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px] text-primary">group</span>
-                      Katılımcılar
+                      <span className="material-symbols-outlined text-[12px] text-primary">videocam</span>
+                      Kameralar ({cameraTracks.length})
                     </span>
                     <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
                   </div>
-                  
-                  {/* Videos */}
-                  <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto no-drag pr-0.5">
-                    {participants.map((p) => {
-                      const isTeacher = checkIsTeacher(p);
-                      const trackRef = cameraTracks.find(t => t.participant.identity === p.identity);
-                      const initial = p.name ? p.name.charAt(0).toUpperCase() : p.identity.charAt(0).toUpperCase();
-                      
-                      if (trackRef) {
+
+                  {/* Active camera feeds only */}
+                  <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto no-drag pr-0.5">
+                    {cameraTracks.length === 0 ? (
+                      <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                        Aktif kamera yok
+                      </div>
+                    ) : (
+                      cameraTracks.map((trackRef) => {
+                        const p = trackRef.participant;
+                        const isTeacher = checkIsTeacher(p);
                         const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${p.identity}_camera`;
                         return (
-                          <div 
-                            key={trackKey} 
+                          <div
+                            key={trackKey}
                             className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
-                              isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
+                              isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
                             }`}
                           >
-                            <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
-                            
-                            {/* Speaking indicator overlay */}
+                            <VideoTrack trackRef={trackRef} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+
+                            {/* Speaking indicator */}
                             {p.isSpeaking && (
                               <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
                                 <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
                               </div>
                             )}
 
-                            {/* Status name tags */}
-                            <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
-                              {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
-                              <span className="text-white truncate">{p.name || p.identity} {p.isLocal ? '(Sen)' : ''}</span>
+                            {/* Name tag */}
+                            <div className="absolute bottom-1 left-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 truncate">
+                              {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm shrink-0">HOCA</span>}
+                              <span className="text-white truncate">{p.name || p.identity}{p.isLocal ? ' (Sen)' : ''}</span>
                             </div>
                           </div>
                         );
-                      } else {
-                        return (
-                          <div 
-                            key={`${p.identity}_placeholder`}
-                            className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950/80 border shadow-sm flex flex-col items-center justify-center p-2 camera-item ${
-                              isTeacher ? 'border-primary/30' : 'border-slate-900'
-                            }`}
-                          >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-inner ${
-                              isTeacher ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'
-                            }`}>
-                              {initial}
-                            </div>
-                            <div className="text-[8px] font-extrabold mt-1 text-slate-300 max-w-full truncate px-1 flex items-center gap-1">
-                              {isTeacher && <span className="text-[7px] bg-primary/20 text-primary font-black px-1 rounded-sm">HOCA</span>}
-                              <span className="truncate">{p.name || p.identity} {p.isLocal ? '(Sen)' : ''}</span>
-                            </div>
-                            <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-[8px]">videocam_off</span>
-                              Kamera Kapalı
-                            </span>
-                            
-                            {/* Speaking indicator overlay */}
-                            {p.isSpeaking && (
-                              <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                                <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    })}
-                    {participants.length === 0 && (
-                      <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                        Aktif kamera yok
-                      </div>
+                      })
                     )}
                   </div>
                 </div>
@@ -1476,8 +1442,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                             : 'border-slate-800 hover:border-primary/30'
                         }`}
                       >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
-                        
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={{ transform: 'scaleX(-1)' }} />
+
                         {/* Floating tag inside camera panel */}
                         <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
                           {isTeacher ? (

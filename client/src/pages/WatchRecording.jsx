@@ -2,6 +2,9 @@ import React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const isSafari = typeof navigator !== 'undefined' &&
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 const WatchRecording = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -122,9 +125,9 @@ const WatchRecording = () => {
         </div>
         <div className="flex items-center gap-3">
           {player.type === 'native' ? (
-            <a 
-              href={player.url} 
-              download="ders_kaydi.webm"
+            <a
+              href={player.url}
+              download="ders_kaydi"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-emerald-950/20"
@@ -134,12 +137,16 @@ const WatchRecording = () => {
               Donuyorsa İndir
             </a>
           ) : (
-            <a 
-              href={decodeURIComponent(videoUrl)} 
+            <a
+              href={decodeURIComponent(videoUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-indigo-950/20"
-              title="Kaydı yeni sekmede aç"
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md ${
+                isSafari
+                  ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-950/20 animate-pulse'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-950/20'
+              }`}
+              title={isSafari ? "Safari'de iframe çalışmıyorsa buraya tıklayın" : "Kaydı yeni sekmede aç"}
             >
               <span className="material-symbols-outlined text-sm">open_in_new</span>
               {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da Aç" : "Dış Kaynakta Aç"}
@@ -153,14 +160,29 @@ const WatchRecording = () => {
 
       {/* Video Viewport */}
       <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
+
+        {/* Safari + Google Drive uyarı banner'ı (video yüklemeden önce göster) */}
+        {isSafari && player.type === 'iframe' && !videoError && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-slate-950 text-xs font-black px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 max-w-sm text-center">
+            <span className="material-symbols-outlined text-sm shrink-0">info</span>
+            Safari'de video açılmazsa aşağıdaki "Google Drive'da Aç" butonunu kullanın.
+          </div>
+        )}
+
         {videoError ? (
           <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
             <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
             <div>
               <h2 className="text-xl font-black text-white mb-2">Video Oynatılamıyor</h2>
-              <p className="text-slate-400 text-sm max-w-md">
-                Ders kaydı bu cihazda oynatılamıyor. Kaydı doğrudan açmayı veya indirmeyi deneyebilirsiniz.
-              </p>
+              {isSafari ? (
+                <p className="text-slate-400 text-sm max-w-md">
+                  Safari, WebM formatını desteklemiyor. Kaydı Google Drive'da açarak izleyebilir veya indirebilirsiniz.
+                </p>
+              ) : (
+                <p className="text-slate-400 text-sm max-w-md">
+                  Ders kaydı bu cihazda oynatılamıyor. Kaydı doğrudan açmayı veya indirmeyi deneyebilirsiniz.
+                </p>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
@@ -170,7 +192,7 @@ const WatchRecording = () => {
                 className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all"
               >
                 <span className="material-symbols-outlined text-sm">open_in_new</span>
-                Yeni Sekmede Aç
+                {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da Aç" : "Yeni Sekmede Aç"}
               </a>
               <a
                 href={decodeURIComponent(videoUrl)}
@@ -181,13 +203,18 @@ const WatchRecording = () => {
                 İndir
               </a>
             </div>
+            {isSafari && (
+              <p className="text-slate-600 text-xs max-w-xs">
+                İpucu: Yeni kaydedilen dersler otomatik olarak Safari uyumlu MP4 formatında kaydedilecektir.
+              </p>
+            )}
           </div>
         ) : player.type === 'iframe' ? (
           <iframe
             src={player.url}
             className="w-full border-0 z-10"
             style={{ height: '100%', minHeight: '100%' }}
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
             onError={() => setVideoError(true)}
           />
