@@ -478,6 +478,139 @@ app.put('/api/teacher/lessons/:id/recording', auth, checkRole('TEACHER'), async 
   }
 });
 
+function base64url(buf) {
+  return buf.toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function generateGoogleAccessToken(clientEmail, privateKey) {
+  const formattedKey = privateKey.replace(/\\n/g, '\n');
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: clientEmail,
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const base64Header = base64url(Buffer.from(JSON.stringify(header)));
+  const base64Claim = base64url(Buffer.from(JSON.stringify(claim)));
+  const signatureInput = `${base64Header}.${base64Claim}`;
+  
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(signatureInput);
+  const signature = base64url(sign.sign(formattedKey));
+  
+  return `${signatureInput}.${signature}`;
+}
+
+async function getGoogleDriveAccessToken() {
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  if (!email || !privateKey) {
+    console.warn('Google Service Account credentials (GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) are not set. Skipping Google Drive upload.');
+    return null;
+  }
+
+  const jwt = generateGoogleAccessToken(email, privateKey);
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Google OAuth token retrieval failed: ${errorText}`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
+}
+
+async function uploadToGoogleDrive(assembledBuffer, filename, folderId) {
+  const accessToken = await getGoogleDriveAccessToken();
+  if (!accessToken) {
+    return null;
+  }
+  
+  const metadata = {
+    name: filename,
+    mimeType: 'video/webm'
+  };
+  
+  if (folderId) {
+    metadata.parents = [folderId];
+  }
+  
+  const boundary = '----GoogleDriveMultipartBoundary' + Math.random().toString(36).substring(2);
+  
+  const parts = [];
+  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
+  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: video/webm\r\n\r\n`));
+  parts.push(assembledBuffer);
+  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+  
+  const payload = Buffer.concat(parts);
+  
+  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive...`);
+  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+      'Content-Length': String(payload.length)
+    },
+    body: payload
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google Drive upload API failed: ${errorText}`);
+  }
+  
+  const fileData = await response.json();
+  const fileId = fileData.id;
+  console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
+  
+  try {
+    console.log(`Setting public reader permission for Google Drive file ${fileId}...`);
+    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        role: 'reader',
+        type: 'anyone'
+      })
+    });
+    if (!permRes.ok) {
+      const permErrText = await permRes.text();
+      console.warn(`Failed to set permissions for file ${fileId}: ${permErrText}`);
+    } else {
+      console.log(`Public reader permission set successfully for Google Drive file ${fileId}.`);
+    }
+  } catch (permErr) {
+    console.warn("Failed to set public view permission on Google Drive file, continuing...", permErr);
+  }
+  
+  return `https://drive.google.com/file/d/${fileId}/view?usp=drivesdk`;
+}
+
 app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
@@ -528,11 +661,24 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       const buffersToConcat = chunks.map(c => c.data);
       const assembledBuffer = Buffer.concat(buffersToConcat);
 
-      console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Uploading from backend to Catbox...`);
+      console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Starting upload chain...`);
 
       let catboxRes;
       let uploadSuccess = false;
       let finalUrl = "";
+
+      // Attempt 0: Google Drive Upload (Priority)
+      try {
+        const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+        const driveUrl = await uploadToGoogleDrive(assembledBuffer, `lesson_${lessonId}.webm`, driveFolderId);
+        if (driveUrl) {
+          uploadSuccess = true;
+          finalUrl = driveUrl;
+          console.log(`Successfully uploaded to Google Drive: ${finalUrl}`);
+        }
+      } catch (driveErr) {
+        console.error("Google Drive upload failed, falling back to other providers...", driveErr);
+      }
 
       // Attempt 1: Native FormData + Blob first (supported in Node 18+)
       try {
