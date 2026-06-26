@@ -9,6 +9,7 @@ const WatchRecording = () => {
   const videoUrl = searchParams.get('url');
   const lessonTitle = searchParams.get('title') || 'Ders Kaydı';
   const [isBuffering, setIsBuffering] = React.useState(false);
+  const [videoError, setVideoError] = React.useState(false);
 
   const getBackPath = () => {
     if (user?.role === 'PARENT') return '/veli';
@@ -93,7 +94,7 @@ const WatchRecording = () => {
   const player = getPlayerTypeAndUrl(videoUrl);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
+    <div className="h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
       {/* Immersive Top Bar */}
       <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/85 to-transparent px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -151,37 +152,68 @@ const WatchRecording = () => {
       </div>
 
       {/* Video Viewport */}
-      <div className="flex-1 w-full h-full flex items-center justify-center bg-black relative">
-        {player.type === 'iframe' ? (
-          <iframe 
-            src={player.url} 
-            className="w-full h-full max-h-screen border-0 z-10" 
-            allow="autoplay; encrypted-media; picture-in-picture" 
+      <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
+        {videoError ? (
+          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
+            <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
+            <div>
+              <h2 className="text-xl font-black text-white mb-2">Video Oynatılamıyor</h2>
+              <p className="text-slate-400 text-sm max-w-md">
+                Ders kaydı bu cihazda oynatılamıyor. Kaydı doğrudan açmayı veya indirmeyi deneyebilirsiniz.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={decodeURIComponent(videoUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                Yeni Sekmede Aç
+              </a>
+              <a
+                href={decodeURIComponent(videoUrl)}
+                download
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">download</span>
+                İndir
+              </a>
+            </div>
+          </div>
+        ) : player.type === 'iframe' ? (
+          <iframe
+            src={player.url}
+            className="w-full border-0 z-10"
+            style={{ height: '100%', minHeight: '100%' }}
+            allow="autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
+            onError={() => setVideoError(true)}
           />
         ) : (
-          <video 
-            src={player.url} 
-            controls 
-            playsInline 
+          <video
+            src={player.url}
+            controls
+            playsInline
             autoPlay
             preload="auto"
             onWaiting={() => setIsBuffering(true)}
-            onPlaying={() => setIsBuffering(false)}
+            onPlaying={() => { setIsBuffering(false); setVideoError(false); }}
             onCanPlay={() => setIsBuffering(false)}
             onSeeked={() => setIsBuffering(false)}
+            onError={() => { setIsBuffering(false); setVideoError(true); }}
             className="w-full h-full max-h-screen object-contain z-10"
           />
         )}
-        
-        {isBuffering && (
+
+        {isBuffering && !videoError && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-4 transition-all">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-sm font-semibold text-slate-200 tracking-wider">Video Yükleniyor...</p>
           </div>
         )}
 
-        {/* Abstract background glow for premium glassmorphism vibe */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] pointer-events-none" />
       </div>
     </div>

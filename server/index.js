@@ -1882,25 +1882,25 @@ const initParentCodes = async () => {
       console.log(`Updated student ${student.name} with parentCode ${parentCode}`);
     }
 
-    // Clean up legacy YouTube or external URLs in recordingUrl database entries
-    const externalLessons = await prisma.lesson.findMany({
+    // Fix broken /uploads/lesson_*.webm paths that were incorrectly set by a previous migration.
+    // These local file paths don't exist since recordings are stored on Google Drive or external services.
+    const fs = require('fs');
+    const brokenLessons = await prisma.lesson.findMany({
       where: {
-        OR: [
-          { recordingUrl: { contains: 'youtube.com' } },
-          { recordingUrl: { contains: 'youtu.be' } },
-          { recordingUrl: { contains: 'google.com' } }
-        ]
+        recordingUrl: { startsWith: '/uploads/' }
       }
     });
 
-    for (const lesson of externalLessons) {
-      await prisma.lesson.update({
-        where: { id: lesson.id },
-        data: {
-          recordingUrl: `/uploads/lesson_${lesson.id}.webm`
-        }
-      });
-      console.log(`Migrated legacy YouTube/external link to local storage path for lesson ${lesson.id}`);
+    for (const lesson of brokenLessons) {
+      const localPath = require('path').join(__dirname, lesson.recordingUrl);
+      const fileExists = fs.existsSync(localPath);
+      if (!fileExists) {
+        await prisma.lesson.update({
+          where: { id: lesson.id },
+          data: { recordingUrl: null }
+        });
+        console.log(`Cleared broken local recording path for lesson ${lesson.id}: ${lesson.recordingUrl}`);
+      }
     }
   } catch (err) {
     console.error('Error initializing parent codes / cleaning recordings:', err);

@@ -215,3 +215,4 @@ const Derslerimiz = () => {
 };
 
 export default Derslerimiz;
+Bu sayganın en üstünde eklediğim fotolar kaysın istiyorum bişe bozma
