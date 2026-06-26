@@ -1575,7 +1575,15 @@ app.post('/api/ai/ask', auth, async (req, res) => {
 app.get('/api/parent/student', auth, checkRole('PARENT'), async (req, res) => {
   try {
     const student = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      include: {
+        teacher: {
+          select: {
+            name: true,
+            studentTel: true
+          }
+        }
+      }
     });
     if (!student) {
       return res.status(404).json({ error: 'Öğrenci bulunamadı.' });
@@ -1593,7 +1601,10 @@ app.get('/api/parent/student', auth, checkRole('PARENT'), async (req, res) => {
       paymentStatus: student.paymentStatus,
       paymentDay: student.paymentDay,
       paymentAmount: student.paymentAmount,
-      paymentNote: student.paymentNote
+      paymentNote: student.paymentNote,
+      paymentType: student.paymentType,
+      totalLessons: student.totalLessons,
+      teacher: student.teacher
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

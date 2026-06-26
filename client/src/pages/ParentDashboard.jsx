@@ -15,6 +15,18 @@ const ParentDashboard = () => {
   const [activeRecordingUrl, setActiveRecordingUrl] = useState(null);
   const { logout } = useAuth();
 
+  const getTeacherWhatsAppLink = () => {
+    let phone = student?.teacher?.studentTel || '905350598950';
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '90' + cleanPhone.substring(1);
+    } else if (cleanPhone.length === 10 && cleanPhone.startsWith('5')) {
+      cleanPhone = '90' + cleanPhone;
+    }
+    const message = `Merhaba ${student?.teacher?.name || 'Hocam'}, ${student?.name || 'öğrencimiz'} hakkında görüşmek istiyorum.`;
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -161,29 +173,49 @@ const ParentDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Student Details Card */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-                <h4 className="font-black text-slate-950 text-base border-b pb-3">Öğrenci Bilgileri</h4>
-                <div className="space-y-3.5 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Öğrenci Adı:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.name}</span>
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between space-y-4">
+                <div>
+                  <h4 className="font-black text-slate-950 text-base border-b pb-3">Öğrenci Bilgileri</h4>
+                  <div className="space-y-3.5 text-sm mt-4">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400 font-semibold shrink-0">Öğrenci Adı:</span>
+                      <span className="font-bold text-slate-900 text-right">{student?.name}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400 font-semibold shrink-0">Sınıf Derecesi:</span>
+                      <span className="font-bold text-slate-900 text-right">{(student?.grade === 'KPSS' || student?.grade === 'Mezun') ? student?.grade : `${student?.grade}. Sınıf`}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400 font-semibold shrink-0">Verilen Hizmet:</span>
+                      <span className="font-bold text-slate-900 text-right">{student?.serviceProvided || 'Matematik Özel Ders'}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400 font-semibold shrink-0">Öğrenci Tel:</span>
+                      <span className="font-bold text-slate-900 text-right">{student?.studentTel || '-'}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-400 font-semibold shrink-0">Veli Tel:</span>
+                      <span className="font-bold text-slate-900 text-right">{student?.parentTel || '-'}</span>
+                    </div>
+                    {student?.teacher?.name && (
+                      <div className="flex justify-between gap-2 border-t pt-3.5 border-slate-100">
+                        <span className="text-slate-400 font-semibold shrink-0">Öğretmen:</span>
+                        <span className="font-bold text-primary text-right">{student.teacher.name}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Sınıf Derecesi:</span>
-                    <span className="font-bold text-slate-900 text-right">{(student?.grade === 'KPSS' || student?.grade === 'Mezun') ? student?.grade : `${student?.grade}. Sınıf`}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Verilen Hizmet:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.serviceProvided || 'Matematik Özel Ders'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Öğrenci Tel:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.studentTel || '-'}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">Veli Tel:</span>
-                    <span className="font-bold text-slate-900 text-right">{student?.parentTel || '-'}</span>
-                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <a
+                    href={getTeacherWhatsAppLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm py-3 px-4 rounded-2xl shadow-lg shadow-emerald-600/10 hover:shadow-xl hover:scale-[1.01] transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">chat</span>
+                    Öğretmen ile İletişime Geç
+                  </a>
                 </div>
               </div>
 
