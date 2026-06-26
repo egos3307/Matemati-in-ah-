@@ -8,7 +8,8 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_123';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET not configured');
     const decoded = jwt.verify(token, secret);
     req.user = decoded;
     next();

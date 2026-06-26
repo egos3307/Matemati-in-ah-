@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 
 const BlogPostDetail = () => {
@@ -102,7 +103,7 @@ const BlogPostDetail = () => {
           {/* Main Content Body */}
           <div 
             className="prose max-w-none text-slate-600 text-base leading-relaxed whitespace-pre-line"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
           />
         </article>
 

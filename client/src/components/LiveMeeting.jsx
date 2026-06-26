@@ -313,18 +313,43 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
   const cameraTracks = useTracks([Track.Source.Camera]);
+  const micTracks = useTracks([Track.Source.Microphone]);
   const screenShareTracks = useTracks([Track.Source.ScreenShare]).filter(
     (track) => track.publication?.kind === 'video' || track.track?.kind === 'video'
   );
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const room = useMaybeRoomContext();
+  const isTeacherRole = role === 'TEACHER' || role === 'HEAD_TEACHER';
 
   const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, recording, saving
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const showWhiteboardRef = useRef(false);
   const whiteboardCanvasRef = useRef(null);
   const recordingStartTimeRef = useRef(0);
+  const [mutingParticipant, setMutingParticipant] = useState(null);
+
+  const muteParticipantTrack = async (participant, trackType) => {
+    const tracks = trackType === 'audio' ? micTracks : cameraTracks;
+    const trackRef = tracks.find(t => t.participant.identity === participant.identity);
+    const trackSid = trackRef?.publication?.trackSid;
+    if (!trackSid) return;
+
+    const key = `${participant.identity}_${trackType}`;
+    setMutingParticipant(key);
+    try {
+      await axios.post('/api/livekit/mute-participant', {
+        roomName: `lesson_${lessonId}`,
+        participantIdentity: participant.identity,
+        trackSid,
+        muted: true,
+      });
+    } catch (err) {
+      console.error('Mute failed:', err);
+    } finally {
+      setMutingParticipant(null);
+    }
+  };
 
   useEffect(() => {
     showWhiteboardRef.current = showWhiteboard;
@@ -1533,18 +1558,49 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       </div>
                     </div>
 
-                    {/* Mute status icons */}
+                    {/* Mute status / teacher controls */}
                     <div className="flex items-center gap-1 text-slate-400 flex-shrink-0">
-                      <span className={`material-symbols-outlined text-base p-1 rounded-lg ${
-                        p.isMicrophoneEnabled ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'
-                      }`}>
-                        {p.isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                      </span>
-                      <span className={`material-symbols-outlined text-base p-1 rounded-lg ${
-                        p.isCameraEnabled ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'
-                      }`}>
-                        {p.isCameraEnabled ? 'videocam' : 'videocam_off'}
-                      </span>
+                      {isTeacherRole && !isTeacher && !p.isLocal ? (
+                        <>
+                          <button
+                            title={p.isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofon Zaten Kapalı'}
+                            disabled={!p.isMicrophoneEnabled || mutingParticipant === `${p.identity}_audio`}
+                            onClick={() => muteParticipantTrack(p, 'audio')}
+                            className={`material-symbols-outlined text-base p-1 rounded-lg transition-all cursor-pointer ${
+                              p.isMicrophoneEnabled
+                                ? 'text-emerald-400 bg-emerald-500/10 hover:text-red-400 hover:bg-red-500/15'
+                                : 'text-red-400 bg-red-500/10 opacity-50 cursor-not-allowed'
+                            }`}
+                          >
+                            {mutingParticipant === `${p.identity}_audio` ? 'hourglass_empty' : (p.isMicrophoneEnabled ? 'mic' : 'mic_off')}
+                          </button>
+                          <button
+                            title={p.isCameraEnabled ? 'Kamerayı Kapat' : 'Kamera Zaten Kapalı'}
+                            disabled={!p.isCameraEnabled || mutingParticipant === `${p.identity}_video`}
+                            onClick={() => muteParticipantTrack(p, 'video')}
+                            className={`material-symbols-outlined text-base p-1 rounded-lg transition-all cursor-pointer ${
+                              p.isCameraEnabled
+                                ? 'text-emerald-400 bg-emerald-500/10 hover:text-red-400 hover:bg-red-500/15'
+                                : 'text-red-400 bg-red-500/10 opacity-50 cursor-not-allowed'
+                            }`}
+                          >
+                            {mutingParticipant === `${p.identity}_video` ? 'hourglass_empty' : (p.isCameraEnabled ? 'videocam' : 'videocam_off')}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className={`material-symbols-outlined text-base p-1 rounded-lg ${
+                            p.isMicrophoneEnabled ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'
+                          }`}>
+                            {p.isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                          </span>
+                          <span className={`material-symbols-outlined text-base p-1 rounded-lg ${
+                            p.isCameraEnabled ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'
+                          }`}>
+                            {p.isCameraEnabled ? 'videocam' : 'videocam_off'}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

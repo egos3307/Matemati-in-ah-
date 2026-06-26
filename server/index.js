@@ -6,7 +6,9 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { auth, checkRole } = require('./middleware/auth');
 const crypto = require('crypto');
-const { AccessToken } = require('livekit-server-sdk');
+const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
+const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
 const os = require('os');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
@@ -123,6 +125,14 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Serve static recorded lessons
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -130,52 +140,10 @@ app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
 
-app.get('/api/debug', async (req, res) => {
-  const fs = require('fs');
-  
-  const debugInfo = {
-    cwd: process.cwd(),
-    dirname: __dirname,
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      VERCEL: process.env.VERCEL,
-      DATABASE_URL: process.env.DATABASE_URL ? 'DEFINED' : 'UNDEFINED',
-      SERVER_TIME: new Date().toISOString(),
-      LIVEKIT_API_KEY_EXISTS: !!process.env.LIVEKIT_API_KEY,
-      LIVEKIT_API_KEY_PREVIEW: process.env.LIVEKIT_API_KEY ? `${process.env.LIVEKIT_API_KEY.substring(0, 5)}...${process.env.LIVEKIT_API_KEY.slice(-5)}` : 'N/A',
-      LIVEKIT_API_SECRET_EXISTS: !!process.env.LIVEKIT_API_SECRET,
-      LIVEKIT_API_SECRET_PREVIEW: process.env.LIVEKIT_API_SECRET ? `${process.env.LIVEKIT_API_SECRET.substring(0, 5)}...${process.env.LIVEKIT_API_SECRET.slice(-5)}` : 'N/A',
-      LIVEKIT_URL_EXISTS: !!process.env.LIVEKIT_URL,
-      LIVEKIT_URL_VALUE: process.env.LIVEKIT_URL || 'N/A'
-    },
-    exists: {
-      dirname_devDb: fs.existsSync(path.resolve(__dirname, 'dev.db')),
-      cwd_server_devDb: fs.existsSync(path.join(process.cwd(), 'server', 'dev.db')),
-      cwd_devDb: fs.existsSync(path.join(process.cwd(), 'dev.db')),
-      tmp_devDb: fs.existsSync('/tmp/dev.db'),
-      prisma_schema: fs.existsSync(path.join(process.cwd(), 'server', 'prisma', 'schema.prisma')),
-      cwd_files: [],
-      dirname_files: []
-    }
-  };
-
-  try {
-    debugInfo.exists.cwd_files = fs.readdirSync(process.cwd());
-  } catch (e) {
-    debugInfo.exists.cwd_files = [e.message];
-  }
-
-  try {
-    debugInfo.exists.dirname_files = fs.readdirSync(__dirname);
-  } catch (e) {
-    debugInfo.exists.dirname_files = [e.message];
-  }
-
-  res.json(debugInfo);
-});
+// Debug endpoint kaldırıldı (güvenlik)
 
 // Auth Routes
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { email, password, studentCode, loginType } = req.body;
   console.log('Login attempt:', { email, studentCode, loginType }); // Debug log
   try {
@@ -221,7 +189,8 @@ app.post('/api/auth/login', async (req, res) => {
       }
     }
 
-    const secret = process.env.JWT_SECRET || 'fallback_secret_for_dev_123';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return res.status(500).json({ error: 'Sunucu yapılandırma hatası' });
     const token = jwt.sign(
       { id: user.id, role: user.role, name: user.name, grade: user.grade },
       secret,
@@ -277,13 +246,13 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
     const finalEmail = email || `${studentCode.toLowerCase()}@fulle.com`;
 
     const student = await prisma.user.create({
-      data: { 
-        email: finalEmail, 
-        password: hashedPassword, 
-        name, 
-        grade, 
-        parentName, 
-        parentTel, 
+      data: {
+        email: finalEmail,
+        password: hashedPassword,
+        name,
+        grade,
+        parentName,
+        parentTel,
         studentTel,
         studentCode,
         parentCode,
@@ -292,8 +261,9 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
         paymentDay,
         paymentAmount,
         paymentNote,
-        role: 'STUDENT' 
+        role: 'STUDENT'
       },
+      select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true }
     });
     res.json(student);
   } catch (err) {
@@ -305,6 +275,10 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
   const id = parseInt(req.params.id);
   const { email, name, grade, parentName, parentTel, studentTel, serviceProvided, paymentStatus, paymentDay, paymentAmount, paymentNote, paymentType, totalLessons } = req.body;
   try {
+    const whereClause = req.user.role === 'HEAD_TEACHER' ? { id } : { id, teacherId: req.user.id };
+    const existing = await prisma.user.findFirst({ where: whereClause });
+    if (!existing) return res.status(403).json({ error: 'Bu öğrenciye erişim yetkiniz yok' });
+
     const updated = await prisma.user.update({
       where: { id },
       data: {
@@ -321,7 +295,8 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
         paymentNote,
         paymentType: paymentType || 'MONTHLY',
         totalLessons: totalLessons ? parseInt(totalLessons) : 0
-      }
+      },
+      select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true }
     });
     res.json(updated);
   } catch (err) {
@@ -332,16 +307,15 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
 app.delete('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    // Cascade delete relations
+    const whereClause = req.user.role === 'HEAD_TEACHER' ? { id } : { id, teacherId: req.user.id };
+    const existing = await prisma.user.findFirst({ where: whereClause });
+    if (!existing) return res.status(403).json({ error: 'Bu öğrenciye erişim yetkiniz yok' });
+
     await prisma.trial.deleteMany({ where: { studentId: id } });
     await prisma.studentHomework.deleteMany({ where: { studentId: id } });
-    await prisma.lesson.updateMany({
-      where: { studentId: id },
-      data: { studentId: null }
-    });
-
-    const deleted = await prisma.user.delete({ where: { id } });
-    res.json({ success: true, deleted });
+    await prisma.lesson.updateMany({ where: { studentId: id }, data: { studentId: null } });
+    await prisma.user.delete({ where: { id } });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -961,13 +935,14 @@ app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) =>
   try {
     let students;
     if (req.user.role === 'HEAD_TEACHER') {
-      students = await prisma.user.findMany({ 
+      students = await prisma.user.findMany({
         where: { role: 'STUDENT' },
-        include: { teacher: { select: { id: true, name: true } } }
+        select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true, teacher: { select: { id: true, name: true } } }
       });
     } else {
-      students = await prisma.user.findMany({ 
-        where: { role: 'STUDENT', teacherId: req.user.id } 
+      students = await prisma.user.findMany({
+        where: { role: 'STUDENT', teacherId: req.user.id },
+        select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true }
       });
     }
     res.json(students);
@@ -1628,7 +1603,7 @@ app.delete('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res
 
 // Zoom SDK Signature Endpoint
 app.post('/api/zoom/signature', auth, async (req, res) => {
-  const { meetingNumber, role } = req.body;
+  const { meetingNumber } = req.body;
   const sdkKey = process.env.ZOOM_SDK_KEY || 'YOUR_SDK_KEY';
   const sdkSecret = process.env.ZOOM_SDK_SECRET || 'YOUR_SDK_SECRET';
 
@@ -1637,8 +1612,7 @@ app.post('/api/zoom/signature', auth, async (req, res) => {
   }
 
   try {
-    // role: 1 for host (teacher), 0 for participant (student)
-    const zoomRole = role === 'TEACHER' ? 1 : 0;
+    const zoomRole = (req.user.role === 'TEACHER' || req.user.role === 'HEAD_TEACHER') ? 1 : 0;
     
     const iat = Math.round(new Date().getTime() / 1000) - 30;
     const exp = iat + 60 * 60 * 2; // 2 hours expiration
@@ -1723,6 +1697,31 @@ app.post('/api/livekit/token', auth, async (req, res) => {
     console.error('LiveKit token generation error:', err);
     // Automatically fallback to Jitsi if generation fails
     res.json({ useFallback: true });
+  }
+});
+
+// Öğretmenin öğrenci sesini/kamerasını kapatması
+app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req, res) => {
+  const { roomName, participantIdentity, trackSid, muted } = req.body;
+  if (!roomName || !participantIdentity || !trackSid) {
+    return res.status(400).json({ error: 'roomName, participantIdentity ve trackSid gereklidir.' });
+  }
+
+  const apiKey = (process.env.LIVEKIT_API_KEY || '').replace(/['"]/g, '').trim();
+  const apiSecret = (process.env.LIVEKIT_API_SECRET || '').replace(/['"]/g, '').trim();
+  const livekitUrl = (process.env.LIVEKIT_URL || '').replace(/['"]/g, '').replace(/\/$/, '').trim();
+
+  if (!apiKey || !apiSecret || !livekitUrl) {
+    return res.status(503).json({ error: 'LiveKit yapılandırılmamış.' });
+  }
+
+  try {
+    const roomService = new RoomServiceClient(livekitUrl, apiKey, apiSecret);
+    await roomService.mutePublishedTrack(roomName, participantIdentity, trackSid, muted !== false);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('LiveKit mute error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
