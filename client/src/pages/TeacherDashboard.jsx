@@ -71,7 +71,7 @@ const TeacherDashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [lessonTime, setLessonTime] = useState('12:00');
-  const [newLessonStudentId, setNewLessonStudentId] = useState('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [newLessonZoomUrl, setNewLessonZoomUrl] = useState('');
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [blogs, setBlogs] = useState([]);
@@ -372,8 +372,8 @@ const TeacherDashboard = () => {
 
   const handleCreateLesson = async (e) => {
     e.preventDefault();
-    if (!newLessonStudentId) {
-      alert('Lütfen bu ders için bir öğrenci seçin.');
+    if (selectedStudentIds.length === 0) {
+      alert('Lütfen bu ders için en az bir öğrenci seçin.');
       return;
     }
     try {
@@ -385,12 +385,12 @@ const TeacherDashboard = () => {
         title: newLesson.title,
         description: newLesson.description,
         date: dateObj.toISOString(),
-        studentId: parseInt(newLessonStudentId),
+        studentIds: selectedStudentIds,
         zoomJoinUrl: newLessonZoomUrl
       });
       setNewLesson({ title: '', description: '', date: '' });
       setLessonTime('12:00');
-      setNewLessonStudentId('');
+      setSelectedStudentIds([]);
       setNewLessonZoomUrl('');
       fetchLessons();
       alert('Ders başarıyla oluşturuldu!');
@@ -1576,18 +1576,31 @@ const TeacherDashboard = () => {
                   </h4>
                   <form onSubmit={handleCreateLesson} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi</label>
-                      <select 
-                        className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm" 
-                        value={newLessonStudentId} 
-                        onChange={(e) => setNewLessonStudentId(e.target.value)} 
-                        required
-                      >
-                        <option value="">Öğrenci Seçiniz</option>
-                        {students.map(student => (
-                          <option key={student.id} value={student.id}>{student.name} ({(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`})</option>
-                        ))}
-                      </select>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi (Birden fazla seçebilirsiniz)</label>
+                      <div className="max-h-48 overflow-y-auto border border-primary/10 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
+                        {students.map(student => {
+                          const isChecked = selectedStudentIds.includes(student.id);
+                          return (
+                            <label key={student.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
+                              <input 
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  setSelectedStudentIds(prev => 
+                                    prev.includes(student.id) 
+                                      ? prev.filter(id => id !== student.id) 
+                                      : [...prev, student.id]
+                                  );
+                                }}
+                                className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5 cursor-pointer"
+                              />
+                              <span className="text-sm font-bold text-slate-800">
+                                {student.name} <span className="text-xs text-slate-400">({(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`})</span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">

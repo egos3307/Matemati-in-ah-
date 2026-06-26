@@ -345,7 +345,7 @@ app.delete('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, r
 });
 
 app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, description, date, studentId, zoomJoinUrl } = req.body;
+  const { title, description, date, studentId, studentIds, zoomJoinUrl } = req.body;
   try {
     let finalUrl = zoomJoinUrl;
     if (!finalUrl) {
@@ -358,17 +358,46 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
       finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
     }
 
-    const lesson = await prisma.lesson.create({
-      data: {
-        title,
-        description,
-        date: new Date(date),
-        teacherId: req.user.id,
-        studentId: studentId ? parseInt(studentId) : null,
-        zoomJoinUrl: finalUrl, 
-      },
-    });
-    res.json(lesson);
+    let targetIds = [];
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      targetIds = studentIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    } else if (studentId) {
+      const parsedId = parseInt(studentId);
+      if (!isNaN(parsedId)) {
+        targetIds.push(parsedId);
+      }
+    }
+
+    if (targetIds.length === 0) {
+      const lesson = await prisma.lesson.create({
+        data: {
+          title,
+          description,
+          date: new Date(date),
+          teacherId: req.user.id,
+          studentId: null,
+          zoomJoinUrl: finalUrl, 
+        },
+      });
+      return res.json(lesson);
+    }
+
+    const lessonsCreated = [];
+    for (const sId of targetIds) {
+      const lesson = await prisma.lesson.create({
+        data: {
+          title,
+          description,
+          date: new Date(date),
+          teacherId: req.user.id,
+          studentId: sId,
+          zoomJoinUrl: finalUrl,
+        },
+      });
+      lessonsCreated.push(lesson);
+    }
+
+    res.json(lessonsCreated[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
