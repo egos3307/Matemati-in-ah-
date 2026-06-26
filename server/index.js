@@ -1962,4 +1962,54 @@ if (require.main === module) {
   });
 }
 
+// YouTube RSS Feed (API key gereksiz)
+let ytCacheData = null;
+let ytCacheTime = 0;
+const YT_CACHE_MS = 30 * 60 * 1000; // 30 dakika
+
+app.get('/api/social/youtube-feed', async (req, res) => {
+  try {
+    if (ytCacheData && Date.now() - ytCacheTime < YT_CACHE_MS) {
+      return res.json(ytCacheData);
+    }
+
+    const channelHandle = 'FULLEMATEM%C4%B0T%C4%B0G%C4%B0'; // @FULLEMATEMATİGİ URL encoded
+    const pageRes = await axios.get(`https://www.youtube.com/@${channelHandle}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+      timeout: 8000,
+    });
+
+    const channelIdMatch = pageRes.data.match(/"channelId":"(UC[a-zA-Z0-9_-]+)"/);
+    if (!channelIdMatch) return res.status(502).json({ error: 'Kanal ID bulunamadı' });
+
+    const channelId = channelIdMatch[1];
+    const rssRes = await axios.get(
+      `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
+      { timeout: 8000 }
+    );
+
+    const entries = rssRes.data.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+    const videos = entries.slice(0, 3).map(entry => {
+      const videoId = (entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1];
+      const rawTitle = (entry.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+      const title = rawTitle.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+      const published = (entry.match(/<published>(.*?)<\/published>/) || [])[1];
+      return {
+        videoId,
+        title,
+        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        published,
+      };
+    }).filter(v => v.videoId);
+
+    ytCacheData = videos;
+    ytCacheTime = Date.now();
+    res.json(videos);
+  } catch (err) {
+    if (ytCacheData) return res.json(ytCacheData);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = app;
