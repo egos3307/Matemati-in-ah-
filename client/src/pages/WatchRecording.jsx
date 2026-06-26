@@ -60,8 +60,21 @@ const WatchRecording = () => {
             </p>
           </div>
         </div>
-        <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm">
-          Fulle Matematik
+        <div className="flex items-center gap-3">
+          <a 
+            href={decodeURIComponent(videoUrl)} 
+            download={`ders_kaydi.webm`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-emerald-950/20"
+            title="Donma problemi yaşarsanız indirip izleyebilirsiniz"
+          >
+            <span className="material-symbols-outlined text-sm">download</span>
+            Donuyorsa İndir
+          </a>
+          <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm hidden md:block">
+            Fulle Matematik
+          </div>
         </div>
       </div>
 
@@ -72,6 +85,7 @@ const WatchRecording = () => {
           controls 
           playsInline 
           autoPlay
+          preload="auto"
           className="w-full h-full max-h-screen object-contain z-10"
         />
         
