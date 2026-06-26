@@ -8,8 +8,6 @@ const { auth, checkRole } = require('./middleware/auth');
 const crypto = require('crypto');
 const { AccessToken } = require('livekit-server-sdk');
 const os = require('os');
-const path = require('path');
-const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -134,7 +132,6 @@ app.get('/', (req, res) => {
 
 app.get('/api/debug', async (req, res) => {
   const fs = require('fs');
-  const path = require('path');
   
   const debugInfo = {
     cwd: process.cwd(),
