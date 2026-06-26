@@ -472,8 +472,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           ctx.fillStyle = '#080b11';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          // Fetch all active, playing videos on the DOM
-          const videoElements = Array.from(document.querySelectorAll('video')).filter(video => {
+          // Find screen share video element if active
+          const screenShareVideo = document.querySelector('.screenshare-container video');
+          // Find camera video elements on the page (active, playing, and not paused)
+          const cameraVideos = Array.from(document.querySelectorAll('.camera-item video')).filter(video => {
             return video.readyState >= 2 && !video.paused;
           });
 
@@ -481,33 +483,48 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             // Draw whiteboard canvas first
             ctx.drawImage(whiteboardCanvasRef.current, 0, 0, canvas.width, canvas.height);
             
-            // Draw first active video (typically the teacher) in a PiP corner
-            if (videoElements.length > 0) {
+            // Draw first active camera video (typically the teacher) in a PiP corner
+            if (cameraVideos.length > 0) {
               const pipW = 240;
               const pipH = 135;
               const pipX = canvas.width - pipW - 20;
               const pipY = 20;
               ctx.fillStyle = '#0f172a';
               ctx.fillRect(pipX - 2, pipY - 2, pipW + 4, pipH + 4);
-              ctx.drawImage(videoElements[0], pipX, pipY, pipW, pipH);
+              ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
+            }
+          } else if (screenShareVideo && screenShareVideo.readyState >= 2 && !screenShareVideo.paused) {
+            // Draw screen share video full-screen
+            ctx.drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
+
+            // Draw teacher's camera video in a PiP corner if available
+            if (cameraVideos.length > 0) {
+              const pipW = 240;
+              const pipH = 135;
+              const pipX = canvas.width - pipW - 20;
+              const pipY = 20;
+              ctx.fillStyle = '#0f172a';
+              ctx.fillRect(pipX - 2, pipY - 2, pipW + 4, pipH + 4);
+              ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
             }
           } else {
-            if (videoElements.length === 1) {
-              ctx.drawImage(videoElements[0], 0, 0, canvas.width, canvas.height);
-            } else if (videoElements.length === 2) {
+            // Normal camera grid
+            if (cameraVideos.length === 1) {
+              ctx.drawImage(cameraVideos[0], 0, 0, canvas.width, canvas.height);
+            } else if (cameraVideos.length === 2) {
               const w = canvas.width / 2;
               const h = canvas.height;
-              ctx.drawImage(videoElements[0], 0, 0, w, h);
-              ctx.drawImage(videoElements[1], w, 0, w, h);
-            } else if (videoElements.length > 2) {
+              ctx.drawImage(cameraVideos[0], 0, 0, w, h);
+              ctx.drawImage(cameraVideos[1], w, 0, w, h);
+            } else if (cameraVideos.length > 2) {
               const w = canvas.width / 2;
               const h = canvas.height / 2;
-              ctx.drawImage(videoElements[0], 0, 0, w, h);
-              ctx.drawImage(videoElements[1], w, 0, w, h);
-              if (videoElements[2]) ctx.drawImage(videoElements[2], 0, h, w, h);
-              if (videoElements[3]) ctx.drawImage(videoElements[3], w, h, w, h);
+              ctx.drawImage(cameraVideos[0], 0, 0, w, h);
+              ctx.drawImage(cameraVideos[1], w, 0, w, h);
+              if (cameraVideos[2]) ctx.drawImage(cameraVideos[2], 0, h, w, h);
+              if (cameraVideos[3]) ctx.drawImage(cameraVideos[3], w, h, w, h);
             } else {
-              // If no videos are currently active, show a placeholder
+              // Placeholder
               ctx.fillStyle = '#ffffff';
               ctx.font = '24px sans-serif';
               ctx.textAlign = 'center';
@@ -1259,7 +1276,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   return (
                     <div 
                       key={trackKey} 
-                      className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
+                      className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
                         isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                       }`}
                     >
@@ -1287,7 +1304,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             isScreenSharing ? (
               // A. LAYOUT: SCREEN SHARING ACTIVE
               <div className="w-full h-full flex items-center justify-center p-3 relative bg-black">
-                <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950">
+                <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950 screenshare-container">
                   <VideoTrack 
                     trackRef={screenShareTracks[0]} 
                     className="w-full h-full object-contain" 
@@ -1322,7 +1339,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       return (
                         <div 
                           key={trackKey} 
-                          className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md ${
+                          className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
                             isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                           }`}
                         >
@@ -1354,7 +1371,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     return (
                       <div 
                         key={trackKey} 
-                        className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] ${
+                        className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] camera-item ${
                           isTeacher 
                             ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
                             : 'border-slate-800 hover:border-primary/30'

@@ -753,7 +753,7 @@ app.get('/api/teacher/teachers', auth, checkRole('TEACHER'), async (req, res) =>
   try {
     const teachers = await prisma.user.findMany({
       where: { role: 'TEACHER' },
-      select: { id: true, name: true, email: true, role: true }
+      select: { id: true, name: true, email: true, role: true, studentTel: true }
     });
     res.json(teachers);
   } catch (err) {
@@ -765,7 +765,7 @@ app.post('/api/teacher/add-teacher', auth, checkRole('TEACHER'), async (req, res
   if (req.user.role !== 'HEAD_TEACHER') {
     return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
   }
-  const { name, email, password } = req.body;
+  const { name, email, password, studentTel } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
   }
@@ -780,10 +780,96 @@ app.post('/api/teacher/add-teacher', auth, checkRole('TEACHER'), async (req, res
         name,
         email,
         password: hashedPassword,
+        studentTel,
         role: 'TEACHER'
       }
     });
-    res.json({ success: true, teacher: { id: newTeacher.id, name: newTeacher.name, email: newTeacher.email } });
+    res.json({ success: true, teacher: { id: newTeacher.id, name: newTeacher.name, email: newTeacher.email, studentTel: newTeacher.studentTel } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/teacher/teachers/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  if (req.user.role !== 'HEAD_TEACHER') {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
+  }
+  const id = parseInt(req.params.id);
+  const { name, email, studentTel, password } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Ad Soyad ve E-posta zorunludur.' });
+  }
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { email, NOT: { id } }
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'Bu e-posta adresi zaten kullanımda.' });
+    }
+    
+    const updateData = {
+      name,
+      email,
+      studentTel
+    };
+
+    if (password && password.trim() !== '') {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData
+    });
+    
+    res.json({ success: true, teacher: { id: updated.id, name: updated.name, email: updated.email, studentTel: updated.studentTel } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/teachers/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  if (req.user.role !== 'HEAD_TEACHER') {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
+  }
+  const id = parseInt(req.params.id);
+  try {
+    // Set teacherId to null for all assigned students
+    await prisma.user.updateMany({
+      where: { teacherId: id },
+      data: { teacherId: null }
+    });
+
+    // Delete blog posts authored by this teacher
+    await prisma.blogPost.deleteMany({
+      where: { authorId: id }
+    });
+
+    // Delete lessons and their homeworks
+    const teacherLessons = await prisma.lesson.findMany({
+      where: { teacherId: id },
+      select: { id: true }
+    });
+    const lessonIds = teacherLessons.map(l => l.id);
+    if (lessonIds.length > 0) {
+      await prisma.studentHomework.deleteMany({
+        where: { homework: { lessonId: { in: lessonIds } } }
+      });
+      await prisma.homework.deleteMany({
+        where: { lessonId: { in: lessonIds } }
+      });
+      await prisma.lessonChunk.deleteMany({
+        where: { lessonId: { in: lessonIds } }
+      });
+      await prisma.lesson.deleteMany({
+        where: { teacherId: id }
+      });
+    }
+
+    const deleted = await prisma.user.delete({
+      where: { id }
+    });
+    res.json({ success: true, deleted });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

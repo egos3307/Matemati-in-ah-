@@ -81,8 +81,10 @@ const TeacherDashboard = () => {
   const [insertImgOpen, setInsertImgOpen] = useState(false);
   const [editingRecordingId, setEditingRecordingId] = useState(null);
   const [teachers, setTeachers] = useState([]);
-  const [newTeacher, setNewTeacher] = useState({ name: '', email: '', password: '' });
+  const [newTeacher, setNewTeacher] = useState({ name: '', email: '', password: '', studentTel: '' });
   const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
+  const [showEditTeacherModal, setShowEditTeacherModal] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState({ id: null, name: '', email: '', studentTel: '', password: '' });
   const [assigningStudentId, setAssigningStudentId] = useState(null);
 
   // Form submission and question states
@@ -193,12 +195,59 @@ const TeacherDashboard = () => {
     e.preventDefault();
     try {
       await axios.post('/api/teacher/add-teacher', newTeacher);
-      setNewTeacher({ name: '', email: '', password: '' });
+      setNewTeacher({ name: '', email: '', password: '', studentTel: '' });
       fetchTeachers();
       setShowAddTeacherModal(false);
       alert('Öğretmen başarıyla eklendi!');
     } catch (err) {
       alert('Öğretmen eklenirken hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+    let pass = '';
+    for (let i = 0; i < 10; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  };
+
+  const handleEditTeacherClick = (teacher) => {
+    setEditingTeacher({
+      id: teacher.id,
+      name: teacher.name || '',
+      email: teacher.email || '',
+      studentTel: teacher.studentTel || '',
+      password: ''
+    });
+    setShowEditTeacherModal(true);
+  };
+
+  const handleEditTeacherSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/teacher/teachers/${editingTeacher.id}`, editingTeacher);
+      setShowEditTeacherModal(false);
+      fetchTeachers();
+      alert('Öğretmen bilgileri başarıyla güncellendi.');
+    } catch (err) {
+      console.error('Error updating teacher:', err);
+      alert('Öğretmen güncellenirken bir hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteTeacher = async (teacherId, teacherName) => {
+    if (!window.confirm(`"${teacherName}" adlı öğretmeni silmek istediğinize emin misiniz? Bu işlem öğretmene ait tüm dersleri ve blog yazılarını silecektir!`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/teacher/teachers/${teacherId}`);
+      fetchTeachers();
+      alert('Öğretmen başarıyla silindi.');
+    } catch (err) {
+      console.error('Error deleting teacher:', err);
+      alert('Öğretmen silinirken bir hata oluştu: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -2614,16 +2663,36 @@ const TeacherDashboard = () => {
                                 </span>
                               )}
                             </h4>
-                            <p className="text-slate-400 text-xs font-medium">{teacher.email}</p>
+                            <p className="text-slate-400 text-xs font-medium">{teacher.email} {teacher.studentTel && `• ${teacher.studentTel}`}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
-                          <div>
-                            <span className="text-slate-400">Atanan Öğrenci:</span> <span className="text-slate-800 font-extrabold">{teacherStudents.length}</span>
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+                            <div>
+                              <span className="text-slate-400">Atanan Öğrenci:</span> <span className="text-slate-800 font-extrabold">{teacherStudents.length}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400">Toplam Canlı Ders:</span> <span className="text-slate-800 font-extrabold">{teacherLessons.length}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-slate-400">Toplam Canlı Ders:</span> <span className="text-slate-800 font-extrabold">{teacherLessons.length}</span>
-                          </div>
+                          {teacher.role !== 'HEAD_TEACHER' && (
+                            <div className="flex items-center gap-2 border-l border-slate-100 pl-4">
+                              <button
+                                onClick={() => handleEditTeacherClick(teacher)}
+                                className="text-slate-400 hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-1.5 hover:bg-slate-50 rounded-lg"
+                                title="Bilgileri Düzenle"
+                              >
+                                <span className="material-symbols-outlined text-lg">edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
+                                className="text-slate-400 hover:text-red-500 transition-colors cursor-pointer flex items-center justify-center p-1.5 hover:bg-slate-50 rounded-lg"
+                                title="Öğretmeni Sil"
+                              >
+                                <span className="material-symbols-outlined text-lg">delete</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -2837,9 +2906,28 @@ const TeacherDashboard = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase ml-1">Giriş Şifresi</label>
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Telefon Numarası</label>
                 <input 
-                  type="password" 
+                  type="tel"
+                  placeholder="Örn: 05551112233"
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={newTeacher.studentTel || ''} 
+                  onChange={(e) => setNewTeacher({...newTeacher, studentTel: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-xs font-black text-slate-400 uppercase">Giriş Şifresi</label>
+                  <button 
+                    type="button" 
+                    onClick={() => setNewTeacher({...newTeacher, password: generatePassword()})} 
+                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    Şifre Öner
+                  </button>
+                </div>
+                <input 
+                  type="text" 
                   className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
                   value={newTeacher.password} 
                   onChange={(e) => setNewTeacher({...newTeacher, password: e.target.value})} 
@@ -2852,6 +2940,78 @@ const TeacherDashboard = () => {
                 className="w-full bg-primary hover:bg-primary/95 text-white font-black text-sm py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all mt-4 cursor-pointer"
               >
                 Öğretmeni Kaydet
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Teacher Modal */}
+      {showEditTeacherModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setShowEditTeacherModal(false)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900 transition-colors cursor-pointer">
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+            <h3 className="text-3xl font-black text-slate-900 mb-2 font-display">Öğretmen Düzenle</h3>
+            <p className="text-slate-400 font-bold text-sm mb-8 uppercase tracking-widest">Öğretmen bilgilerini güncelleyin</p>
+            
+            <form onSubmit={handleEditTeacherSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Ad Soyad</label>
+                <input 
+                  type="text"
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={editingTeacher.name} 
+                  onChange={(e) => setEditingTeacher({...editingTeacher, name: e.target.value})} 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">E-posta Adresi</label>
+                <input 
+                  type="email" 
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={editingTeacher.email} 
+                  onChange={(e) => setEditingTeacher({...editingTeacher, email: e.target.value})} 
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase ml-1">Telefon Numarası</label>
+                <input 
+                  type="tel"
+                  placeholder="Örn: 05551112233"
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={editingTeacher.studentTel || ''} 
+                  onChange={(e) => setEditingTeacher({...editingTeacher, studentTel: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-xs font-black text-slate-400 uppercase">Yeni Giriş Şifresi (Opsiyonel)</label>
+                  <button 
+                    type="button" 
+                    onClick={() => setEditingTeacher({...editingTeacher, password: generatePassword()})} 
+                    className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    Şifre Öner
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                  className="w-full rounded-2xl border border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" 
+                  value={editingTeacher.password || ''} 
+                  onChange={(e) => setEditingTeacher({...editingTeacher, password: e.target.value})} 
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/95 text-white font-black text-sm py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all mt-4 cursor-pointer"
+              >
+                Değişiklikleri Kaydet
               </button>
             </form>
           </div>

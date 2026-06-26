@@ -13,6 +13,8 @@ import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
 import Contact from './pages/Contact';
 
+import WatchRecording from './pages/WatchRecording';
+
 // Placeholder components for other pages
 const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematik, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
 
@@ -43,6 +45,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute role="STUDENT">
               <StudentDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ogrenci/kayit-izle" 
+          element={
+            <ProtectedRoute role="STUDENT">
+              <WatchRecording />
             </ProtectedRoute>
           } 
         />
