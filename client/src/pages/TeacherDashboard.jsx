@@ -87,6 +87,14 @@ const TeacherDashboard = () => {
   const [showEditTeacherModal, setShowEditTeacherModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState({ id: null, name: '', email: '', studentTel: '', password: '' });
   const [assigningStudentId, setAssigningStudentId] = useState(null);
+  const [messagedStudentIds, setMessagedStudentIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fulle_messaged_students');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Form submission and question states
   const [trialRequests, setTrialRequests] = useState([]);
@@ -136,6 +144,17 @@ const TeacherDashboard = () => {
       return `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
     }
     return `https://wa.me/${formatted}`;
+  };
+
+  const handleFirstMessage = (e, student) => {
+    e.stopPropagation();
+    const phone = student.studentTel || student.parentTel;
+    if (!phone) return;
+    const message = `Merhaba! Yeni sistemimizi hayata geçirdik.\n\nÖğrenci giriş kodu: ${student.studentCode}\nVeli giriş kodu: ${student.parentCode || '-'}\n\nGiriş adresi: https://fullematematigi.com.tr/giris`;
+    const newMessaged = [...messagedStudentIds, student.id];
+    setMessagedStudentIds(newMessaged);
+    localStorage.setItem('fulle_messaged_students', JSON.stringify(newMessaged));
+    window.open(getWhatsAppLink(phone, message), '_blank');
   };
 
   const getGradeDistribution = () => {
@@ -1136,8 +1155,17 @@ const TeacherDashboard = () => {
                       <p className="text-sm text-slate-400 font-bold mb-4">{(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}</p>
                       <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
                         <span className="material-symbols-outlined text-sm">call</span>
-                        {student.parentTel || 'Telefon yok'}
+                        {student.studentTel || student.parentTel || 'Telefon yok'}
                       </div>
+                      {!messagedStudentIds.includes(student.id) && (student.studentTel || student.parentTel) && (
+                        <button
+                          onClick={(e) => handleFirstMessage(e, student)}
+                          className="mt-3 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">send</span>
+                          İlk Mesajı Gönder
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

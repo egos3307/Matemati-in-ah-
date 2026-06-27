@@ -15,6 +15,7 @@ import BlogPostDetail from './pages/BlogPostDetail';
 import Contact from './pages/Contact';
 
 import WatchRecording from './pages/WatchRecording';
+import KVKK from './pages/KVKK';
 
 // Placeholder components for other pages
 const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematik, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
@@ -78,6 +79,7 @@ const AppContent = () => {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/iletisim" element={<Contact />} />
+        <Route path="/kvkk" element={<KVKK />} />
         <Route path="/giris" element={<Login />} />
         <Route 
           path="/ogretmen" 

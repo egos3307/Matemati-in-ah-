@@ -682,7 +682,7 @@ const Home = () => {
                 <li><Link className="hover:text-primary transition-colors" to="/derslerimiz">Derslerimiz</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/blog">Blog</Link></li>
                 <li><a className="hover:text-primary transition-colors" href="#">Kariyer</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">KVKK</a></li>
+                <li><Link className="hover:text-primary transition-colors" to="/kvkk">KVKK</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link></li>
               </ul>
             </div>
