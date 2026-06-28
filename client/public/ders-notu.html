@@ -409,7 +409,7 @@ function sayfaHTML(icerikHTML, sayfaNo, toplamSayfa) {
     <footer class="sayfa-footer">
       <div class="footer-serit"></div>
       <div class="footer-ic">
-        <div class="footer-marka"><strong>Bunak Çelik</strong> | Fulle Ha</div>
+        <div class="footer-marka"><strong>Burak Çelik</strong> / Fullematematiği</div>
         <div class="footer-sayfa">${toplamSayfa > 1 ? `${sayfaNo} / ${toplamSayfa} • ` : ''}fullematematigi.com.tr</div>
       </div>
     </footer>
@@ -515,17 +515,18 @@ async function autoSplit(elements, maxHeightPx) {
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   await new Promise(r => requestAnimationFrame(r));
 
-  /* Her klon için offsetTop (grid içi konum) + offsetHeight */
+  /* Her klon için offsetTop (grid içi konum) */
   const sayfalar = [[]];
   let pageStart = 0; /* mevcut sayfanın grid-top başlangıcı */
 
   for (let i = 0; i < klonlar.length; i++) {
-    const elTop    = klonlar[i].offsetTop;
-    const elBottom = klonlar[i].offsetTop + klonlar[i].offsetHeight;
+    const elTop = klonlar[i].offsetTop;
 
-    /* Mevcut sayfa doluysa yeni sayfa aç */
+    /* Elemanın ÜSTÜ sayfanın limitini geçtiyse yeni sayfa aç.
+       elTop bazlı kontrol: üstü sığan eleman sayfada kalır,
+       diğer türlü footer yakınında gereksiz boşluk oluşur. */
     if (sayfalar[sayfalar.length - 1].length > 0 &&
-        (elBottom - pageStart) > maxHeightPx) {
+        (elTop - pageStart) >= maxHeightPx) {
       pageStart = elTop;
       sayfalar.push([]);
     }
@@ -713,9 +714,10 @@ async function pdfUret() {
   const sayfalar = document.querySelectorAll('.a4-sayfa');
   if (!sayfalar.length) { btn.disabled = false; btn.textContent = 'PDF Üret'; return; }
 
-  /* Geçici PDF konteyneri: sayfalar arası boşluk yok, gölge yok */
+  /* Geçici PDF konteyneri: sayfalar arası boşluk yok, gölge yok.
+     NOT: visibility:hidden html2canvas'ı kör eder — sadece left:-99999px ile gizle */
   const pdfWrap = document.createElement('div');
-  pdfWrap.style.cssText = 'position:fixed;top:0;left:-99999px;background:#fff;width:210mm;visibility:hidden;';
+  pdfWrap.style.cssText = 'position:fixed;top:0;left:-99999px;background:#fff;width:210mm;z-index:-1;';
 
   sayfalar.forEach((sayfa, i) => {
     const k = sayfa.cloneNode(true);
