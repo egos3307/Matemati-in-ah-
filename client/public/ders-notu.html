@@ -703,30 +703,46 @@ function fotografYukle(e) {
 
 /* ══════════════════════════════════════════════
    PDF ÜRETME
-   Tüm sayfaları geçici bir konteynere alır, boşluksuz ve gölgesiz şekilde PDF'e basar.
+   html2canvas yalnızca viewport'ta olan elemanları yakalayabilir.
+   Bu yüzden pdfWrap'i ekranda (top:0 left:0) gösterip üstünü
+   bir overlay ile kapatıyoruz; kullanıcı görmez ama canvas yakalar.
 ══════════════════════════════════════════════ */
 async function pdfUret() {
   const btn = document.getElementById('btn-pdf');
   btn.disabled = true;
   btn.textContent = 'Hazırlanıyor...';
-  toast('PDF oluşturuluyor...', 'inf');
 
   const sayfalar = document.querySelectorAll('.a4-sayfa');
   if (!sayfalar.length) { btn.disabled = false; btn.textContent = 'PDF Üret'; return; }
 
-  /* Geçici PDF konteyneri: sayfalar arası boşluk yok, gölge yok.
-     NOT: visibility:hidden html2canvas'ı kör eder — sadece left:-99999px ile gizle */
+  /* Karartma overlay — PDF konteyneri bunun arkasında ama yine de viewport'ta */
+  const overlay = document.createElement('div');
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'background:rgba(17,24,39,.85)',
+    'z-index:9998', 'display:flex', 'flex-direction:column',
+    'align-items:center', 'justify-content:center', 'gap:14px'
+  ].join(';');
+  overlay.innerHTML = `
+    <div style="width:44px;height:44px;border:4px solid #F5C518;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></div>
+    <div style="color:#fff;font-weight:700;font-size:14px;font-family:Lexend,sans-serif;">PDF oluşturuluyor…</div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+  document.body.appendChild(overlay);
+
+  /* PDF konteyneri: viewport'ta (top:0 left:0) ama overlay'in arkasında */
   const pdfWrap = document.createElement('div');
-  pdfWrap.style.cssText = 'position:fixed;top:0;left:-99999px;background:#fff;width:210mm;z-index:-1;';
+  pdfWrap.style.cssText = [
+    'position:fixed', 'top:0', 'left:0',
+    'width:210mm', 'background:#fff',
+    'z-index:9997',               /* overlay (9998) arkasında */
+    'overflow:visible'
+  ].join(';');
 
   sayfalar.forEach((sayfa, i) => {
     const k = sayfa.cloneNode(true);
-    k.style.boxShadow = 'none';
-    k.style.borderRadius = '0';
-    /* Sayfa no etiketini gizle */
-    const no = k.querySelector('.sayfa-no-etiket');
-    if (no) no.style.display = 'none';
-    /* Sayfalar arası CSS sayfa kırılması */
+    k.style.cssText += ';box-shadow:none;border-radius:0;min-height:297mm;';
+    /* Önizleme etiketlerini kaldır */
+    k.querySelectorAll('.sayfa-no-etiket').forEach(el => el.remove());
+    /* Son sayfa hariç sayfa kırılması */
     if (i < sayfalar.length - 1) {
       k.style.pageBreakAfter = 'always';
       k.style.breakAfter = 'page';
@@ -735,18 +751,27 @@ async function pdfUret() {
   });
 
   document.body.appendChild(pdfWrap);
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  /* Render için birkaç frame bekle */
+  await new Promise(r => setTimeout(r, 120));
 
   const dosyaAdi = (document.getElementById('inp-konu').value || 'ders-notu')
     .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') || 'ders-notu';
 
   const opts = {
-    margin:      [8, 10, 8, 10],
+    margin:      0,
     filename:    `${dosyaAdi}.pdf`,
     image:       { type: 'jpeg', quality: 0.97 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
-    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-    pagebreak:   { mode: ['css', 'legacy'] }
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      letterRendering: true,
+      windowWidth: pdfWrap.scrollWidth,
+      windowHeight: pdfWrap.scrollHeight
+    },
+    jsPDF:     { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+    pagebreak: { mode: ['css', 'legacy'], before: '.a4-sayfa:not(:first-child)' }
   };
 
   try {
@@ -757,6 +782,7 @@ async function pdfUret() {
     toast('PDF hatası oluştu.', 'err');
   } finally {
     document.body.removeChild(pdfWrap);
+    document.body.removeChild(overlay);
     btn.disabled = false;
     btn.innerHTML = `
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
