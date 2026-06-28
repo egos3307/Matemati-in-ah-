@@ -168,7 +168,7 @@
       font-family: 'Lexend', sans-serif;
       color: #1a1a1a;
       position: relative;
-      /* min-height: 297mm — KASITLI OLARAK YOK, içerik belirlesin */
+      min-height: 297mm;
     }
 
     /* HEADER */
@@ -438,105 +438,103 @@ function splitAtBreaks(htmlKod) {
 }
 
 /* ══════════════════════════════════════════════
-   OTOMATİK OVERFLOW BÖLME
-   Bir element grubunu, içerik alanı yüksekliğini (px) aşmadan sayfaya sığdırır.
-   Measurement: gerçek grid yerleşimiyle offsetTop + offsetHeight kullanılır.
-══════════════════════════════════════════════ */
-async function autoSplit(elements, maxHeightPx) {
-  if (elements.length === 0) return [[]];
-
-  /* --- Ölçüm grid'i oluştur --- */
-  const a4Ornek = document.querySelector('.a4-sayfa');
-  const a4w = a4Ornek ? a4Ornek.offsetWidth : 794; // 210mm @ 96dpi
-  const pad = Math.round(a4w * 10 / 210);          // 10mm padding
-  const gap_col = Math.round(a4w * 14 / 210);
-  const gap_row = Math.round(a4w * 9  / 210);
-
-  const grid = document.createElement('div');
-  grid.style.cssText = `
-    position: fixed; top: 0; left: ${-(a4w + 50)}px;
-    width: ${a4w - pad * 2}px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: ${gap_col}px;
-    row-gap: ${gap_row}px;
-    align-content: start;
-    font-family: Lexend, sans-serif;
-    font-size: 11px;
-    visibility: hidden;
-    pointer-events: none;
-    position: relative;       /* offsetTop relative to this */
-    overflow: visible;
-  `;
-
-  /* Relative konteynere ihtiyaç var ki offsetTop doğru çalışsın */
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:fixed;top:0;left:-99999px;visibility:hidden;pointer-events:none;';
-  wrapper.appendChild(grid);
-  document.body.appendChild(wrapper);
-
-  const klonlar = elements.map(el => {
-    const k = el.cloneNode(true);
-    grid.appendChild(k);
-    return k;
-  });
-
-  /* Render için iki frame bekle */
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-  /* --- Griddeki her çocuğun alt kenarını bul --- */
-  const sayfalar = [[]];
-  let sayfaBaslangic = 0; // her yeni sayfanın "sıfır" noktası (grid koordinatında)
-
-  for (let i = 0; i < klonlar.length; i++) {
-    const el = klonlar[i];
-    const elTop    = el.offsetTop;
-    const elBottom = el.offsetTop + el.offsetHeight;
-
-    /* Bu element mevcut sayfayı taşırıyor mu? */
-    if (sayfalar[sayfalar.length - 1].length > 0 &&
-        (elBottom - sayfaBaslangic) > maxHeightPx) {
-      /* Yeni sayfa başlat */
-      sayfaBaslangic = elTop;
-      sayfalar.push([]);
-    }
-
-    sayfalar[sayfalar.length - 1].push(elements[i].outerHTML);
-  }
-
-  document.body.removeChild(wrapper);
-  return sayfalar;
-}
-
-/* ══════════════════════════════════════════════
    İÇERİK ALANI MAKSİMUM YÜKSEKLİĞİ (px) - Bir kez ölç
+   min-height:297mm sayesinde footer gerçek konumda olur.
 ══════════════════════════════════════════════ */
 let cachedMaxH = null;
 
 async function getMaxH() {
   if (cachedMaxH) return cachedMaxH;
 
-  /* Boş bir sayfa render edip header+konu+footer'ın ne kadar yer kapladığını ölç */
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;top:0;left:-99999px;visibility:hidden;';
-  wrap.innerHTML = sayfaHTML('<div style="height:1px"></div>', 1, 1);
+  wrap.style.cssText = 'position:fixed;top:0;left:-99999px;visibility:hidden;pointer-events:none;';
+  wrap.innerHTML = sayfaHTML('<div style="height:1px;opacity:0;"></div>', 1, 1);
   document.body.appendChild(wrap);
 
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-  const a4      = wrap.querySelector('.a4-sayfa');
-  const icerik  = wrap.querySelector('.sayfa-icerik');
-  const footer  = wrap.querySelector('.sayfa-footer');
-
-  /* Footer üstü – içerik üstü = kullanılabilir içerik yüksekliği */
-  const a4Top      = a4.getBoundingClientRect().top;
-  const icerikTop  = icerik.getBoundingClientRect().top;
-  const footerTop  = footer.getBoundingClientRect().top;
-
-  cachedMaxH = footerTop - icerikTop - 8; /* 8px güvenlik payı */
+  const icerik = wrap.querySelector('.sayfa-icerik');
+  const footer = wrap.querySelector('.sayfa-footer');
+  const measured = footer.getBoundingClientRect().top - icerik.getBoundingClientRect().top - 12;
 
   document.body.removeChild(wrap);
+
+  /* Güvenlik: ölçüm makul değil ise (100px'den az) A4 oranından hesapla */
+  if (measured < 100) {
+    const a4w = document.querySelector('.a4-sayfa')?.offsetWidth || 794;
+    cachedMaxH = Math.round(220 * a4w / 210); /* 220mm içerik yüksekliği tahmini */
+  } else {
+    cachedMaxH = measured;
+  }
   return cachedMaxH;
+}
+
+/* ══════════════════════════════════════════════
+   OTOMATİK OVERFLOW BÖLME
+   Tüm elementleri tek bir gizli grid'e koy, offsetTop ile hangi sayfaya
+   düştüğünü hesapla. position:relative kritik — offsetTop bunu referans alır.
+══════════════════════════════════════════════ */
+async function autoSplit(elements, maxHeightPx) {
+  if (elements.length === 0) return [[]];
+  if (elements.length === 1) return [[elements[0].outerHTML]];
+
+  const a4w    = document.querySelector('.a4-sayfa')?.offsetWidth || 794;
+  const pad    = Math.round(a4w * 10 / 210);
+  const gapCol = Math.round(a4w * 14 / 210);
+  const gapRow = Math.round(a4w *  9 / 210);
+
+  /* Gizli ölçüm grid'i — position:relative zorunlu, aksi hâlde
+     offsetTop window'a göre ölçülür ve tutarsız sonuç verir */
+  const grid = document.createElement('div');
+  grid.style.cssText = [
+    'position:relative',
+    `width:${a4w - pad * 2}px`,
+    'display:grid',
+    'grid-template-columns:1fr 1fr',
+    `column-gap:${gapCol}px`,
+    `row-gap:${gapRow}px`,
+    'align-content:start',
+    "font-family:'Lexend',sans-serif",
+    'font-size:11px',
+    'box-sizing:border-box'
+  ].join(';');
+
+  const offscreen = document.createElement('div');
+  offscreen.style.cssText = 'position:fixed;top:0;left:-99999px;visibility:hidden;pointer-events:none;';
+  offscreen.appendChild(grid);
+  document.body.appendChild(offscreen);
+
+  /* Klonları grid'e ekle */
+  const klonlar = elements.map(el => {
+    const k = el.cloneNode(true);
+    grid.appendChild(k);
+    return k;
+  });
+
+  /* İki frame render bekle (grid layout tam oturması için) */
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await new Promise(r => requestAnimationFrame(r));
+
+  /* Her klon için offsetTop (grid içi konum) + offsetHeight */
+  const sayfalar = [[]];
+  let pageStart = 0; /* mevcut sayfanın grid-top başlangıcı */
+
+  for (let i = 0; i < klonlar.length; i++) {
+    const elTop    = klonlar[i].offsetTop;
+    const elBottom = klonlar[i].offsetTop + klonlar[i].offsetHeight;
+
+    /* Mevcut sayfa doluysa yeni sayfa aç */
+    if (sayfalar[sayfalar.length - 1].length > 0 &&
+        (elBottom - pageStart) > maxHeightPx) {
+      pageStart = elTop;
+      sayfalar.push([]);
+    }
+
+    sayfalar[sayfalar.length - 1].push(elements[i].outerHTML);
+  }
+
+  document.body.removeChild(offscreen);
+  return sayfalar;
 }
 
 /* ══════════════════════════════════════════════
