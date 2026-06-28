@@ -762,7 +762,28 @@ async function pdfUret() {
         useCORS: true,
         allowTaint: false,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        /* SVG'leri img'ye çevir — html2canvas margin:auto ile SVG'leri
+           yanlış konumlandırır, bu onclone ile yakalamadan önce düzeltilir */
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('svg').forEach(svg => {
+            try {
+              const w = parseInt(svg.getAttribute('width'))  || 160;
+              const h = parseInt(svg.getAttribute('height')) || 110;
+              let str = new XMLSerializer().serializeToString(svg);
+              if (!str.includes('xmlns='))
+                str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+              const img = clonedDoc.createElement('img');
+              img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+              img.width  = w;
+              img.height = h;
+              img.style.cssText = svg.getAttribute('style') || '';
+              img.style.display = 'block';
+              img.style.margin  = '10px auto';
+              svg.parentNode.replaceChild(img, svg);
+            } catch (e) {}
+          });
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
