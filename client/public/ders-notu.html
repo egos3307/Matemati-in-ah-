@@ -8,7 +8,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- html2canvas: sayfayı canvas'a çevirir -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- jsPDF: canvas'ları PDF'e ekler -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
@@ -703,85 +706,87 @@ function fotografYukle(e) {
 
 /* ══════════════════════════════════════════════
    PDF ÜRETME
-   html2canvas yalnızca viewport'ta olan elemanları yakalayabilir.
-   Bu yüzden pdfWrap'i ekranda (top:0 left:0) gösterip üstünü
-   bir overlay ile kapatıyoruz; kullanıcı görmez ama canvas yakalar.
+   Strateji: zaten ekranda görünen her .a4-sayfa elementini
+   html2canvas ile tek tek yakala → jsPDF ile birleştir.
+   Klon veya off-screen element YOK — doğrudan ekrandaki DOM.
 ══════════════════════════════════════════════ */
 async function pdfUret() {
   const btn = document.getElementById('btn-pdf');
   btn.disabled = true;
   btn.textContent = 'Hazırlanıyor...';
 
-  const sayfalar = document.querySelectorAll('.a4-sayfa');
-  if (!sayfalar.length) { btn.disabled = false; btn.textContent = 'PDF Üret'; return; }
+  const sayfaListesi = Array.from(document.querySelectorAll('.a4-sayfa'));
+  if (!sayfaListesi.length) {
+    btn.disabled = false;
+    btn.textContent = 'PDF Üret';
+    return;
+  }
 
-  /* Karartma overlay — PDF konteyneri bunun arkasında ama yine de viewport'ta */
+  /* Overlay */
   const overlay = document.createElement('div');
-  overlay.style.cssText = [
-    'position:fixed', 'inset:0', 'background:rgba(17,24,39,.85)',
-    'z-index:9998', 'display:flex', 'flex-direction:column',
-    'align-items:center', 'justify-content:center', 'gap:14px'
-  ].join(';');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(17,24,39,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Lexend,sans-serif;';
   overlay.innerHTML = `
-    <div style="width:44px;height:44px;border:4px solid #F5C518;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></div>
-    <div style="color:#fff;font-weight:700;font-size:14px;font-family:Lexend,sans-serif;">PDF oluşturuluyor…</div>
-    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    <div id="pdf-spinner" style="width:44px;height:44px;border:4px solid #F5C518;border-top-color:transparent;border-radius:50%;animation:_spin .8s linear infinite;"></div>
+    <div id="pdf-durum" style="color:#fff;font-weight:700;font-size:14px;">Hazırlanıyor…</div>
+    <style>@keyframes _spin{to{transform:rotate(360deg)}}</style>`;
   document.body.appendChild(overlay);
+  const durum = overlay.querySelector('#pdf-durum');
 
-  /* PDF konteyneri: viewport'ta (top:0 left:0) ama overlay'in arkasında */
-  const pdfWrap = document.createElement('div');
-  pdfWrap.style.cssText = [
-    'position:fixed', 'top:0', 'left:0',
-    'width:210mm', 'background:#fff',
-    'z-index:9997',               /* overlay (9998) arkasında */
-    'overflow:visible'
-  ].join(';');
-
-  sayfalar.forEach((sayfa, i) => {
-    const k = sayfa.cloneNode(true);
-    k.style.cssText += ';box-shadow:none;border-radius:0;min-height:297mm;';
-    /* Önizleme etiketlerini kaldır */
-    k.querySelectorAll('.sayfa-no-etiket').forEach(el => el.remove());
-    /* Son sayfa hariç sayfa kırılması */
-    if (i < sayfalar.length - 1) {
-      k.style.pageBreakAfter = 'always';
-      k.style.breakAfter = 'page';
-    }
-    pdfWrap.appendChild(k);
+  /* Geçici: gölge ve köşe kaldır, sayfa no etiketlerini gizle */
+  sayfaListesi.forEach(s => {
+    s.dataset.os  = s.style.boxShadow;
+    s.dataset.or  = s.style.borderRadius;
+    s.style.boxShadow    = 'none';
+    s.style.borderRadius = '0';
   });
+  document.querySelectorAll('.sayfa-no-etiket').forEach(e => e.style.visibility = 'hidden');
 
-  document.body.appendChild(pdfWrap);
-
-  /* Render için birkaç frame bekle */
-  await new Promise(r => setTimeout(r, 120));
+  await new Promise(r => requestAnimationFrame(r));
 
   const dosyaAdi = (document.getElementById('inp-konu').value || 'ders-notu')
     .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') || 'ders-notu';
 
-  const opts = {
-    margin:      0,
-    filename:    `${dosyaAdi}.pdf`,
-    image:       { type: 'jpeg', quality: 0.97 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      letterRendering: true,
-      windowWidth: pdfWrap.scrollWidth,
-      windowHeight: pdfWrap.scrollHeight
-    },
-    jsPDF:     { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-    pagebreak: { mode: ['css', 'legacy'], before: '.a4-sayfa:not(:first-child)' }
-  };
-
   try {
-    await html2pdf().set(opts).from(pdfWrap).save();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+
+    for (let i = 0; i < sayfaListesi.length; i++) {
+      durum.textContent = `Sayfa ${i + 1} / ${sayfaListesi.length} işleniyor…`;
+
+      /* Her sayfayı viewport'a kaydır ki html2canvas görsün */
+      sayfaListesi[i].scrollIntoView({ block: 'start' });
+      await new Promise(r => setTimeout(r, 80));
+
+      const canvas = await html2canvas(sayfaListesi[i], {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      /* A4: 210mm genişlik, yükseklik orana göre */
+      const pdfW = 210;
+      const pdfH = (canvas.height * pdfW) / canvas.width;
+
+      if (i > 0) pdf.addPage([210, Math.max(297, pdfH)], 'portrait');
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
+    }
+
+    pdf.save(`${dosyaAdi}.pdf`);
     toast('PDF indirildi!', 'ok');
+
   } catch (err) {
-    console.error(err);
-    toast('PDF hatası oluştu.', 'err');
+    console.error('PDF hatası:', err);
+    toast('PDF hatası: ' + err.message, 'err');
   } finally {
-    document.body.removeChild(pdfWrap);
+    /* Stilleri geri yükle */
+    sayfaListesi.forEach(s => {
+      s.style.boxShadow    = s.dataset.os || '';
+      s.style.borderRadius = s.dataset.or || '';
+    });
+    document.querySelectorAll('.sayfa-no-etiket').forEach(e => e.style.visibility = '');
     document.body.removeChild(overlay);
     btn.disabled = false;
     btn.innerHTML = `
