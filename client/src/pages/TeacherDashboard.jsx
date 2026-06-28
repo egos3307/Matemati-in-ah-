@@ -773,7 +773,7 @@ const TeacherDashboard = () => {
                 <span className="material-symbols-outlined">forum</span>
                 <span>Formdan Gelenler</span>
               </button>
-              <button 
+              <button
                 onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
                 className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
               >
@@ -782,6 +782,15 @@ const TeacherDashboard = () => {
               </button>
             </>
           )}
+          <a
+            href="/ders-notu.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all hover:bg-amber-50 text-slate-500 hover:text-amber-600 mt-2 border border-dashed border-slate-200 hover:border-amber-300"
+          >
+            <span className="material-symbols-outlined">description</span>
+            <span>Ders Notu Oluştur</span>
+          </a>
         </nav>
       </aside>
 

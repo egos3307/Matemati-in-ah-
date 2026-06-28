@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ders Notu Oluştur – Fullematematiği</title>
+
+  <!-- KaTeX: Matematiksel formül render -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+
+  <!-- html2pdf.js: HTML → PDF dönüştürücü -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Temel ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sarı: #F5C518;
+      --koyu: #1a1a2e;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --panel-3: #374151;
+      --text-muted: #9ca3af;
+      --a4-w: 210mm;
+    }
+
+    body {
+      font-family: 'Lexend', 'Inter', sans-serif;
+      background: var(--koyu);
+      color: #f9fafb;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Üst Bar ── */
+    .top-bar {
+      background: var(--panel);
+      border-bottom: 1px solid #374151;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .top-bar img { height: 32px; width: 32px; border-radius: 50%; object-fit: contain; }
+    .top-bar h1 { font-size: 15px; font-weight: 900; color: #f9fafb; }
+    .top-bar span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+    /* ── Ana Çalışma Alanı ── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ────────────────────────────────────────
+       SOL PANEL (%30)
+    ──────────────────────────────────────── */
+    .left-panel {
+      width: 30%;
+      min-width: 280px;
+      background: var(--panel);
+      border-right: 1px solid #374151;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .panel-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .left-panel textarea {
+      flex: 1;
+      min-height: 300px;
+      background: var(--panel-2);
+      border: 1px solid var(--panel-3);
+      border-radius: 10px;
+      color: #e5e7eb;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .left-panel textarea:focus { border-color: var(--sarı); }
+    .left-panel textarea::placeholder { color: #4b5563; }
+
+    /* Form alanları */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group input, .form-group select {
+      background: var(--panel-2);
+      border: 1px solid var(--panel-3);
+      border-radius: 8px;
+      color: #e5e7eb;
+      font-size: 12px;
+      padding: 8px 10px;
+      outline: none;
+      font-family: 'Lexend', sans-serif;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--sarı); }
+    .form-group select option { background: var(--panel-2); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* Butonlar */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 14px;
+      border: none; border-radius: 10px;
+      font-family: 'Lexend', sans-serif;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.18s; width: 100%;
+    }
+    .btn-photo {
+      background: var(--panel-2);
+      border: 1.5px solid var(--panel-3);
+      color: #d1d5db;
+    }
+    .btn-photo:hover { border-color: var(--sarı); color: var(--sarı); }
+
+    .btn-pdf {
+      background: var(--sarı);
+      color: #111;
+      box-shadow: 0 4px 12px rgba(245,197,24,0.3);
+    }
+    .btn-pdf:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,197,24,0.4); }
+    .btn-pdf:active { transform: translateY(0); }
+    .btn-pdf.loading { opacity: 0.7; pointer-events: none; }
+
+    .btn-temizle {
+      background: transparent;
+      border: 1px solid #374151;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .btn-temizle:hover { border-color: #6b7280; color: #9ca3af; }
+
+    .divider {
+      height: 1px; background: #374151; margin: 4px 0;
+    }
+
+    /* Şablon seçici */
+    .template-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .tpl-btn {
+      background: var(--panel-2);
+      border: 1px solid var(--panel-3);
+      border-radius: 8px;
+      color: #9ca3af;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 7px 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: 'Lexend', sans-serif;
+    }
+    .tpl-btn:hover { border-color: var(--sarı); color: var(--sarı); background: rgba(245,197,24,0.07); }
+
+    /* ────────────────────────────────────────
+       SAĞ PANEL (%70) — Önizleme
+    ──────────────────────────────────────── */
+    .right-panel {
+      flex: 1;
+      background: #e5e7eb;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 20px 40px;
+    }
+
+    .preview-toolbar {
+      width: 100%;
+      max-width: var(--a4-w);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .preview-toolbar span {
+      font-size: 11px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .zoom-badge {
+      background: #d1d5db;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #6b7280;
+    }
+
+    /* ── A4 Sayfa Simülasyonu ── */
+    #a4-sayfa {
+      width: var(--a4-w);
+      min-height: 297mm;
+      background: #ffffff;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08);
+      border-radius: 2px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      font-family: 'Lexend', sans-serif;
+      color: #1a1a1a;
+    }
+
+    /* ── HEADER ── */
+    .sayfa-header {
+      padding: 8mm 10mm 0;
+      flex-shrink: 0;
+    }
+
+    .header-ust {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 6px;
+    }
+
+    .logo-daire {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 2px solid var(--sarı);
+      background: #fff;
+    }
+    .logo-daire img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .header-metin { flex: 1; }
+    .header-marka {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1a1a1a;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+    .header-altyazi {
+      font-size: 9px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: 2px;
+    }
+
+    .header-meta {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .meta-satir {
+      font-size: 9px;
+      font-weight: 600;
+      color: #374151;
+      line-height: 1.8;
+    }
+    .meta-satir strong { color: #1a1a1a; font-weight: 700; }
+
+    /* Kalın sarı şerit */
+    .sari-serit {
+      height: 5px;
+      background: linear-gradient(90deg, var(--sarı) 0%, #f0b800 100%);
+      margin-top: 7px;
+      border-radius: 2px;
+    }
+
+    /* Konu başlık alanı */
+    .konu-bar {
+      padding: 5px 10mm;
+      background: #f8f8f8;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .konu-bar-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+    #konu-baslik-preview {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1a1a1a;
+      flex: 1;
+    }
+    #sinif-preview {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--sarı);
+      background: #1a1a1a;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── İÇERİK ALANI ── */
+    #dinamik-icerik-alani {
+      flex: 1;
+      padding: 6mm 10mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10mm 15mm;
+      align-content: start;
+      outline: none;
+      min-height: 200px;
+    }
+
+    /* İki sütun düzeni – editlenebilir modda görsel yardım */
+    #dinamik-icerik-alani:focus {
+      box-shadow: inset 0 0 0 2px rgba(245,197,24,0.3);
+    }
+
+    /* Soru kutuları – sayfa geçişinde bölünmesini engelle */
+    #dinamik-icerik-alani .soru,
+    #dinamik-icerik-alani .soru-kutusu {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* Varsayılan içerik stilleri */
+    #dinamik-icerik-alani p,
+    #dinamik-icerik-alani div:not([class]) {
+      font-size: 11px;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+
+    /* Soru numarası kutu stili (AI'dan gelecek içerik için) */
+    #dinamik-icerik-alani .soru,
+    #dinamik-icerik-alani .soru-kutusu {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #fff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    #dinamik-icerik-alani .soru .soru-no,
+    #dinamik-icerik-alani .soru-kutusu .soru-no {
+      font-weight: 900;
+      font-size: 12px;
+      color: #111;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    #dinamik-icerik-alani img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      display: block;
+      margin: 4px 0;
+    }
+
+    /* Tek sütuna geçen elemanlar */
+    #dinamik-icerik-alani .tam-genislik {
+      grid-column: 1 / -1;
+    }
+
+    /* Boş durum göstergesi */
+    .bos-gosterge {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 20mm 0;
+      color: #d1d5db;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      user-select: none;
+    }
+    .bos-gosterge svg {
+      display: block; margin: 0 auto 10px;
+      opacity: 0.4;
+    }
+
+    /* ── FOOTER ── */
+    .sayfa-footer {
+      padding: 0 10mm 6mm;
+      flex-shrink: 0;
+    }
+    .footer-serit {
+      height: 4px;
+      background: linear-gradient(90deg, var(--sarı) 0%, #f0b800 100%);
+      border-radius: 2px;
+      margin-bottom: 6px;
+    }
+    .footer-icerik {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-marka {
+      font-size: 9px;
+      font-weight: 700;
+      color: #6b7280;
+      letter-spacing: 0.05em;
+    }
+    .footer-marka strong { color: #374151; }
+    .footer-sayfa {
+      font-size: 9px;
+      font-weight: 600;
+      color: #9ca3af;
+    }
+
+    /* ── PDF Üretirken Gizlenecek ── */
+    @media print {
+      .bos-gosterge { display: none !important; }
+      #a4-sayfa { box-shadow: none !important; }
+    }
+
+    /* ── Scrollbar Stili ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* ── Gizli dosya inputu ── */
+    #foto-input { display: none; }
+
+    /* ── Toast Bildirimi ── */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #111827;
+      border: 1px solid #374151;
+      color: #f9fafb;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      transform: translateY(0);
+      opacity: 1;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .toast.gizle { opacity: 0; transform: translateY(8px); }
+    .toast.basari { border-left: 3px solid #22c55e; }
+    .toast.bilgi   { border-left: 3px solid var(--sarı); }
+    .toast.hata    { border-left: 3px solid #ef4444; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     ÜST BAR
+══════════════════════════════════════ -->
+<div class="top-bar">
+  <img src="/logo.png" alt="Logo" onerror="this.style.display='none'" />
+  <h1>Ders Notu Oluştur</h1>
+  <span>— Fullematematiği Öğretmen Araçları</span>
+</div>
+
+<!-- ══════════════════════════════════════
+     ÇALIŞMA ALANI
+══════════════════════════════════════ -->
+<div class="workspace">
+
+  <!-- ════════════════════════════════════
+       SOL PANEL
+  ════════════════════════════════════ -->
+  <aside class="left-panel">
+
+    <!-- Meta Bilgiler -->
+    <div class="form-group">
+      <p class="panel-label">Sayfa Başlığı / Konu</p>
+      <input id="konu-input" type="text" placeholder="Ör: Denklemler – 8. Sınıf" oninput="metaBilgiGuncelle()" />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <p class="panel-label">Sınıf Seviyesi</p>
+        <select id="sinif-input" onchange="metaBilgiGuncelle()">
+          <option value="">Sınıf</option>
+          <option>5. Sınıf</option>
+          <option>6. Sınıf</option>
+          <option>7. Sınıf</option>
+          <option>8. Sınıf</option>
+          <option>9. Sınıf</option>
+          <option>10. Sınıf</option>
+          <option>11. Sınıf</option>
+          <option>12. Sınıf</option>
+          <option>LGS</option>
+          <option>YKS</option>
+          <option>KPSS</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <p class="panel-label">Tarih</p>
+        <input id="tarih-input" type="date" oninput="metaBilgiGuncelle()" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Hızlı Şablonlar -->
+    <p class="panel-label">Hızlı Şablonlar</p>
+    <div class="template-grid">
+      <button class="tpl-btn" onclick="sablonEkle('soru-2')">2 Sütun Sorular</button>
+      <button class="tpl-btn" onclick="sablonEkle('soru-tek')">Tek Sütun</button>
+      <button class="tpl-btn" onclick="sablonEkle('bosluk')">Boşluk Doldur</button>
+      <button class="tpl-btn" onclick="sablonEkle('konu-anlatim')">Konu Anlatımı</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- HTML Kod Alanı -->
+    <p class="panel-label">HTML İçerik Kodu</p>
+    <textarea
+      id="html-input"
+      placeholder="Buraya HTML yapıştırın veya yazın...
+
+Örnek:
+&lt;div class=&quot;soru&quot;&gt;
+  &lt;span class=&quot;soru-no&quot;&gt;1.&lt;/span&gt;
+  Soru metni buraya gelir.
+  &lt;br/&gt;A) ... &nbsp; B) ...
+  &lt;br/&gt;C) ... &nbsp; D) ...
+&lt;/div&gt;"
+      oninput="htmlIcerikGuncelle()"
+      rows="14"
+    ></textarea>
+
+    <div class="divider"></div>
+
+    <!-- Eylem Butonları -->
+    <input type="file" id="foto-input" accept="image/*" onchange="fotografYukle(event)" />
+    <button class="btn btn-photo" onclick="fotografSec()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Seçili Yere Fotoğraf Ekle
+    </button>
+
+    <button class="btn btn-pdf" id="pdf-btn" onclick="pdfUret()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      PDF Üret
+    </button>
+
+    <button class="btn btn-temizle" onclick="temizle()">
+      Alanı Temizle
+    </button>
+
+  </aside>
+
+  <!-- ════════════════════════════════════
+       SAĞ PANEL — Önizleme
+  ════════════════════════════════════ -->
+  <section class="right-panel">
+    <div class="preview-toolbar">
+      <span>Canlı Önizleme</span>
+      <span class="zoom-badge">A4 • 210mm</span>
+    </div>
+
+    <!-- A4 SAYFA ŞABLONU -->
+    <div id="a4-sayfa">
+
+      <!-- ── HEADER ── -->
+      <header class="sayfa-header">
+        <div class="header-ust">
+          <!-- Yuvarlak Logo -->
+          <div class="logo-daire">
+            <img src="/logo.png" alt="Fullematematiği Logo"
+                 onerror="this.parentElement.style.background='#F5C518';this.style.display='none'" />
+          </div>
+
+          <!-- Marka Metni -->
+          <div class="header-metin">
+            <div class="header-marka">Fullematematiği</div>
+            <div class="header-altyazi">Online Matematik Özel Dersi</div>
+          </div>
+
+          <!-- Sağ Meta -->
+          <div class="header-meta">
+            <div class="meta-satir"><strong id="meta-sinif">—</strong></div>
+            <div class="meta-satir" id="meta-tarih">—</div>
+          </div>
+        </div>
+
+        <!-- Sarı Şerit -->
+        <div class="sari-serit"></div>
+      </header>
+
+      <!-- Konu Başlığı Barı -->
+      <div class="konu-bar">
+        <span class="konu-bar-label">Konu:</span>
+        <span id="konu-baslik-preview">—</span>
+        <span id="sinif-preview" style="display:none"></span>
+      </div>
+
+      <!-- ── DİNAMİK İÇERİK ALANI (contenteditable) ── -->
+      <div
+        id="dinamik-icerik-alani"
+        contenteditable="true"
+        spellcheck="false"
+      >
+        <!-- Boş durum göstergesi -->
+        <div class="bos-gosterge" id="bos-mesaj">
+          <svg width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="16" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Sol panelden HTML yapıştırın veya şablon seçin.<br/>
+          İçerik burada anında görünecek.
+        </div>
+      </div>
+
+      <!-- ── FOOTER ── -->
+      <footer class="sayfa-footer">
+        <div class="footer-serit"></div>
+        <div class="footer-icerik">
+          <div class="footer-marka">
+            <strong>Bunak Çelik</strong> | Fulle Ha
+          </div>
+          <div class="footer-sayfa">fullematematigi.com.tr</div>
+        </div>
+      </footer>
+
+    </div><!-- /a4-sayfa -->
+  </section>
+
+</div><!-- /workspace -->
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+  // ── Tarih alanını bugüne varsayılan ayarla ──
+  (function() {
+    const bugun = new Date().toISOString().split('T')[0];
+    document.getElementById('tarih-input').value = bugun;
+    metaBilgiGuncelle();
+  })();
+
+  // ── Meta Bilgileri Güncelleyen Fonksiyon ──
+  function metaBilgiGuncelle() {
+    const konu   = document.getElementById('konu-input').value.trim();
+    const sinif  = document.getElementById('sinif-input').value;
+    const tarih  = document.getElementById('tarih-input').value;
+
+    // Konu barı
+    document.getElementById('konu-baslik-preview').textContent = konu || '—';
+
+    // Sınıf rozeti
+    const sinifPreview = document.getElementById('sinif-preview');
+    if (sinif) {
+      sinifPreview.textContent = sinif;
+      sinifPreview.style.display = 'inline-block';
+    } else {
+      sinifPreview.style.display = 'none';
+    }
+
+    // Sağ üst meta
+    document.getElementById('meta-sinif').textContent = sinif || '—';
+    document.getElementById('meta-tarih').textContent = tarih
+      ? new Date(tarih + 'T00:00:00').toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' })
+      : '—';
+  }
+
+  // ── HTML İçerik Güncelleme (Canlı) ──
+  function htmlIcerikGuncelle() {
+    const deger    = document.getElementById('html-input').value;
+    const icerik   = document.getElementById('dinamik-icerik-alani');
+    const bosMesaj = document.getElementById('bos-mesaj');
+
+    if (deger.trim() === '') {
+      // İçerik boşsa placeholder'ı göster
+      icerik.innerHTML = '';
+      if (!document.getElementById('bos-mesaj')) {
+        const el = document.createElement('div');
+        el.className = 'bos-gosterge';
+        el.id = 'bos-mesaj';
+        el.innerHTML = `
+          <svg width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="16" y2="17"/>
+          </svg>
+          Sol panelden HTML yapıştırın veya şablon seçin.<br/>
+          İçerik burada anında görünecek.`;
+        icerik.appendChild(el);
+      }
+      return;
+    }
+
+    // HTML enjekte et
+    icerik.innerHTML = deger;
+
+    // KaTeX render (sayfa yüklendiyse)
+    if (typeof renderMathInElement === 'function') {
+      try {
+        renderMathInElement(icerik, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$',  right: '$',  display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false
+        });
+      } catch(e) {}
+    }
+  }
+
+  // ── Fotoğraf Seçiciyi Aç ──
+  function fotografSec() {
+    document.getElementById('foto-input').click();
+  }
+
+  // ── Fotoğrafı İmlecin Olduğu Yere Enjekte Et ──
+  function fotografYukle(event) {
+    const dosya = event.target.files[0];
+    if (!dosya) return;
+
+    const okuyucu = new FileReader();
+    okuyucu.onload = function(e) {
+      const base64 = e.target.result;
+      const img = document.createElement('img');
+      img.src = base64;
+      img.style.maxWidth = '100%';
+      img.style.height   = 'auto';
+      img.style.display  = 'block';
+      img.style.margin   = '6px 0';
+      img.style.borderRadius = '4px';
+
+      const icerik = document.getElementById('dinamik-icerik-alani');
+
+      // Selection API ile imlecin olduğu yeri bul
+      const secim = window.getSelection();
+      if (secim && secim.rangeCount > 0) {
+        const aralik = secim.getRangeAt(0);
+        // İmlecin, içerik alanı içinde olup olmadığını kontrol et
+        if (icerik.contains(aralik.commonAncestorContainer)) {
+          aralik.deleteContents();
+          aralik.insertNode(img);
+          aralik.collapse(false);
+          secim.removeAllRanges();
+          secim.addRange(aralik);
+          toast('Fotoğraf imleç konumuna eklendi.', 'basari');
+        } else {
+          // Seçim alanın dışındaysa sona ekle
+          icerik.appendChild(img);
+          toast('Fotoğraf notun sonuna eklendi.', 'bilgi');
+        }
+      } else {
+        icerik.appendChild(img);
+        toast('Fotoğraf notun sonuna eklendi.', 'bilgi');
+      }
+
+      // Textarea'yı da güncelle (senkronize tut)
+      document.getElementById('html-input').value = icerik.innerHTML;
+    };
+    okuyucu.readAsDataURL(dosya);
+
+    // Input'u sıfırla (aynı dosya tekrar seçilebilsin)
+    event.target.value = '';
+  }
+
+  // ── PDF Üretim Fonksiyonu ──
+  async function pdfUret() {
+    const buton = document.getElementById('pdf-btn');
+    buton.classList.add('loading');
+    buton.textContent = 'Hazırlanıyor...';
+    toast('PDF oluşturuluyor...', 'bilgi');
+
+    // Boş mesajı geçici gizle
+    const bosMesaj = document.getElementById('bos-mesaj');
+    if (bosMesaj) bosMesaj.style.display = 'none';
+
+    const element = document.getElementById('a4-sayfa');
+    const dosyaAdi = (document.getElementById('konu-input').value || 'ders-notu')
+                      .toLowerCase()
+                      .replace(/\s+/g, '-')
+                      .replace(/[^a-z0-9\-]/g, '') || 'ders-notu';
+
+    const ayarlar = {
+      margin:      [8, 10, 8, 10],   // mm: üst sağ alt sol
+      filename:    `${dosyaAdi}.pdf`,
+      image:       { type: 'jpeg', quality: 0.97 },
+      html2canvas: {
+        scale: 2,                    // Yüksek çözünürlük
+        useCORS: true,               // Harici logo/resim desteği
+        allowTaint: false,
+        logging: false,
+        letterRendering: true,
+        windowWidth: element.scrollWidth,
+      },
+      jsPDF: {
+        unit:        'mm',
+        format:      'a4',
+        orientation: 'portrait',
+        compress:    true
+      },
+      pagebreak: {
+        mode: ['avoid-all', 'css'],
+        before: '.sayfa-kesimi',
+        avoid:  ['.soru', '.soru-kutusu']
+      }
+    };
+
+    try {
+      await html2pdf().set(ayarlar).from(element).save();
+      toast('PDF başarıyla indirildi!', 'basari');
+    } catch (err) {
+      console.error('PDF hatası:', err);
+      toast('PDF oluşturulurken hata oluştu.', 'hata');
+    } finally {
+      if (bosMesaj) bosMesaj.style.display = '';
+      buton.classList.remove('loading');
+      buton.innerHTML = `
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        PDF Üret`;
+    }
+  }
+
+  // ── Alanı Temizle ──
+  function temizle() {
+    document.getElementById('html-input').value = '';
+    htmlIcerikGuncelle();
+    toast('Alan temizlendi.', 'bilgi');
+  }
+
+  // ── Şablon Ekleme ──
+  function sablonEkle(tip) {
+    const sablonlar = {
+
+      'soru-2': `<div class="soru">
+  <span class="soru-no">1.</span>
+  Soru metni burada yer alır. Aşağıdakilerden hangisi doğrudur?
+  <br/><br/>
+  A) Seçenek bir &nbsp;&nbsp; B) Seçenek iki
+  <br/>
+  C) Seçenek üç &nbsp;&nbsp; D) Seçenek dört
+</div>
+
+<div class="soru">
+  <span class="soru-no">2.</span>
+  İkinci soru metni buraya gelir.
+  <br/><br/>
+  A) ... &nbsp;&nbsp; B) ...
+  <br/>
+  C) ... &nbsp;&nbsp; D) ...
+</div>
+
+<div class="soru">
+  <span class="soru-no">3.</span>
+  Üçüncü soru. $x^2 + 5x + 6 = 0$ denkleminin kökleri nelerdir?
+  <br/><br/>
+  A) $x=2, x=3$ &nbsp;&nbsp; B) $x=-2, x=-3$
+  <br/>
+  C) $x=1, x=6$ &nbsp;&nbsp; D) $x=-1, x=-6$
+</div>
+
+<div class="soru">
+  <span class="soru-no">4.</span>
+  Dördüncü soru metni burada.
+  <br/><br/>
+  A) ... &nbsp;&nbsp; B) ...
+  <br/>
+  C) ... &nbsp;&nbsp; D) ...
+</div>`,
+
+      'soru-tek': `<div class="soru tam-genislik">
+  <span class="soru-no">1.</span>
+  Tam genişlikte soru metni. Uzun açıklamalı sorular için kullanın.
+  <br/><br/>
+  A) Seçenek A &nbsp;&nbsp;&nbsp; B) Seçenek B
+  <br/>
+  C) Seçenek C &nbsp;&nbsp;&nbsp; D) Seçenek D
+</div>`,
+
+      'bosluk': `<div class="soru">
+  <span class="soru-no">1.</span>
+  Aşağıdaki boşlukları uygun ifadelerle doldurun.
+  <br/><br/>
+  Bir üçgenin iç açıları toplamı ________ derecedir.
+</div>
+
+<div class="soru">
+  <span class="soru-no">2.</span>
+  $a^2 + b^2 = $ ________ (Pisagor Teoremi)
+</div>`,
+
+      'konu-anlatim': `<div class="tam-genislik" style="margin-bottom:6mm;">
+  <h3 style="font-size:13px;font-weight:900;color:#1a1a1a;margin-bottom:5px;border-left:3px solid #F5C518;padding-left:8px;">Konu Özeti</h3>
+  <p style="font-size:11px;line-height:1.7;color:#374151;">
+    Konu anlatımı buraya gelir. Önemli kavramlar, formüller ve kurallar burada özetlenebilir.
+    Matematikte $f(x) = ax + b$ şeklinde tanımlanan fonksiyonlara <strong>doğrusal fonksiyon</strong> denir.
+  </p>
+</div>
+
+<div class="soru">
+  <span class="soru-no">1.</span>
+  Uygulama sorusu.
+  <br/><br/>
+  A) ... &nbsp;&nbsp; B) ...
+  <br/>
+  C) ... &nbsp;&nbsp; D) ...
+</div>
+
+<div class="soru">
+  <span class="soru-no">2.</span>
+  İkinci uygulama sorusu.
+  <br/><br/>
+  A) ... &nbsp;&nbsp; B) ...
+  <br/>
+  C) ... &nbsp;&nbsp; D) ...
+</div>`
+    };
+
+    const mevcut = document.getElementById('html-input').value;
+    const yeni   = mevcut ? mevcut + '\n\n' + sablonlar[tip] : sablonlar[tip];
+    document.getElementById('html-input').value = yeni;
+    htmlIcerikGuncelle();
+    toast('Şablon eklendi!', 'basari');
+  }
+
+  // ── Toast Bildirimi ──
+  function toast(mesaj, tip = 'bilgi') {
+    // Varsa öncekini kaldır
+    const eskiToast = document.querySelector('.toast');
+    if (eskiToast) eskiToast.remove();
+
+    const el = document.createElement('div');
+    el.className = `toast ${tip}`;
+    el.textContent = mesaj;
+    document.body.appendChild(el);
+
+    setTimeout(() => {
+      el.classList.add('gizle');
+      setTimeout(() => el.remove(), 350);
+    }, 2500);
+  }
+
+  // ── KaTeX Hazır Olduğunda Mevcut İçeriği Render Et ──
+  document.addEventListener('DOMContentLoaded', function() {
+    // KaTeX auto-render'ın yüklenmesini bekle
+    const bekle = setInterval(() => {
+      if (typeof renderMathInElement === 'function') {
+        clearInterval(bekle);
+        const icerik = document.getElementById('dinamik-icerik-alani');
+        if (icerik.textContent.trim()) {
+          renderMathInElement(icerik, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$',  right: '$',  display: false }
+            ],
+            throwOnError: false
+          });
+        }
+      }
+    }, 200);
+  });
+</script>
+
+</body>
+</html>
