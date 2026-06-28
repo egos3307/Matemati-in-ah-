@@ -326,14 +326,14 @@
 
     /* ── İÇERİK ALANI ── */
     #dinamik-icerik-alani {
-      flex: 1;
+      /* flex:1 YOK — içerik doğal olarak büyüyüp 2. sayfaya taşsın */
       padding: 6mm 10mm;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10mm 15mm;
       align-content: start;
       outline: none;
-      min-height: 200px;
+      min-height: 160mm;
     }
 
     /* İki sütun düzeni – editlenebilir modda görsel yardım */
@@ -412,6 +412,7 @@
     .sayfa-footer {
       padding: 0 10mm 6mm;
       flex-shrink: 0;
+      margin-top: auto; /* içerik kısa olunca footer alta yapışır */
     }
     .footer-serit {
       height: 4px;
@@ -437,9 +438,32 @@
       color: #9ca3af;
     }
 
+    /* ── Sayfa Kesim Çizgisi (Önizleme) ── */
+    .sayfa-kesim-cizgisi {
+      position: absolute;
+      left: 0; right: 0;
+      height: 0;
+      border-top: 2px dashed #3b82f6;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .sayfa-kesim-etiket {
+      position: absolute;
+      right: 8px;
+      top: -11px;
+      font-size: 9px;
+      color: #fff;
+      font-weight: 700;
+      background: #3b82f6;
+      padding: 1px 7px;
+      border-radius: 10px;
+      letter-spacing: 0.04em;
+    }
+
     /* ── PDF Üretirken Gizlenecek ── */
     @media print {
       .bos-gosterge { display: none !important; }
+      .sayfa-kesim-cizgisi { display: none !important; }
       #a4-sayfa { box-shadow: none !important; }
     }
 
@@ -694,37 +718,60 @@
       : '—';
   }
 
+  // ── Sayfa Kesim Çizgilerini Çiz ──
+  function guncelleSayfaKesimleri() {
+    const a4 = document.getElementById('a4-sayfa');
+    document.querySelectorAll('.sayfa-kesim-cizgisi').forEach(el => el.remove());
+
+    const mmToPx   = a4.offsetWidth / 210;          // 210mm = A4 genişliği
+    const sayfaYuk = Math.round(297 * mmToPx);      // 297mm → piksel
+    const toplamYuk = a4.scrollHeight;
+    const sayfaSayisi = Math.ceil(toplamYuk / sayfaYuk);
+
+    for (let i = 1; i < sayfaSayisi; i++) {
+      const cizgi = document.createElement('div');
+      cizgi.className = 'sayfa-kesim-cizgisi';
+      cizgi.style.top = (i * sayfaYuk) + 'px';
+      const etiket = document.createElement('span');
+      etiket.className = 'sayfa-kesim-etiket';
+      etiket.textContent = `Sayfa ${i + 1}`;
+      cizgi.appendChild(etiket);
+      a4.appendChild(cizgi);
+    }
+
+    // Önizleme araç çubuğunu güncelle
+    const badge = document.querySelector('.zoom-badge');
+    if (badge) badge.textContent = `A4 • 210mm • ${sayfaSayisi} Sayfa`;
+  }
+
   // ── HTML İçerik Güncelleme (Canlı) ──
   function htmlIcerikGuncelle() {
-    const deger    = document.getElementById('html-input').value;
-    const icerik   = document.getElementById('dinamik-icerik-alani');
-    const bosMesaj = document.getElementById('bos-mesaj');
+    const deger  = document.getElementById('html-input').value;
+    const icerik = document.getElementById('dinamik-icerik-alani');
 
     if (deger.trim() === '') {
-      // İçerik boşsa placeholder'ı göster
       icerik.innerHTML = '';
-      if (!document.getElementById('bos-mesaj')) {
-        const el = document.createElement('div');
-        el.className = 'bos-gosterge';
-        el.id = 'bos-mesaj';
-        el.innerHTML = `
-          <svg width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="8" y1="13" x2="16" y2="13"/>
-            <line x1="8" y1="17" x2="16" y2="17"/>
-          </svg>
-          Sol panelden HTML yapıştırın veya şablon seçin.<br/>
-          İçerik burada anında görünecek.`;
-        icerik.appendChild(el);
-      }
+      const el = document.createElement('div');
+      el.className = 'bos-gosterge';
+      el.id = 'bos-mesaj';
+      el.innerHTML = `
+        <svg width="40" height="40" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="8" y1="13" x2="16" y2="13"/>
+          <line x1="8" y1="17" x2="16" y2="17"/>
+        </svg>
+        Sol panelden HTML yapıştırın veya şablon seçin.<br/>
+        İçerik burada anında görünecek.`;
+      icerik.appendChild(el);
+      guncelleSayfaKesimleri();
       return;
     }
 
     // HTML enjekte et
     icerik.innerHTML = deger;
 
-    // KaTeX render (sayfa yüklendiyse)
+    // KaTeX render
     if (typeof renderMathInElement === 'function') {
       try {
         renderMathInElement(icerik, {
@@ -738,6 +785,9 @@
         });
       } catch(e) {}
     }
+
+    // Render bittikten sonra kesim çizgilerini güncelle
+    setTimeout(guncelleSayfaKesimleri, 50);
   }
 
   // ── Fotoğraf Seçiciyi Aç ──
@@ -785,8 +835,9 @@
         toast('Fotoğraf notun sonuna eklendi.', 'bilgi');
       }
 
-      // Textarea'yı da güncelle (senkronize tut)
+      // Textarea'yı güncelle ve kesim çizgilerini yenile
       document.getElementById('html-input').value = icerik.innerHTML;
+      setTimeout(guncelleSayfaKesimleri, 100);
     };
     okuyucu.readAsDataURL(dosya);
 
@@ -801,9 +852,10 @@
     buton.textContent = 'Hazırlanıyor...';
     toast('PDF oluşturuluyor...', 'bilgi');
 
-    // Boş mesajı geçici gizle
+    // PDF öncesi önizleme elemanlarını gizle
     const bosMesaj = document.getElementById('bos-mesaj');
     if (bosMesaj) bosMesaj.style.display = 'none';
+    document.querySelectorAll('.sayfa-kesim-cizgisi').forEach(el => el.style.display = 'none');
 
     const element = document.getElementById('a4-sayfa');
     const dosyaAdi = (document.getElementById('konu-input').value || 'ders-notu')
@@ -844,6 +896,7 @@
       toast('PDF oluşturulurken hata oluştu.', 'hata');
     } finally {
       if (bosMesaj) bosMesaj.style.display = '';
+      document.querySelectorAll('.sayfa-kesim-cizgisi').forEach(el => el.style.display = '');
       buton.classList.remove('loading');
       buton.innerHTML = `
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -955,6 +1008,7 @@
     const yeni   = mevcut ? mevcut + '\n\n' + sablonlar[tip] : sablonlar[tip];
     document.getElementById('html-input').value = yeni;
     htmlIcerikGuncelle();
+    setTimeout(guncelleSayfaKesimleri, 100);
     toast('Şablon eklendi!', 'basari');
   }
 
