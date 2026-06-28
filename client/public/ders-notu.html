@@ -753,19 +753,40 @@ async function pdfUret() {
     for (let i = 0; i < sayfaListesi.length; i++) {
       durum.textContent = `Sayfa ${i + 1} / ${sayfaListesi.length} işleniyor…`;
 
-      /* Her sayfayı viewport'a kaydır ki html2canvas görsün */
-      sayfaListesi[i].scrollIntoView({ block: 'start' });
-      await new Promise(r => setTimeout(r, 80));
+      /* Sayfayı body'e fixed klonla — right-panel'in overflow:auto kırpması
+         html2canvas'ı etkiliyor, footer görünmüyor. body'deki fixed element
+         hiçbir overflow container'a tabi değildir. */
+      const tmpWrap = document.createElement('div');
+      tmpWrap.style.cssText = [
+        'position:fixed', 'top:0', 'left:0',
+        'width:210mm', 'background:#fff',
+        'z-index:9997',      /* overlay (9999) arkasında, kullanıcı görmez */
+        'pointer-events:none', 'overflow:visible'
+      ].join(';');
 
-      const canvas = await html2canvas(sayfaListesi[i], {
+      const klon = sayfaListesi[i].cloneNode(true);
+      klon.style.boxShadow    = 'none';
+      klon.style.borderRadius = '0';
+      klon.querySelectorAll('.sayfa-no-etiket').forEach(el => el.remove());
+      tmpWrap.appendChild(klon);
+      document.body.appendChild(tmpWrap);
+
+      /* Render bekle */
+      await new Promise(r => setTimeout(r, 120));
+
+      const klonH = klon.offsetHeight;
+      const klonW = klon.offsetWidth;
+
+      const canvas = await html2canvas(klon, {
         scale: 2,
         useCORS: true,
         allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
-        /* SVG'leri img'ye çevir — html2canvas margin:auto ile SVG'leri
-           yanlış konumlandırır, bu onclone ile yakalamadan önce düzeltilir */
+        width:  klonW,
+        height: klonH,   /* footer dahil tam yüksekliği yakala */
         onclone: (clonedDoc) => {
+          /* SVG → img: margin:auto ile SVG sağa kayıyor, img'de doğru çalışır */
           clonedDoc.querySelectorAll('svg').forEach(svg => {
             try {
               const w = parseInt(svg.getAttribute('width'))  || 160;
@@ -774,7 +795,7 @@ async function pdfUret() {
               if (!str.includes('xmlns='))
                 str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
               const img = clonedDoc.createElement('img');
-              img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+              img.src    = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
               img.width  = w;
               img.height = h;
               img.style.cssText = svg.getAttribute('style') || '';
@@ -786,8 +807,9 @@ async function pdfUret() {
         }
       });
 
+      document.body.removeChild(tmpWrap);
+
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      /* A4: 210mm genişlik, yükseklik orana göre */
       const pdfW = 210;
       const pdfH = (canvas.height * pdfW) / canvas.width;
 
