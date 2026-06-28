@@ -768,6 +768,29 @@ async function pdfUret() {
       klon.style.boxShadow    = 'none';
       klon.style.borderRadius = '0';
       klon.querySelectorAll('.sayfa-no-etiket').forEach(el => el.remove());
+
+      /* SVG → img: DOM'a eklenmeden ÖNCE dönüştür.
+         html2canvas grid hücrelerinde margin:auto'yu yanlış hesaplıyor.
+         text-align:center + inline-block sarıcı ile sorunsuz ortalanır. */
+      klon.querySelectorAll('svg').forEach(svg => {
+        try {
+          const w = parseInt(svg.getAttribute('width'))  || 160;
+          const h = parseInt(svg.getAttribute('height')) || 110;
+          let str = new XMLSerializer().serializeToString(svg);
+          if (!str.includes('xmlns='))
+            str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+          const sarici = document.createElement('div');
+          sarici.style.cssText = 'text-align:center;margin:10px 0;line-height:0;';
+          const img = document.createElement('img');
+          img.src    = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+          img.width  = w;
+          img.height = h;
+          img.style.display = 'inline-block';
+          sarici.appendChild(img);
+          svg.parentNode.replaceChild(sarici, svg);
+        } catch (e) {}
+      });
+
       tmpWrap.appendChild(klon);
       document.body.appendChild(tmpWrap);
 
@@ -784,27 +807,7 @@ async function pdfUret() {
         logging: false,
         backgroundColor: '#ffffff',
         width:  klonW,
-        height: klonH,   /* footer dahil tam yüksekliği yakala */
-        onclone: (clonedDoc) => {
-          /* SVG → img: margin:auto ile SVG sağa kayıyor, img'de doğru çalışır */
-          clonedDoc.querySelectorAll('svg').forEach(svg => {
-            try {
-              const w = parseInt(svg.getAttribute('width'))  || 160;
-              const h = parseInt(svg.getAttribute('height')) || 110;
-              let str = new XMLSerializer().serializeToString(svg);
-              if (!str.includes('xmlns='))
-                str = str.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-              const img = clonedDoc.createElement('img');
-              img.src    = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
-              img.width  = w;
-              img.height = h;
-              img.style.cssText = svg.getAttribute('style') || '';
-              img.style.display = 'block';
-              img.style.margin  = '10px auto';
-              svg.parentNode.replaceChild(img, svg);
-            } catch (e) {}
-          });
-        }
+        height: klonH
       });
 
       document.body.removeChild(tmpWrap);
