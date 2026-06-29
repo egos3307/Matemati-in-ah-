@@ -420,6 +420,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const virtualBgEnabledRef = useRef(false);
   const virtualSegmenterRef = useRef(null);
   const virtualBgCanvasRef = useRef(null);
+  const virtualMaskCanvasRef = useRef(null);
   const virtualRawVideoRef = useRef(null);
   const virtualBgFrameRef = useRef(null);
   const virtualBgLKTrackRef = useRef(null);
@@ -460,9 +461,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       virtualRawVideoRef.current.srcObject = null;
       virtualRawVideoRef.current = null;
     }
-    if (virtualBgCanvasRef.current) {
-      virtualBgCanvasRef.current = null;
-    }
+    virtualBgCanvasRef.current = null;
+    virtualMaskCanvasRef.current = null;
   };
 
   const enableVirtualBackground = async (color) => {
@@ -489,46 +489,84 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       const rawTrack = cameraPub.track.mediaStreamTrack;
 
-      // Hidden video element for raw camera feed
+      // Video element for raw camera feed
       const video = document.createElement('video');
       video.playsInline = true;
       video.muted = true;
       video.srcObject = new MediaStream([rawTrack]);
-      await video.play();
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => { video.play().then(resolve).catch(reject); };
+        video.onerror = reject;
+      });
       virtualRawVideoRef.current = video;
 
-      // Processing canvas (matches camera resolution)
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
-      virtualBgCanvasRef.current = canvas;
-      const ctx = canvas.getContext('2d');
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 480;
 
-      // MediaPipe Selfie Segmentation setup
+      // Main output canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      // willReadFrequently = keep in CPU memory for fast getImageData
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      virtualBgCanvasRef.current = canvas;
+
+      // Temp canvas for reading mask pixel data
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = w;
+      maskCanvas.height = h;
+      const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+      virtualMaskCanvasRef.current = maskCanvas;
+
+      // Pre-parse background color into R,G,B components
+      const hex = color.replace('#', '');
+      const bgR = parseInt(hex.substring(0, 2), 16);
+      const bgG = parseInt(hex.substring(2, 4), 16);
+      const bgB = parseInt(hex.substring(4, 6), 16);
+
+      // MediaPipe Selfie Segmentation
       const segmenter = new window.SelfieSegmentation({
         locateFile: (file) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
       });
       segmenter.setOptions({ modelSelection: 1 });
-
-      segmenter.onResults((results) => {
-        const { width, height } = canvas;
-        ctx.clearRect(0, 0, width, height);
-        // Draw camera frame
-        ctx.drawImage(results.image, 0, 0, width, height);
-        // Keep only person pixels (mask = white where person is)
-        ctx.globalCompositeOperation = 'destination-in';
-        ctx.drawImage(results.segmentationMask, 0, 0, width, height);
-        // Fill background behind person
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, width, height);
-        ctx.globalCompositeOperation = 'source-over';
-      });
-
       virtualSegmenterRef.current = segmenter;
 
-      // Frame processing loop
+      segmenter.onResults((results) => {
+        if (!results.image || !results.segmentationMask) return;
+
+        // Draw camera frame to main canvas
+        ctx.drawImage(results.image, 0, 0, w, h);
+        const frameData = ctx.getImageData(0, 0, w, h);
+
+        // Draw mask to temp canvas and read pixel data
+        maskCtx.drawImage(results.segmentationMask, 0, 0, w, h);
+        const maskData = maskCtx.getImageData(0, 0, w, h);
+
+        const fd = frameData.data;
+        const md = maskData.data;
+
+        // md[i] = R channel of mask: ~255 where person, ~0 where background
+        for (let i = 0; i < fd.length; i += 4) {
+          if (md[i] < 128) {
+            fd[i]     = bgR;
+            fd[i + 1] = bgG;
+            fd[i + 2] = bgB;
+            fd[i + 3] = 255;
+          }
+        }
+
+        ctx.putImageData(frameData, 0, 0);
+      });
+
+      // Draw first real frame to canvas so stream starts with video, not black
+      ctx.drawImage(video, 0, 0, w, h);
+
+      // Capture canvas stream before starting the loop
+      const canvasStream = canvas.captureStream(30);
+      const processedVideoTrack = canvasStream.getVideoTracks()[0];
+
+      // Start segmentation loop
       const runFrame = async () => {
         if (!virtualBgEnabledRef.current) return;
         if (video.readyState >= 2) {
@@ -536,18 +574,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
         virtualBgFrameRef.current = requestAnimationFrame(runFrame);
       };
-      // Warm up the model on first send before publishing
-      await segmenter.send({ image: video });
-      virtualBgFrameRef.current = requestAnimationFrame(runFrame);
+      runFrame();
 
-      // Capture canvas as MediaStream and publish as camera track
-      const canvasStream = canvas.captureStream(30);
-      const processedVideoTrack = canvasStream.getVideoTracks()[0];
-
-      // Unpublish original camera track
+      // Replace camera track in LiveKit
       await localParticipant.unpublishTrack(cameraPub.track);
-
-      // Publish processed canvas track as camera source
       const livekitTrack = new LocalVideoTrack(processedVideoTrack, undefined, false);
       await localParticipant.publishTrack(livekitTrack, { source: Track.Source.Camera });
       virtualBgLKTrackRef.current = livekitTrack;
@@ -557,6 +587,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     } catch (err) {
       console.error('Sanal arka plan hatası:', err);
       cleanupVirtualBg();
+      await localParticipant.setCameraEnabled(true).catch(() => {});
       alert('Sanal arka plan başlatılamadı: ' + (err.message || err));
     } finally {
       setVirtualBgLoading(false);
