@@ -530,12 +530,11 @@ const StudentDashboard = () => {
     // Calculate empty
     currentSubject.empty = Math.max(0, currentSubject.questionCount - (currentSubject.correct + currentSubject.wrong));
     
-    // Calculate net: LGS (grade <= 8) is 3 wrong = 1 correct, YKS (grade >= 9) and KPSS/Mezun is 4 wrong = 1 correct
+    // Calculate net: LGS (grade <= 8 veya 'LGS') is 3 wrong = 1 correct, YKS/KPSS/ALES/DGS/AGS/Mezun is 4 wrong = 1 correct
     const userGrade = user?.grade || "5";
     let coef = 0.25;
-    if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
-      const userGradeNum = parseInt(userGrade) || 5;
-      if (userGradeNum <= 8) {
+    if (!['KPSS', 'Mezun', 'ALES', 'DGS', 'AGS'].includes(userGrade)) {
+      if (userGrade === 'LGS' || parseInt(userGrade) <= 8) {
         coef = 1/3;
       }
     }
@@ -841,7 +840,7 @@ const StudentDashboard = () => {
                       </h2>
                     )}
                     <p className="text-[11px] text-slate-300 font-bold">
-                      {user?.name} • {(user?.grade === 'KPSS' || user?.grade === 'Mezun') ? `${user?.grade} Öğrencisi` : `${user?.grade}. Sınıf Öğrencisi`}
+                      {user?.name} • {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(user?.grade)) ? `${user?.grade} Öğrencisi` : `${user?.grade}. Sınıf Öğrencisi`}
                     </p>
                   </div>
 
@@ -1554,9 +1553,8 @@ const StudentDashboard = () => {
                                   {(() => {
                                     const userGrade = user?.grade || "5";
                                     let coef = 0.25;
-                                    if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
-                                      const userGradeNum = parseInt(userGrade) || 5;
-                                      if (userGradeNum <= 8) coef = 1/3;
+                                    if (!['KPSS', 'Mezun', 'ALES', 'DGS', 'AGS'].includes(userGrade)) {
+                                      if (userGrade === 'LGS' || parseInt(userGrade) <= 8) coef = 1/3;
                                     }
                                     const calculatedNet = res.net !== undefined ? res.net : (res.correct - (res.wrong * coef));
                                     return Math.max(0, calculatedNet).toFixed(2);

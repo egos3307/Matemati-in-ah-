@@ -1069,7 +1069,7 @@ const TeacherDashboard = () => {
                               </div>
                             </td>
                             <td className="py-3"><code className="bg-slate-100 px-2 py-1 rounded text-primary font-black text-xs">{student.studentCode}</code></td>
-                            <td className="py-3 font-bold text-slate-500 text-sm">{(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}</td>
+                            <td className="py-3 font-bold text-slate-500 text-sm">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}</td>
                             <td className="py-3 text-xs text-slate-400 font-medium">{student.parentName || '-'}</td>
                             <td className="py-3 text-right">
                               <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
@@ -1105,7 +1105,7 @@ const TeacherDashboard = () => {
                         return (
                           <div key={grade} className="space-y-1.5">
                             <div className="flex justify-between items-center text-xs font-bold">
-                              <span className="text-slate-700">{(grade === 'KPSS' || grade === 'Mezun' || grade === 'Diğer') ? grade : `${grade}. Sınıf`}</span>
+                              <span className="text-slate-700">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS', 'Diğer'].includes(grade)) ? grade : `${grade}. Sınıf`}</span>
                               <span className="text-slate-500">{count} Öğrenci ({percent}%)</span>
                             </div>
                             <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -1161,7 +1161,7 @@ const TeacherDashboard = () => {
                         </div>
                       </div>
                       <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
-                      <p className="text-sm text-slate-400 font-bold mb-4">{(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}</p>
+                      <p className="text-sm text-slate-400 font-bold mb-4">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}</p>
                       <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
                         <span className="material-symbols-outlined text-sm">call</span>
                         {student.studentTel || student.parentTel || 'Telefon yok'}
@@ -1190,7 +1190,7 @@ const TeacherDashboard = () => {
                   <div>
                     <h3 className="text-3xl font-black text-slate-900">{selectedStudent.name}</h3>
                     <div className="flex gap-4 mt-1">
-                      <span className="text-xs font-bold text-primary uppercase tracking-widest">{(selectedStudent.grade === 'KPSS' || selectedStudent.grade === 'Mezun') ? selectedStudent.grade : `${selectedStudent.grade}. Sınıf`}</span>
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(selectedStudent.grade)) ? selectedStudent.grade : `${selectedStudent.grade}. Sınıf`}</span>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Öğrenci Kodu: {selectedStudent.studentCode}</span>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Veli Kodu: {selectedStudent.parentCode || 'Yok'}</span>
                     </div>
@@ -1263,9 +1263,8 @@ const TeacherDashboard = () => {
                                         {(() => {
                                           const userGrade = selectedStudent?.grade || "5";
                                           let coef = 0.25;
-                                          if (userGrade !== 'KPSS' && userGrade !== 'Mezun') {
-                                            const userGradeNum = parseInt(userGrade) || 5;
-                                            if (userGradeNum <= 8) {
+                                          if (!['KPSS', 'Mezun', 'ALES', 'DGS', 'AGS'].includes(userGrade)) {
+                                            if (userGrade === 'LGS' || parseInt(userGrade) <= 8) {
                                               coef = 1/3;
                                             }
                                           }
@@ -1657,7 +1656,7 @@ const TeacherDashboard = () => {
                                 className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5 cursor-pointer"
                               />
                               <span className="text-sm font-bold text-slate-800">
-                                {student.name} <span className="text-xs text-slate-400">({(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`})</span>
+                                {student.name} <span className="text-xs text-slate-400">({(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`})</span>
                               </span>
                             </label>
                           );
@@ -2373,7 +2372,7 @@ const TeacherDashboard = () => {
                                 </span>
                               </div>
                               <p className="text-xs text-slate-500 font-medium mt-1">{req.email} • {req.phone}</p>
-                              <p className="text-xs font-bold text-primary mt-1">Sınıf/Seviye: {(req.grade === 'KPSS' || req.grade === 'Mezun') ? req.grade : `${req.grade}. Sınıf`}</p>
+                              <p className="text-xs font-bold text-primary mt-1">Sınıf/Seviye: {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(req.grade)) ? req.grade : `${req.grade}. Sınıf`}</p>
                             </div>
 
                             <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-xl tracking-wider ${
@@ -2664,7 +2663,7 @@ const TeacherDashboard = () => {
                             </td>
                             <td className="py-4">
                               <span className="font-bold text-slate-600 text-sm">
-                                {(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}
+                                {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}
                               </span>
                             </td>
                             <td className="py-4 font-bold text-slate-700 text-sm">
@@ -2875,7 +2874,7 @@ const TeacherDashboard = () => {
                         <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
                           <td className="py-4 font-bold text-slate-900 text-sm">{student.name}</td>
                           <td className="py-4 font-bold text-slate-500 text-sm">
-                            {(student.grade === 'KPSS' || student.grade === 'Mezun') ? student.grade : `${student.grade}. Sınıf`}
+                            {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}
                           </td>
                           <td className="py-4">
                             {student.teacher ? (
@@ -2931,8 +2930,13 @@ const TeacherDashboard = () => {
                   <label className="text-xs font-black text-slate-400 uppercase ml-1">Sınıf</label>
                   <select className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" value={newStudent.grade} onChange={(e) => setNewStudent({...newStudent, grade: e.target.value})} required>
                     <option value="">Seçiniz</option>
-                    {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    {[5,6,7].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    <option value="LGS">LGS (8. Sınıf)</option>
+                    {[9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
                     <option value="Mezun">Mezun</option>
+                    <option value="AGS">AGS</option>
+                    <option value="ALES">ALES</option>
+                    <option value="DGS">DGS</option>
                     <option value="KPSS">KPSS</option>
                   </select>
                 </div>
@@ -3145,8 +3149,13 @@ const TeacherDashboard = () => {
                     required
                   >
                     <option value="">Seçiniz</option>
-                    {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    {[5,6,7].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
+                    <option value="LGS">LGS (8. Sınıf)</option>
+                    {[9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
                     <option value="Mezun">Mezun</option>
+                    <option value="AGS">AGS</option>
+                    <option value="ALES">ALES</option>
+                    <option value="DGS">DGS</option>
                     <option value="KPSS">KPSS</option>
                   </select>
                 </div>

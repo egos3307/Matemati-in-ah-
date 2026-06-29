@@ -183,7 +183,7 @@ const ParentDashboard = () => {
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-slate-400 font-semibold shrink-0">Sınıf Derecesi:</span>
-                      <span className="font-bold text-slate-900 text-right">{(student?.grade === 'KPSS' || student?.grade === 'Mezun') ? student?.grade : `${student?.grade}. Sınıf`}</span>
+                      <span className="font-bold text-slate-900 text-right">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student?.grade)) ? student?.grade : `${student?.grade}. Sınıf`}</span>
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-slate-400 font-semibold shrink-0">Verilen Hizmet:</span>
