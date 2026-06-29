@@ -203,10 +203,7 @@ const Whiteboard = ({ role, whiteboardCanvasRef }) => {
       </div>
 
       {/* Drawing Area */}
-      <div
-        className="flex-1 relative cursor-crosshair overflow-hidden"
-        style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-      >
+      <div className="flex-1 bg-white relative cursor-crosshair overflow-hidden">
         <canvas
           ref={canvasElRef}
           onMouseDown={startDrawing}
@@ -1231,7 +1228,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   }
 
   return (
-    <div className="fixed inset-0 z-[99999] flex flex-col bg-[#080b11] font-sans text-slate-100 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
+      style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
       {/* Top Header */}
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
         <div className="flex items-center gap-3">
@@ -1279,10 +1279,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       </div>
 
       {/* Main Content Pane (Videos & Sidebar) */}
-      <div className="flex-1 flex relative overflow-hidden bg-[#05070a]">
+      <div className="flex-1 flex relative overflow-hidden bg-[#05070a]/80">
         
         {/* VIDEO DISPLAY WINDOW */}
-        <div className="flex-1 relative overflow-hidden flex flex-col justify-center bg-black">
+        <div className="flex-1 relative overflow-hidden flex flex-col justify-center bg-black/80">
           {/* Whiteboard view - always mounted but conditionally visible */}
           <div 
             className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900"
