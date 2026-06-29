@@ -731,7 +731,6 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         }
       };
 
-      let catboxRes;
       let uploadSuccess = false;
       let finalUrl = "";
 
@@ -748,86 +747,43 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         console.error("Google Drive upload failed, falling back to other providers...", driveErr);
       }
 
-      // Attempt 1: Native FormData + Blob first (supported in Node 18+)
-      try {
-        const fileBlob = new Blob([assembledBuffer], { type: mimeType });
-        const formData = new FormData();
-        formData.append('reqtype', 'fileupload');
-        formData.append('fileToUpload', fileBlob, `lesson_${lessonId}.${fileExt}`);
-
-        catboxRes = await fetch('https://catbox.moe/user/api.php', {
-          method: 'POST',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': '*/*'
-          },
-          body: formData
-        });
-
-        if (catboxRes && catboxRes.ok) {
-          const text = await catboxRes.text();
-          const trimmed = text.trim();
-          if (trimmed.startsWith('https://files.catbox.moe/')) {
-            const reachable = await verifyUploadedUrl(trimmed);
-            if (reachable) {
-              uploadSuccess = true;
-              finalUrl = trimmed;
-            } else {
-              console.warn(`Catbox (FormData) URL not reachable: ${trimmed}`);
-            }
-          } else {
-            console.warn(`Catbox (FormData) returned non-URL response: ${text.substring(0, 100)}`);
-          }
-        } else {
-          console.warn(`Native FormData upload returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
-        }
-      } catch (err) {
-        console.warn("Global FormData upload failed, attempting fallback:", err);
-      }
-
-      // Attempt 2: Fallback manual buffer multipart construction (zero dependency, avoids chunked encoding issues)
+      // Attempt 1: Pixeldrain (Türkiye'de erişilebilir, kalıcı depolama)
       if (!uploadSuccess) {
         try {
-          console.log("Attempting manual multipart boundary fallback upload to Catbox...");
+          console.log("Attempting Pixeldrain upload...");
           const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
           const parts = [];
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
           parts.push(assembledBuffer);
           parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
           const payload = Buffer.concat(parts);
 
-          catboxRes = await fetch('https://catbox.moe/user/api.php', {
+          const pdRes = await fetch('https://pixeldrain.com/api/file', {
             method: 'POST',
             headers: {
               'Content-Type': `multipart/form-data; boundary=${boundary}`,
               'Content-Length': String(payload.length),
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': '*/*'
             },
             body: payload
           });
 
-          if (catboxRes && catboxRes.ok) {
-            const text = await catboxRes.text();
-            const trimmed = text.trim();
-            if (trimmed.startsWith('https://files.catbox.moe/')) {
-              const reachable = await verifyUploadedUrl(trimmed);
-              if (reachable) {
-                uploadSuccess = true;
-                finalUrl = trimmed;
-              } else {
-                console.warn(`Catbox (manual) URL not reachable: ${trimmed}`);
-              }
+          const pdJson = await pdRes.json();
+          if (pdRes.ok && pdJson.success && pdJson.id) {
+            const url = `https://pixeldrain.com/api/file/${pdJson.id}`;
+            const reachable = await verifyUploadedUrl(url);
+            if (reachable) {
+              uploadSuccess = true;
+              finalUrl = url;
+              console.log(`Successfully uploaded to Pixeldrain: ${finalUrl}`);
             } else {
-              console.warn(`Catbox (manual) returned non-URL response: ${text.substring(0, 100)}`);
+              console.warn(`Pixeldrain URL not reachable: ${url}`);
             }
           } else {
-            console.warn(`Fallback manual upload also returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
+            console.warn(`Pixeldrain upload failed: ${JSON.stringify(pdJson)}`);
           }
-        } catch (fallbackErr) {
-          console.error("Fallback manual upload failed with error:", fallbackErr);
+        } catch (pdErr) {
+          console.error("Pixeldrain upload failed with error:", pdErr);
         }
       }
 
