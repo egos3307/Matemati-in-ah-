@@ -1230,7 +1230,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   return (
     <div
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
-      style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#080b11' }}
     >
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: 'rgba(8, 11, 17, 0.65)' }} />
       {/* Top Header */}
