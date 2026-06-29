@@ -744,10 +744,12 @@ async function parcayiEtiketle(parcaMetni) {
   // Küçük modeller için kısa ve net talimat
   const sistemTalimati =
     'Aşağıdaki ders metnini kelimesi kelimesine koru, HİÇBİR İÇERİĞİ SİLME veya özetleme. ' +
-    'Yalnızca şu etiketleri ekle: Bölüm başlıklarını "1. Başlık" biçimine sok, ' +
-    'soru cümlelerinin önüne "SORU X:" yaz, ' +
-    'çoktan seçmeli şıkları "A) B) C) D) E)" biçiminde tek satıra al (doğru şıkkın başına = ekle), ' +
-    'matematik ifadelerini $...$ ile çevrelе. ' +
+    'Yalnızca şu etiketleri ekle:\n' +
+    '1) Bölüm/konu başlıklarını (kısa, tek satır, büyük harfle başlayan, fiil içermeyen) "## Başlık" biçimine sok.\n' +
+    '2) YALNIZCA A) B) C) D) E) şıkları olan çoktan seçmeli soruların önüne "SORU X:" yaz (X=sıra numarası). ' +
+       'Açıklama veya düz metin cümleleri SORU olarak etiketleme.\n' +
+    '3) Çoktan seçmeli şıkları her biri ayrı satırda "A) ... " "B) ..." biçiminde yaz; doğru şıkkın başına = ekle.\n' +
+    '4) Matematik ifadelerini $...$ ile çevrelе.\n' +
     'HTML, açıklama veya özet yazma. Sadece düzenlenmiş metni döndür.';
 
   let cikti = '';
@@ -906,11 +908,20 @@ function etiketliMetniHTML(metin) {
       i++; continue;
     }
 
-    /* Başlık: "1. Başlık", "## Başlık", tamamı büyük harf kısa satır */
+    /* Başlık: "## Başlık" veya tamamı büyük harf kısa satır (harf olmayan veya çok kısa satırlar hariç) */
+    // NOT: "1. ..." numaralı satırlar artık başlık sayılmıyor — soru numarası olabilir.
+    // Soru işareti içeren satır asla başlık değildir.
     const isBaslik =
-      (/^\d+[.)\s]\s*\S/.test(satir) && satir.length < 100 && !/^\d+[.)\s]\s*[a-zçğışöşü]/.test(satir.substring(0,3))) ||
       /^#{1,3}\s/.test(satir) ||
-      (satir === satir.toUpperCase() && satir.length > 3 && satir.length < 80 && /[A-ZÇĞİÖŞÜ]/.test(satir));
+      (
+        satir === satir.toUpperCase() &&
+        satir.length > 4 && satir.length < 80 &&
+        /[A-ZÇĞİÖŞÜ]/.test(satir) &&
+        !satir.includes('?') &&
+        !/^[A-E][.)]/i.test(satir) &&
+        !/^SORU\s*\d/i.test(satir) &&
+        !/^\d+[.)]/.test(satir)   // numaralı satır başlık değil
+      );
 
     if (isBaslik) {
       soruKapat();
@@ -919,8 +930,21 @@ function etiketliMetniHTML(metin) {
       i++; continue;
     }
 
-    /* SORU X: — satır başlıyor */
+    /* SORU X: — satır başlıyor
+       İLERİYE BAKIŞ: Eğer sonraki satırlarda hiç A)/B)/C)/D)/E) şıkkı yoksa
+       bu satır GERÇEK bir soru değildir → düz paragraf olarak göster. */
     if (/^SORU\s*\d+\s*:/i.test(satir)) {
+      // Sonraki 8 satıra bak: en az 2 adet A)/B)/C)/D)/E) şıkkı var mı?
+      let sikSayisi = 0;
+      for (let j = i + 1; j < Math.min(i + 9, satirlar.length); j++) {
+        if (/^=?[A-E][.)]/i.test(satirlar[j].trim())) sikSayisi++;
+      }
+      if (sikSayisi < 2) {
+        // Gerçek soru değil — düz paragraf olarak göster
+        const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
+        html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:3px 0;">${soruMetni || satir}</div>`;
+        i++; continue;
+      }
       soruKapat();
       soruSayaci++;
       const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
@@ -928,18 +952,14 @@ function etiketliMetniHTML(metin) {
       i++; continue;
     }
 
-    /* Şık satırı: A) B) C) D) E) – aktif soruya ekle veya yeni soru başlat */
-    if (/^=?[A-E][.)]/i.test(satir)) {
-      if (suankiSoruHTML !== null) {
-        const isDogruSik = satir.startsWith('=');
-        const temizSik   = satir.replace(/^=/, '');
-        suankiSoruHTML  += isDogruSik
-          ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${temizSik}</strong></span>`
-          : `<span style="margin-right:8px;">${temizSik}</span>`;
-      } else {
-        // SORU bloğu dışında şık → tek paragraf olarak göster
-        html += `<div style="font-size:11px;line-height:1.55;color:#374151;padding:2px 0;">${satir}</div>`;
-      }
+    /* Şık satırı: A) B) C) D) E) – SADECE aktif soru bloğu içinde işle */
+    // Soru bloğu dışındaki "A) ..." satırları şık DEĞİL, normal metindir.
+    if (/^=?[A-E][.)]/i.test(satir) && suankiSoruHTML !== null) {
+      const isDogruSik = satir.startsWith('=');
+      const temizSik   = satir.replace(/^=/, '');
+      suankiSoruHTML  += isDogruSik
+        ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${temizSik}</strong></span>`
+        : `<span style="margin-right:8px;">${temizSik}</span>`;
       i++; continue;
     }
 
