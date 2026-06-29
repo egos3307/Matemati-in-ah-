@@ -1232,8 +1232,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
       style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
+      <div className="absolute inset-0 bg-[#080b11]/85 pointer-events-none" style={{ zIndex: 0 }} />
       {/* Top Header */}
-      <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm">
+      <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm relative">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
             <img src="/logo.png" alt="Fullematematik Logo" className="h-full w-full object-contain" />
@@ -1279,10 +1280,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       </div>
 
       {/* Main Content Pane (Videos & Sidebar) */}
-      <div className="flex-1 flex relative overflow-hidden bg-[#05070a]/80">
+      <div className="flex-1 flex relative overflow-hidden" style={{ zIndex: 1 }}>
         
         {/* VIDEO DISPLAY WINDOW */}
-        <div className="flex-1 relative overflow-hidden flex flex-col justify-center bg-black/80">
+        <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
           {/* Whiteboard view - always mounted but conditionally visible */}
           <div 
             className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900"
@@ -1614,7 +1615,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       </div>
 
       {/* Control Bar (Mute, Video, Screen Share, Participants, Leave) */}
-      <div className="bg-slate-900/90 backdrop-blur-md py-3 px-4 sm:px-6 flex items-center justify-between border-t border-slate-800/60 z-10 shadow-lg select-none">
+      <div className="bg-slate-900/90 backdrop-blur-md py-3 px-4 sm:px-6 flex items-center justify-between border-t border-slate-800/60 z-10 shadow-lg select-none relative">
         
         {/* 1. Mic & Cam Toggles */}
         <div className="flex items-center gap-1.5 sm:gap-2">
