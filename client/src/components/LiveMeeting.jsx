@@ -541,23 +541,36 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         ctx.drawImage(video, 0, 0, w, h);
         const frameData = ctx.getImageData(0, 0, w, h);
 
-        // Mask canvas'ı her frame önce temizle — eski veri kalmasın
+        // Maskeyi blur ile çiz: kenarları yumuşatır + vücut alanını hafif genişletir
         maskCtx.clearRect(0, 0, w, h);
+        maskCtx.filter = 'blur(8px)';
         maskCtx.drawImage(results.segmentationMask, 0, 0, w, h);
+        maskCtx.filter = 'none';
         const maskData = maskCtx.getImageData(0, 0, w, h);
 
         const fd = frameData.data;
         const md = maskData.data;
 
-        // R kanalı: ~255 = person, ~0 = background
-        // Eğer ters görünüyorsa: md[i] > 128 ile değiştir
+        // confidence: 0 = arka plan, 1 = kişi
+        // Sert kesim yerine yumuşak harman (feathering)
         for (let i = 0; i < fd.length; i += 4) {
-          if (md[i] < 128) {
+          const confidence = md[i] / 255;
+
+          if (confidence < 0.15) {
+            // Tam arka plan → düz renk
             fd[i]     = bgR;
             fd[i + 1] = bgG;
             fd[i + 2] = bgB;
             fd[i + 3] = 255;
+          } else if (confidence < 0.85) {
+            // Kenar bölgesi → kamera ile arka plan rengi arasında lineer harman
+            const t = (confidence - 0.15) / 0.7;
+            fd[i]     = Math.round(fd[i]     * t + bgR * (1 - t));
+            fd[i + 1] = Math.round(fd[i + 1] * t + bgG * (1 - t));
+            fd[i + 2] = Math.round(fd[i + 2] * t + bgB * (1 - t));
+            fd[i + 3] = 255;
           }
+          // confidence >= 0.85 → tam kişi, kamera pikseli olduğu gibi kalır
         }
 
         ctx.putImageData(frameData, 0, 0);
