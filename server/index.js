@@ -456,24 +456,29 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
 
 app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), async (req, res) => {
   try {
-    const catboxLessons = await prisma.lesson.findMany({
-      where: { recordingUrl: { startsWith: 'https://files.catbox.moe/' } },
+    const blocked = await prisma.lesson.findMany({
+      where: { OR: [
+        { recordingUrl: { contains: 'catbox.moe' } },
+        { recordingUrl: { contains: 'gofile.io' } }
+      ]},
       select: { id: true, recordingUrl: true, title: true }
     });
 
-    if (catboxLessons.length === 0) {
-      return res.json({ success: true, migrated: 0, message: 'Taşınacak Catbox kaydı bulunamadı.' });
+    if (blocked.length === 0) {
+      return res.json({ success: true, migrated: 0, message: 'Taşınacak kayıt bulunamadı.' });
+    }
+
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+    if (!cloudName || !uploadPreset) {
+      return res.status(400).json({ error: 'Cloudinary yapılandırılmamış. CLOUDINARY_CLOUD_NAME ve CLOUDINARY_UPLOAD_PRESET env değişkenlerini ekleyin.' });
     }
 
     const results = [];
-    for (const lesson of catboxLessons) {
+    for (const lesson of blocked) {
       try {
-        console.log(`Migrating lesson ${lesson.id}: ${lesson.recordingUrl}`);
         const fileRes = await fetch(lesson.recordingUrl, { signal: AbortSignal.timeout(60000) });
-        if (!fileRes.ok) {
-          results.push({ id: lesson.id, success: false, error: `Catbox indirilemedi: ${fileRes.status}` });
-          continue;
-        }
+        if (!fileRes.ok) { results.push({ id: lesson.id, success: false, error: `İndirilemedi: ${fileRes.status}` }); continue; }
 
         const contentType = fileRes.headers.get('content-type') || 'video/mp4';
         const ext = contentType.includes('webm') ? 'webm' : 'mp4';
@@ -483,27 +488,22 @@ app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), a
         const parts = [];
         parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lesson.id}.${ext}"\r\nContent-Type: ${contentType}\r\n\r\n`));
         parts.push(buffer);
-        parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+        parts.push(Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="upload_preset"\r\n\r\n${uploadPreset}\r\n`));
+        parts.push(Buffer.from(`--${boundary}--\r\n`));
         const payload = Buffer.concat(parts);
 
-        const pdRes = await fetch('https://pixeldrain.com/api/file', {
+        const cdnRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
           method: 'POST',
-          headers: {
-            'Content-Type': `multipart/form-data; boundary=${boundary}`,
-            'Content-Length': String(payload.length),
-          },
+          headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': String(payload.length) },
           body: payload,
-          signal: AbortSignal.timeout(120000)
+          signal: AbortSignal.timeout(300000)
         });
-
-        const pdJson = await pdRes.json();
-        if (pdRes.ok && pdJson.success && pdJson.id) {
-          const newUrl = `https://pixeldrain.com/api/file/${pdJson.id}`;
-          await prisma.lesson.update({ where: { id: lesson.id }, data: { recordingUrl: newUrl } });
-          results.push({ id: lesson.id, success: true, newUrl });
-          console.log(`Migrated lesson ${lesson.id} → ${newUrl}`);
+        const cdnJson = await cdnRes.json();
+        if (cdnRes.ok && cdnJson.secure_url) {
+          await prisma.lesson.update({ where: { id: lesson.id }, data: { recordingUrl: cdnJson.secure_url } });
+          results.push({ id: lesson.id, success: true, newUrl: cdnJson.secure_url });
         } else {
-          results.push({ id: lesson.id, success: false, error: `Pixeldrain hatası: ${JSON.stringify(pdJson)}` });
+          results.push({ id: lesson.id, success: false, error: `Cloudinary: ${cdnJson.error?.message || JSON.stringify(cdnJson)}` });
         }
       } catch (err) {
         results.push({ id: lesson.id, success: false, error: err.message });
@@ -511,7 +511,7 @@ app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), a
     }
 
     const migrated = results.filter(r => r.success).length;
-    res.json({ success: true, migrated, total: catboxLessons.length, results });
+    res.json({ success: true, migrated, total: blocked.length, results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -810,7 +810,46 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         console.error("Google Drive upload failed, falling back to other providers...", driveErr);
       }
 
-      // Attempt 1: Pixeldrain (Türkiye'de erişilebilir, kalıcı depolama)
+      // Attempt 1: Cloudinary (Türkiye'de erişilebilir, kalıcı depolama, unsigned upload)
+      if (!uploadSuccess) {
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+        if (cloudName && uploadPreset) {
+          try {
+            console.log("Attempting Cloudinary upload...");
+            const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+            const parts = [];
+            parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
+            parts.push(assembledBuffer);
+            parts.push(Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="upload_preset"\r\n\r\n${uploadPreset}\r\n`));
+            parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="resource_type"\r\n\r\nvideo\r\n`));
+            parts.push(Buffer.from(`--${boundary}--\r\n`));
+            const payload = Buffer.concat(parts);
+
+            const cdnRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': String(payload.length) },
+              body: payload,
+              signal: AbortSignal.timeout(300000)
+            });
+            const cdnJson = await cdnRes.json();
+            if (cdnRes.ok && cdnJson.secure_url) {
+              const reachable = await verifyUploadedUrl(cdnJson.secure_url);
+              if (reachable) {
+                uploadSuccess = true;
+                finalUrl = cdnJson.secure_url;
+                console.log(`Successfully uploaded to Cloudinary: ${finalUrl}`);
+              }
+            } else {
+              console.warn(`Cloudinary upload failed: ${JSON.stringify(cdnJson)}`);
+            }
+          } catch (cdnErr) {
+            console.error("Cloudinary upload failed:", cdnErr);
+          }
+        }
+      }
+
+      // Attempt 2: Pixeldrain (yedek)
       if (!uploadSuccess) {
         try {
           console.log("Attempting Pixeldrain upload...");

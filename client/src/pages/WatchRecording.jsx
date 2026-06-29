@@ -46,7 +46,12 @@ const WatchRecording = () => {
       }
     }
     
-    // 2. YouTube Link Detector
+    // 2. GoFile Link Detector (iframe'i blokluyor, yeni sekme açılacak)
+    if (decodedUrl.includes('gofile.io')) {
+      return { type: 'gofile', url: decodedUrl };
+    }
+
+    // 3. YouTube Link Detector
     if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
       let videoId = '';
       const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
@@ -153,7 +158,7 @@ const WatchRecording = () => {
             </a>
           )}
           <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm hidden md:block">
-            Fulle Matematik
+            Fullematematiği
           </div>
         </div>
       </div>
@@ -161,8 +166,29 @@ const WatchRecording = () => {
       {/* Video Viewport */}
       <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
 
-        {/* Safari + iframe: Google Drive / YouTube iframe'i Safari ITP engeli nedeniyle yüklenemiyor */}
-        {isSafari && player.type === 'iframe' ? (
+        {/* GoFile: iframe desteklemiyor, yeni sekmede aç */}
+        {player.type === 'gofile' ? (
+          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
+            <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-2">
+              <span className="material-symbols-outlined text-5xl text-indigo-400">play_circle</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white mb-2">Ders Kaydını İzleyin</h2>
+              <p className="text-slate-400 text-sm max-w-md leading-relaxed">
+                Bu kayıt harici bir platformda barındırılmaktadır. Aşağıdaki butona tıklayarak videoyu yeni sekmede izleyebilirsiniz.
+              </p>
+            </div>
+            <a
+              href={player.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20 hover:scale-[1.02]"
+            >
+              <span className="material-symbols-outlined text-lg">open_in_new</span>
+              Kaydı Yeni Sekmede İzle
+            </a>
+          </div>
+        ) : isSafari && player.type === 'iframe' ? (
           <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
             <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
               <span className="material-symbols-outlined text-5xl text-amber-400">play_circle</span>
