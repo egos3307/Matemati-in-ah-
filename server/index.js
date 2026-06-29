@@ -722,6 +722,15 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
       console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Starting upload chain...`);
 
+      const verifyUploadedUrl = async (url) => {
+        try {
+          const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) });
+          return res.ok;
+        } catch {
+          return false;
+        }
+      };
+
       let catboxRes;
       let uploadSuccess = false;
       let finalUrl = "";
@@ -756,9 +765,19 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         });
 
         if (catboxRes && catboxRes.ok) {
-          uploadSuccess = true;
           const text = await catboxRes.text();
-          finalUrl = text.trim();
+          const trimmed = text.trim();
+          if (trimmed.startsWith('https://files.catbox.moe/')) {
+            const reachable = await verifyUploadedUrl(trimmed);
+            if (reachable) {
+              uploadSuccess = true;
+              finalUrl = trimmed;
+            } else {
+              console.warn(`Catbox (FormData) URL not reachable: ${trimmed}`);
+            }
+          } else {
+            console.warn(`Catbox (FormData) returned non-URL response: ${text.substring(0, 100)}`);
+          }
         } else {
           console.warn(`Native FormData upload returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
         }
@@ -791,9 +810,19 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           });
 
           if (catboxRes && catboxRes.ok) {
-            uploadSuccess = true;
             const text = await catboxRes.text();
-            finalUrl = text.trim();
+            const trimmed = text.trim();
+            if (trimmed.startsWith('https://files.catbox.moe/')) {
+              const reachable = await verifyUploadedUrl(trimmed);
+              if (reachable) {
+                uploadSuccess = true;
+                finalUrl = trimmed;
+              } else {
+                console.warn(`Catbox (manual) URL not reachable: ${trimmed}`);
+              }
+            } else {
+              console.warn(`Catbox (manual) returned non-URL response: ${text.substring(0, 100)}`);
+            }
           } else {
             console.warn(`Fallback manual upload also returned non-OK status: ${catboxRes ? catboxRes.status : 'unknown'} ${catboxRes ? catboxRes.statusText : ''}`);
           }
@@ -817,10 +846,16 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           });
 
           const resText = await transferRes.text();
-          if (transferRes.ok && resText.startsWith('https://')) {
-            uploadSuccess = true;
-            finalUrl = resText.trim();
-            console.log(`Successfully uploaded to transfer.sh: ${finalUrl}`);
+          if (transferRes.ok && resText.trim().startsWith('https://')) {
+            const trimmed = resText.trim();
+            const reachable = await verifyUploadedUrl(trimmed);
+            if (reachable) {
+              uploadSuccess = true;
+              finalUrl = trimmed;
+              console.log(`Successfully uploaded to transfer.sh: ${finalUrl}`);
+            } else {
+              console.warn(`transfer.sh URL not reachable: ${trimmed}`);
+            }
           } else {
             console.warn(`transfer.sh returned non-OK status: ${transferRes.status}. Response: ${resText}`);
           }
@@ -855,10 +890,16 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
           });
 
           const resText = await litRes.text();
-          if (litRes.ok && resText.startsWith('https://')) {
-            uploadSuccess = true;
-            finalUrl = resText.trim();
-            console.log(`Successfully uploaded to Litterbox: ${finalUrl}`);
+          if (litRes.ok && resText.trim().startsWith('https://')) {
+            const trimmed = resText.trim();
+            const reachable = await verifyUploadedUrl(trimmed);
+            if (reachable) {
+              uploadSuccess = true;
+              finalUrl = trimmed;
+              console.log(`Successfully uploaded to Litterbox: ${finalUrl}`);
+            } else {
+              console.warn(`Litterbox URL not reachable: ${trimmed}`);
+            }
           } else {
             console.warn(`Litterbox returned non-OK status: ${litRes.status}. Response: ${resText}`);
           }
@@ -892,9 +933,15 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
           const resJson = await uguuRes.json();
           if (uguuRes.ok && resJson.success && resJson.files && resJson.files[0]) {
-            uploadSuccess = true;
-            finalUrl = resJson.files[0].url;
-            console.log(`Successfully uploaded to Uguu.se: ${finalUrl}`);
+            const url = resJson.files[0].url;
+            const reachable = await verifyUploadedUrl(url);
+            if (reachable) {
+              uploadSuccess = true;
+              finalUrl = url;
+              console.log(`Successfully uploaded to Uguu.se: ${finalUrl}`);
+            } else {
+              console.warn(`Uguu.se URL not reachable: ${url}`);
+            }
           } else {
             console.warn(`Uguu.se returned non-OK status: ${uguuRes.status}. Response: ${JSON.stringify(resJson)}`);
           }
