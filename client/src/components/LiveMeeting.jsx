@@ -487,7 +487,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         return;
       }
 
-      const rawTrack = cameraPub.track.mediaStreamTrack;
+      // Clone track BEFORE unpublishing — unpublishTrack stops the original
+      const rawTrack = cameraPub.track.mediaStreamTrack.clone();
 
       // Video element for raw camera feed
       const video = document.createElement('video');
@@ -566,6 +567,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       const canvasStream = canvas.captureStream(30);
       const processedVideoTrack = canvasStream.getVideoTracks()[0];
 
+      // Ref'i loop başlamadan true yap — yoksa ilk iterasyonda hemen çıkıyor
+      virtualBgEnabledRef.current = true;
+
       // Start segmentation loop
       const runFrame = async () => {
         if (!virtualBgEnabledRef.current) return;
@@ -577,8 +581,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       runFrame();
 
       // Replace camera track in LiveKit
-      await localParticipant.unpublishTrack(cameraPub.track);
-      const livekitTrack = new LocalVideoTrack(processedVideoTrack, undefined, false);
+      // stopOnUnpublish=false → orijinal track'i durdurma (clone'u etkilemez ama güvenli)
+      await localParticipant.unpublishTrack(cameraPub.track, false);
+      const livekitTrack = new LocalVideoTrack(processedVideoTrack, undefined, true);
       await localParticipant.publishTrack(livekitTrack, { source: Track.Source.Camera });
       virtualBgLKTrackRef.current = livekitTrack;
 
