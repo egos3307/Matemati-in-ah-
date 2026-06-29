@@ -534,20 +534,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       virtualSegmenterRef.current = segmenter;
 
       segmenter.onResults((results) => {
-        if (!results.image || !results.segmentationMask) return;
+        if (!results.segmentationMask) return;
 
-        // Draw camera frame to main canvas
-        ctx.drawImage(results.image, 0, 0, w, h);
+        // Temiz frame: doğrudan video elementinden çek (results.image kısmen işlenmiş olabilir)
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(video, 0, 0, w, h);
         const frameData = ctx.getImageData(0, 0, w, h);
 
-        // Draw mask to temp canvas and read pixel data
+        // Mask canvas'ı her frame önce temizle — eski veri kalmasın
+        maskCtx.clearRect(0, 0, w, h);
         maskCtx.drawImage(results.segmentationMask, 0, 0, w, h);
         const maskData = maskCtx.getImageData(0, 0, w, h);
 
         const fd = frameData.data;
         const md = maskData.data;
 
-        // md[i] = R channel of mask: ~255 where person, ~0 where background
+        // R kanalı: ~255 = person, ~0 = background
+        // Eğer ters görünüyorsa: md[i] > 128 ile değiştir
         for (let i = 0; i < fd.length; i += 4) {
           if (md[i] < 128) {
             fd[i]     = bgR;
