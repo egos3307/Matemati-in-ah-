@@ -922,51 +922,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
         }
       }
 
-      // Attempt 4: Litterbox (72 saat)
-      if (!uploadSuccess) {
-        try {
-          console.log("Attempting Litterbox upload fallback...");
-          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-          const parts = [];
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n`));
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="time"\r\n\r\n72h\r\n`));
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-          parts.push(assembledBuffer);
-          parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
-          const payload = Buffer.concat(parts);
-
-          const litRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-            method: 'POST',
-            headers: {
-              'Content-Type': `multipart/form-data; boundary=${boundary}`,
-              'Content-Length': String(payload.length),
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': '*/*'
-            },
-            body: payload
-          });
-
-          const resText = await litRes.text();
-          if (litRes.ok && resText.trim().startsWith('https://')) {
-            const trimmed = resText.trim();
-            const reachable = await verifyUploadedUrl(trimmed);
-            if (reachable) {
-              uploadSuccess = true;
-              finalUrl = trimmed;
-              console.log(`Successfully uploaded to Litterbox: ${finalUrl}`);
-            } else {
-              console.warn(`Litterbox URL not reachable: ${trimmed}`);
-            }
-          } else {
-            console.warn(`Litterbox returned non-OK status: ${litRes.status}. Response: ${resText}`);
-          }
-        } catch (litterErr) {
-          console.error("Litterbox fallback upload failed with error:", litterErr);
-        }
-      }
-
-      // Attempt 5: Uguu.se (48 saat)
+      // Attempt 4: Uguu.se (48 saat)
       if (!uploadSuccess) {
         try {
           console.log("Attempting Uguu.se upload fallback...");
