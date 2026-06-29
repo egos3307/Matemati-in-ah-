@@ -64,6 +64,8 @@ const TeacherDashboard = () => {
   const [studentTrials, setStudentTrials] = useState([]);
   const [expandedTrialId, setExpandedTrialId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateResult, setMigrateResult] = useState(null);
   const { user } = useAuth();
 
   // Calendar states
@@ -594,6 +596,20 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleMigrateCatbox = async () => {
+    setMigrating(true);
+    setMigrateResult(null);
+    try {
+      const res = await axios.post('/api/teacher/migrate-catbox-recordings');
+      setMigrateResult(res.data);
+      if (res.data.migrated > 0) fetchLessons();
+    } catch (err) {
+      setMigrateResult({ error: err.response?.data?.error || 'Taşıma başarısız.' });
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   const handleSaveRecording = async (lessonId, recordingUrl) => {
     try {
       await axios.put(`/api/teacher/lessons/${lessonId}/recording`, { recordingUrl });
@@ -1030,6 +1046,31 @@ const TeacherDashboard = () => {
                       </span>
                       <span className="material-symbols-outlined text-base">chevron_right</span>
                     </button>
+
+                    <button
+                      onClick={handleMigrateCatbox}
+                      disabled={migrating}
+                      className="w-full flex items-center justify-between p-4 bg-amber-50 hover:bg-amber-100 rounded-2xl border border-amber-200 font-bold text-sm text-amber-700 transition-all text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">cloud_sync</span>
+                        {migrating ? 'Taşınıyor...' : 'Catbox Kayıtlarını Taşı'}
+                      </span>
+                      {migrating
+                        ? <span className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        : <span className="material-symbols-outlined text-base">chevron_right</span>
+                      }
+                    </button>
+                    {migrateResult && (
+                      <div className={`text-xs font-bold px-4 py-3 rounded-2xl ${migrateResult.error ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                        {migrateResult.error
+                          ? migrateResult.error
+                          : migrateResult.migrated === 0
+                            ? migrateResult.message
+                            : `${migrateResult.migrated}/${migrateResult.total} kayıt başarıyla Pixeldrain'e taşındı.`
+                        }
+                      </div>
+                    )}
                   </div>
                 </div>
 

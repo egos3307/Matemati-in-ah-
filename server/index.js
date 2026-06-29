@@ -454,6 +454,69 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
   }
 });
 
+app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const catboxLessons = await prisma.lesson.findMany({
+      where: { recordingUrl: { startsWith: 'https://files.catbox.moe/' } },
+      select: { id: true, recordingUrl: true, title: true }
+    });
+
+    if (catboxLessons.length === 0) {
+      return res.json({ success: true, migrated: 0, message: 'Taşınacak Catbox kaydı bulunamadı.' });
+    }
+
+    const results = [];
+    for (const lesson of catboxLessons) {
+      try {
+        console.log(`Migrating lesson ${lesson.id}: ${lesson.recordingUrl}`);
+        const fileRes = await fetch(lesson.recordingUrl, { signal: AbortSignal.timeout(60000) });
+        if (!fileRes.ok) {
+          results.push({ id: lesson.id, success: false, error: `Catbox indirilemedi: ${fileRes.status}` });
+          continue;
+        }
+
+        const contentType = fileRes.headers.get('content-type') || 'video/mp4';
+        const ext = contentType.includes('webm') ? 'webm' : 'mp4';
+        const buffer = Buffer.from(await fileRes.arrayBuffer());
+
+        const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+        const parts = [];
+        parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lesson.id}.${ext}"\r\nContent-Type: ${contentType}\r\n\r\n`));
+        parts.push(buffer);
+        parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+        const payload = Buffer.concat(parts);
+
+        const pdRes = await fetch('https://pixeldrain.com/api/file', {
+          method: 'POST',
+          headers: {
+            'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': String(payload.length),
+          },
+          body: payload,
+          signal: AbortSignal.timeout(120000)
+        });
+
+        const pdJson = await pdRes.json();
+        if (pdRes.ok && pdJson.success && pdJson.id) {
+          const newUrl = `https://pixeldrain.com/api/file/${pdJson.id}`;
+          await prisma.lesson.update({ where: { id: lesson.id }, data: { recordingUrl: newUrl } });
+          results.push({ id: lesson.id, success: true, newUrl });
+          console.log(`Migrated lesson ${lesson.id} → ${newUrl}`);
+        } else {
+          results.push({ id: lesson.id, success: false, error: `Pixeldrain hatası: ${JSON.stringify(pdJson)}` });
+        }
+      } catch (err) {
+        results.push({ id: lesson.id, success: false, error: err.message });
+      }
+    }
+
+    const migrated = results.filter(r => r.success).length;
+    res.json({ success: true, migrated, total: catboxLessons.length, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/teacher/lessons/:id/recording', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
   const { recordingUrl } = req.body;
