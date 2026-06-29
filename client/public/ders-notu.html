@@ -359,13 +359,13 @@
     .konu-text { font-size: 10.5px; font-weight: 700; color: #111; flex: 1; }
     .sinif-rozet { font-size: 9px; font-weight: 700; color: var(--sari); background: #1a1a1a; padding: 1px 7px; border-radius: 20px; flex-shrink: 0; }
 
-    /* İÇERİK ALANI - 2 Sütunlu Grid */
+    /* İÇERİK ALANI - Tek Sütun */
     .sayfa-icerik {
       padding: 5mm 10mm;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9mm 14mm;
-      align-content: start;
+      display: flex;
+      flex-direction: column;
+      gap: 6mm;
+      align-items: stretch;
       outline: none;
     }
     .sayfa-icerik:focus { box-shadow: inset 0 0 0 2px rgba(245,197,24,.25); }
@@ -382,7 +382,7 @@
       font-size: 11px; line-height: 1.6; color: #1a1a1a;
     }
 
-    /* SVG ve TABLO tam genişlik */
+    /* SVG ve TABLO tam genişlik (tek sütunda zaten tam genişlik) */
     .sayfa-icerik .tam-genislik,
     .sayfa-icerik [data-tam],
     .sayfa-icerik .svg-blok,
@@ -391,7 +391,6 @@
       clear: both !important;
       float: none !important;
       width: 100% !important;
-      grid-column: 1 / -1 !important;
     }
     .sayfa-icerik table {
       width: 100%;
@@ -425,7 +424,7 @@
 
     /* Boş durum */
     .bos-gosterge {
-      grid-column: 1 / -1; text-align: center;
+      text-align: center;
       padding: 18mm 0; color: #d1d5db;
       font-size: 11px; font-weight: 600;
       pointer-events: none; user-select: none;
@@ -665,54 +664,67 @@ async function pdfdenMetinAl(dosya) {
     const avgH = heights.length
       ? heights.reduce((a, b) => a + b, 0) / heights.length
       : 12;
-    const headingEsigi = avgH * 1.25; // ortalamanın %25 üzeri = başlık
+    const headingEsigi = avgH * 1.25;
+
+    /* ── Y koordinatlarını gruplayarak satır yapısını çıkar ──
+       Her benzersiz Y = bir satır. Satırları PDF'teki
+       görünme sırasına göre (yukarıdan aşağı) sırala. */
+    const ESIKOLCEGI = avgH * 0.35; // aynı satır toleransı
+
+    // Önce satırlara grupla
+    const satirMap = new Map(); // key=yuvarlanmış Y, val=[{str,x,fontH,isBold}]
+    for (const it of items) {
+      const str   = it.str;
+      const y     = it.transform ? it.transform[5] : 0;
+      const x     = it.transform ? it.transform[4] : 0;
+      const fontH = Math.abs(it.height || (it.transform && it.transform[3]) || 0);
+      const isBold = it.fontName ? /bold|heavy|black|demi/i.test(it.fontName) : false;
+
+      // Yakın Y değerlerini aynı satıra ekle
+      let anahtarY = y;
+      for (const k of satirMap.keys()) {
+        if (Math.abs(k - y) < ESIKOLCEGI) { anahtarY = k; break; }
+      }
+      if (!satirMap.has(anahtarY)) satirMap.set(anahtarY, []);
+      satirMap.get(anahtarY).push({ str, x, fontH, isBold });
+    }
+
+    // PDF koordinatları alt-sol köşe orijinli → büyük Y = yukarı
+    // Azalan sıra = yukarıdan aşağı
+    const siraliYler = [...satirMap.keys()].sort((a, b) => b - a);
 
     let sayfaMetin = '';
-    let satirBuf   = [];
     let oncekiY    = null;
 
-    const satiriBosalt = () => {
-      if (satirBuf.length === 0) return;
-      sayfaMetin += satirBuf.join('').replace(/\s+/g, ' ').trim() + '\n';
-      satirBuf = [];
-    };
+    for (const y of siraliYler) {
+      const satirElemanlari = satirMap.get(y)
+        .sort((a, b) => a.x - b.x); // X'e göre soldan sağa sırala
 
-    for (const it of items) {
-      const str       = it.str;
-      const y         = it.transform ? it.transform[5] : 0;
-      const fontH     = Math.abs(it.height || (it.transform && it.transform[3]) || 0);
-      const isBold    = it.fontName
-        ? /bold|heavy|black|demi/i.test(it.fontName)
-        : false;
-      const isBaslik  = (fontH >= headingEsigi && str.trim().length > 1) || isBold;
+      const satirMetin = satirElemanlari.map(e => e.str).join(' ').replace(/\s+/g, ' ').trim();
+      if (!satirMetin) continue;
 
-      /* Yeni satır tespiti: Y koordinatı anlamlı değiştiyse */
-      const yDelta = oncekiY !== null ? Math.abs(y - oncekiY) : 0;
-      const yeniSatir = oncekiY !== null && yDelta > avgH * 0.4;
-
-      if (yeniSatir) satiriBosalt();
-
-      if (isBaslik) {
-        satiriBosalt();
-        /* Zaten ## ile başlıyorsa tekrar ekleme */
-        if (!/^##/.test(str.trim())) {
-          sayfaMetin += '## ' + str.trim() + '\n';
-        } else {
-          sayfaMetin += str.trim() + '\n';
+      // Satır arası mesafeden paragraf boşluğu tespiti
+      if (oncekiY !== null) {
+        const aralik = oncekiY - y; // pozitif = aşağı indi
+        // Normal satır = avgH kadar iner; paragraf arasi = 1.8x'ten fazla
+        if (aralik > avgH * 1.8) {
+          sayfaMetin += '\n'; // ekstra boş satır = paragraf arası
         }
+      }
+
+      // Başlık tespiti: herhangi bir elemanın fontH eşiği aşması veya bold
+      const isBaslik = satirElemanlari.some(e =>
+        (e.fontH >= headingEsigi && satirMetin.length > 1) || e.isBold
+      );
+
+      if (isBaslik && !/^##/.test(satirMetin)) {
+        sayfaMetin += '## ' + satirMetin + '\n';
       } else {
-        /* Kelimeler arasında boşluk: aynı satırda önceki öğeyle boşluk bırak */
-        if (satirBuf.length > 0 && !yeniSatir) {
-          const son = satirBuf[satirBuf.length - 1];
-          if (son && !son.endsWith(' ') && !str.startsWith(' ')) {
-            satirBuf.push(' ');
-          }
-        }
-        satirBuf.push(str);
+        sayfaMetin += satirMetin + '\n';
       }
       oncekiY = y;
     }
-    satiriBosalt();
+
     hamMetin += sayfaMetin + '\n';
   }
 
@@ -1280,11 +1292,10 @@ async function autoSplit(elements, maxHeightPx) {
   grid.style.cssText = [
     'position:relative',
     `width:${a4w - pad * 2}px`,
-    'display:grid',
-    'grid-template-columns:1fr 1fr',
-    `column-gap:${gapCol}px`,
-    `row-gap:${gapRow}px`,
-    'align-content:start',
+    'display:flex',
+    'flex-direction:column',
+    `gap:${gapRow}px`,
+    'align-items:stretch',
     "font-family:'Lexend',sans-serif",
     'font-size:11px',
     'box-sizing:border-box'
