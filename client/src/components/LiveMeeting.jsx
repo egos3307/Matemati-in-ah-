@@ -203,7 +203,10 @@ const Whiteboard = ({ role, whiteboardCanvasRef }) => {
       </div>
 
       {/* Drawing Area */}
-      <div className="flex-1 bg-white relative cursor-crosshair overflow-hidden">
+      <div
+        className="flex-1 relative cursor-crosshair overflow-hidden"
+        style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
         <canvas
           ref={canvasElRef}
           onMouseDown={startDrawing}
