@@ -569,6 +569,12 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
       Fasikülü Hazırla (AI ile)
     </button>
 
+    <!-- HIZLI RENDER (AI'SIZ) -->
+    <button class="btn" id="btn-hizli" onclick="hizliGoster()" style="background:var(--panel2);border:1.5px solid var(--turuncu);color:var(--turuncu);font-size:11px;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Hızlı Göster (AI'sız)
+    </button>
+
     <div class="divider"></div>
 
     <!-- Fotoğraf ekle -->
@@ -735,18 +741,38 @@ async function webllmYukle(modelAdi) {
    TEK PARÇAYI AI'YA GÖNDER
 ═══════════════════════════════════════════════════════════ */
 async function parcayiEtiketle(parcaMetni) {
-  const sistemTalimati = `Sana gelen ham metindeki hiçbir formülü veya konuyu silme/değiştirme. Sadece sistemin tanıması için şu etiketleri yerleştir: Başlıkları '1. Başlık Adı' yap, soruları 'SORU X:' yap, şıkları tek satırda yan yana 'A) B) C) =D) E)' yap (doğru şıkkın başına = koy). Metindeki tüm karmaşık matematik ifadelerini tek dolar ($...$) arasında LaTeX olarak koru. Tabloları [TABLO]...[/TABLO] içine, çizimleri siyah çizgili temiz bir inline <svg> kodu üreterek [SVG]...[/SVG] içine al. HTML kodu yazma, chatbot açıklaması yapma. Sadece etiketlenmiş metni döndür.`;
+  // Küçük modeller için kısa ve net talimat
+  const sistemTalimati =
+    'Aşağıdaki ders metnini kelimesi kelimesine koru, HİÇBİR İÇERİĞİ SİLME veya özetleme. ' +
+    'Yalnızca şu etiketleri ekle: Bölüm başlıklarını "1. Başlık" biçimine sok, ' +
+    'soru cümlelerinin önüne "SORU X:" yaz, ' +
+    'çoktan seçmeli şıkları "A) B) C) D) E)" biçiminde tek satıra al (doğru şıkkın başına = ekle), ' +
+    'matematik ifadelerini $...$ ile çevrelе. ' +
+    'HTML, açıklama veya özet yazma. Sadece düzenlenmiş metni döndür.';
 
-  const yanit = await webllmEngine.chat.completions.create({
-    messages: [
-      { role: 'system', content: sistemTalimati },
-      { role: 'user',   content: parcaMetni }
-    ],
-    temperature: 0.2,
-    max_tokens: 4096,
-  });
+  let cikti = '';
+  try {
+    const yanit = await webllmEngine.chat.completions.create({
+      messages: [
+        { role: 'system', content: sistemTalimati },
+        { role: 'user',   content: parcaMetni }
+      ],
+      temperature: 0.1,
+      max_tokens: Math.min(2048, parcaMetni.length * 3),
+    });
+    cikti = yanit.choices?.[0]?.message?.content?.trim() || '';
+  } catch(e) {
+    console.warn('WebLLM parça hatası, orijinal kullanılıyor:', e);
+    return parcaMetni;
+  }
 
-  return yanit.choices?.[0]?.message?.content || parcaMetni;
+  // GÜVENLİK: Eğer çıktı girişin %40'ından kısaysa model içeriği yutmuştur → orijinali kullan
+  if (cikti.length < parcaMetni.length * 0.4) {
+    console.warn(`AI çıktısı çok kısa (${cikti.length}/${parcaMetni.length}), orijinal kullanılıyor.`);
+    return parcaMetni;
+  }
+
+  return cikti;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -780,7 +806,9 @@ async function fasikuluBaslat() {
     }
 
     /* ─── 2. Parçala ─── */
-    const parcalar = metniParcala(hamMetin, 3000);
+    // Küçük modeller için parça boyutunu 900 karakterde tut
+    const parcaBoyutu = secilenModel.includes('1.5B') || secilenModel.includes('2B') || secilenModel.includes('Tiny') ? 900 : 2000;
+    const parcalar = metniParcala(hamMetin, parcaBoyutu);
     aiDurumYaz(`${parcalar.length} parçaya bölündü, AI hazırlanıyor…`, 15);
     document.getElementById('ai-parca-info').textContent =
       `Toplam ${parcalar.length} parça tespit edildi`;
@@ -830,93 +858,107 @@ function etiketliMetniHTML(metin) {
   const satirlar = metin.split('\n');
   let html = '';
   let soruSayaci = 0;
+  let suankiSoruHTML = null; // aktif soru bloğu
   let i = 0;
+
+  const soruKapat = () => {
+    if (suankiSoruHTML !== null) {
+      html += suankiSoruHTML + '</div>';
+      suankiSoruHTML = null;
+    }
+  };
 
   while (i < satirlar.length) {
     let satir = satirlar[i].trim();
 
+    /* Boş satır */
+    if (!satir) { soruKapat(); i++; continue; }
+
     /* [TABLO] bloğu */
-    if (satir === '[TABLO]') {
+    if (satir.toUpperCase().includes('[TABLO]')) {
+      soruKapat();
       let tabloIci = '';
-      i++;
-      while (i < satirlar.length && satirlar[i].trim() !== '[/TABLO]') {
-        tabloIci += satirlar[i] + '\n';
+      if (!satir.toUpperCase().includes('[/TABLO]')) {
         i++;
+        while (i < satirlar.length && !satirlar[i].toUpperCase().includes('[/TABLO]')) {
+          tabloIci += satirlar[i] + '\n'; i++;
+        }
+      } else {
+        tabloIci = satir.replace(/\[TABLO\]/gi,'').replace(/\[\/TABLO\]/gi,'');
       }
-      html += `<div class="tablo-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;">
-        <table>${tabloIci}</table>
-      </div>`;
+      html += `<div class="tablo-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;"><table>${tabloIci}</table></div>`;
       i++; continue;
     }
 
     /* [SVG] bloğu */
-    if (satir === '[SVG]') {
+    if (satir.toUpperCase().includes('[SVG]')) {
+      soruKapat();
       let svgIci = '';
-      i++;
-      while (i < satirlar.length && satirlar[i].trim() !== '[/SVG]') {
-        svgIci += satirlar[i] + '\n';
+      if (!satir.toUpperCase().includes('[/SVG]')) {
         i++;
-      }
-      html += `<div class="svg-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;text-align:center;">
-        ${svgIci}
-      </div>`;
-      i++; continue;
-    }
-
-    /* Başlık: "1. Başlık Adı" veya "## Başlık" */
-    if (/^\d+\.\s+[A-ZÇĞİÖŞÜa-zçğışöşü]/.test(satir) && satir.length < 80) {
-      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 6px;">
-        <h3 style="font-size:13px;font-weight:900;color:#1a1a1a;margin-bottom:0;">${satir}</h3>
-      </div>`;
-      i++; continue;
-    }
-    if (/^#{1,3}\s/.test(satir)) {
-      const baslikMetni = satir.replace(/^#{1,3}\s/, '');
-      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 6px;">
-        <h3 style="font-size:13px;font-weight:900;color:#1a1a1a;margin-bottom:0;">${baslikMetni}</h3>
-      </div>`;
-      i++; continue;
-    }
-
-    /* SORU X: */
-    if (/^SORU\s*\d+\s*:/i.test(satir)) {
-      soruSayaci++;
-      // Sonraki satırlar şıklar olabilir
-      let soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
-      let siklar = '';
-      i++;
-      while (i < satirlar.length) {
-        const sonraki = satirlar[i].trim();
-        if (/^[A-E]\)|^=?[A-E]\)/.test(sonraki)) {
-          siklar += '<span style="margin-right:10px;">' +
-            sonraki.replace(/^=([A-E]\))/, '<strong style="color:#e67e22;">$1</strong>') +
-            '</span>';
-          i++;
-        } else {
-          break;
+        while (i < satirlar.length && !satirlar[i].toUpperCase().includes('[/SVG]')) {
+          svgIci += satirlar[i] + '\n'; i++;
         }
+      } else {
+        svgIci = satir.replace(/\[SVG\]/gi,'').replace(/\[\/SVG\]/gi,'');
       }
-      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #2c3e50;break-inside:avoid;">
-        <strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong>
-        <p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p>
-        ${siklar ? `<div style="font-size:11px;margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${siklar}</div>` : ''}
-      </div>`;
-      continue;
+      html += `<div class="svg-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;text-align:center;">${svgIci}</div>`;
+      i++; continue;
     }
 
-    /* Şık satırı tek başına (SORU bloğu dışında) */
-    if (/^[A-E]\)|^=?[A-E]\)/.test(satir)) {
-      i++; continue; // önceki soru kutusuna eklendi, atla
+    /* Başlık: "1. Başlık", "## Başlık", tamamı büyük harf kısa satır */
+    const isBaslik =
+      (/^\d+[.)\s]\s*\S/.test(satir) && satir.length < 100 && !/^\d+[.)\s]\s*[a-zçğışöşü]/.test(satir.substring(0,3))) ||
+      /^#{1,3}\s/.test(satir) ||
+      (satir === satir.toUpperCase() && satir.length > 3 && satir.length < 80 && /[A-ZÇĞİÖŞÜ]/.test(satir));
+
+    if (isBaslik) {
+      soruKapat();
+      const baslikMetni = satir.replace(/^#{1,3}\s/, '');
+      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 4px;"><h3 style="font-size:12.5px;font-weight:900;color:#1a1a1a;margin:0;">${baslikMetni}</h3></div>`;
+      i++; continue;
     }
 
-    /* Konu anlatım paragrafı */
-    if (satir.length > 0) {
-      html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:4px 0;">${satir}</div>`;
+    /* SORU X: — satır başlıyor */
+    if (/^SORU\s*\d+\s*:/i.test(satir)) {
+      soruKapat();
+      soruSayaci++;
+      const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
+      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #2c3e50;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">`;
+      i++; continue;
     }
 
+    /* Şık satırı: A) B) C) D) E) – aktif soruya ekle veya yeni soru başlat */
+    if (/^=?[A-E][.)]/i.test(satir)) {
+      if (suankiSoruHTML !== null) {
+        const isDogruSik = satir.startsWith('=');
+        const temizSik   = satir.replace(/^=/, '');
+        suankiSoruHTML  += isDogruSik
+          ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${temizSik}</strong></span>`
+          : `<span style="margin-right:8px;">${temizSik}</span>`;
+      } else {
+        // SORU bloğu dışında şık → tek paragraf olarak göster
+        html += `<div style="font-size:11px;line-height:1.55;color:#374151;padding:2px 0;">${satir}</div>`;
+      }
+      i++; continue;
+    }
+
+    /* Aktif soru varsa ve şık değilse: soru gövdesine ekle */
+    if (suankiSoruHTML !== null) {
+      // Şık olmayan satır → soru metnine ekle, soruyu kapat
+      soruKapat();
+      // Sonra bu satırı normal paragraf olarak işle
+      html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:3px 0;">${satir}</div>`;
+      i++; continue;
+    }
+
+    /* ── GENEL PARAGRAF (AI etiketlememiş olsa bile tüm içerik görünsün) ── */
+    html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:3px 0;">${satir}</div>`;
     i++;
   }
 
+  // Açık soru varsa kapat
+  soruKapat();
   return html;
 }
 
@@ -964,6 +1006,44 @@ async function fasikuluOlusturVeCiz(etiketliMetin) {
   }
 
   bindContentEditable();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HIZLI GÖSTER: AI atlanır, ham metin doğrudan render edilir
+═══════════════════════════════════════════════════════════ */
+async function hizliGoster() {
+  const btnHizli = document.getElementById('btn-hizli');
+  const aiPanel  = document.getElementById('ai-panel');
+  btnHizli.disabled = true;
+  aiPanel.classList.add('active');
+
+  try {
+    let hamMetin = '';
+    const pdfDosyasi = secilenPdfDosyasi;
+    const textarea   = document.getElementById('hoca-metin-girdisi').value.trim();
+
+    if (pdfDosyasi) {
+      aiDurumYaz('PDF okunuyor…', 10);
+      hamMetin = await pdfdenMetinAl(pdfDosyasi);
+      toast(`PDF okundu: ${hamMetin.length} karakter`, 'ok');
+    } else if (textarea) {
+      hamMetin = textarea;
+    } else {
+      toast('Lütfen bir PDF yükleyin veya metin yapıştırın!', 'err');
+      return;
+    }
+
+    aiDurumYaz('Ham metin render ediliyor…', 80);
+    nihaiEtiketliMetin = hamMetin;
+    await fasikuluOlusturVeCiz(hamMetin);
+    aiDurumYaz('✅ Hızlı görünüm hazır!', 100);
+    toast('Hızlı görünüm oluşturuldu (AI etiketleme olmadan)', 'inf');
+  } catch(err) {
+    console.error('hizliGoster hatası:', err);
+    toast('Hata: ' + err.message, 'err');
+  } finally {
+    btnHizli.disabled = false;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1370,6 +1450,7 @@ function toast(msg, tip = 'inf') {
 
 /* ─── Global'e aç ─── */
 window.fasikuluBaslat = fasikuluBaslat;
+window.hizliGoster    = hizliGoster;
 window.pdfUret        = pdfUret;
 window.temizle        = temizle;
 window.metaGuncelle   = metaGuncelle;
