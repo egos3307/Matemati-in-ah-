@@ -10,8 +10,7 @@
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 
-  <!-- PDF.js (Mozilla) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module" id="pdfjs-script"></script>
+  <!-- PDF.js (Mozilla) – dinamik import() ile yükleniyor, burada ayrıca script tag'e gerek yok -->
 
   <!-- html2canvas + jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -654,9 +653,67 @@ async function pdfdenMetinAl(dosya) {
   for (let s = 1; s <= toplamSayfa; s++) {
     aiDurumYaz(`PDF sayfa ${s}/${toplamSayfa} okunuyor…`, 5 + Math.round((s / toplamSayfa) * 15));
     const sayfa   = await pdfDoc.getPage(s);
-    const iceriği = await sayfa.getTextContent();
-    const satirlar = iceriği.items.map(item => item.str).join(' ');
-    hamMetin += satirlar + '\n';
+    const icerik  = await sayfa.getTextContent({ includeMarkedContent: false });
+    const items   = icerik.items.filter(it => it.str && it.str.trim());
+
+    if (!items.length) { hamMetin += '\n'; continue; }
+
+    /* ── Font boyutuna göre başlık eşiği belirle ── */
+    const heights = items
+      .map(it => Math.abs(it.height || (it.transform && it.transform[3]) || 0))
+      .filter(h => h > 0);
+    const avgH = heights.length
+      ? heights.reduce((a, b) => a + b, 0) / heights.length
+      : 12;
+    const headingEsigi = avgH * 1.25; // ortalamanın %25 üzeri = başlık
+
+    let sayfaMetin = '';
+    let satirBuf   = [];
+    let oncekiY    = null;
+
+    const satiriBosalt = () => {
+      if (satirBuf.length === 0) return;
+      sayfaMetin += satirBuf.join('').replace(/\s+/g, ' ').trim() + '\n';
+      satirBuf = [];
+    };
+
+    for (const it of items) {
+      const str       = it.str;
+      const y         = it.transform ? it.transform[5] : 0;
+      const fontH     = Math.abs(it.height || (it.transform && it.transform[3]) || 0);
+      const isBold    = it.fontName
+        ? /bold|heavy|black|demi/i.test(it.fontName)
+        : false;
+      const isBaslik  = (fontH >= headingEsigi && str.trim().length > 1) || isBold;
+
+      /* Yeni satır tespiti: Y koordinatı anlamlı değiştiyse */
+      const yDelta = oncekiY !== null ? Math.abs(y - oncekiY) : 0;
+      const yeniSatir = oncekiY !== null && yDelta > avgH * 0.4;
+
+      if (yeniSatir) satiriBosalt();
+
+      if (isBaslik) {
+        satiriBosalt();
+        /* Zaten ## ile başlıyorsa tekrar ekleme */
+        if (!/^##/.test(str.trim())) {
+          sayfaMetin += '## ' + str.trim() + '\n';
+        } else {
+          sayfaMetin += str.trim() + '\n';
+        }
+      } else {
+        /* Kelimeler arasında boşluk: aynı satırda önceki öğeyle boşluk bırak */
+        if (satirBuf.length > 0 && !yeniSatir) {
+          const son = satirBuf[satirBuf.length - 1];
+          if (son && !son.endsWith(' ') && !str.startsWith(' ')) {
+            satirBuf.push(' ');
+          }
+        }
+        satirBuf.push(str);
+      }
+      oncekiY = y;
+    }
+    satiriBosalt();
+    hamMetin += sayfaMetin + '\n';
   }
 
   return hamMetin.trim();
@@ -908,24 +965,23 @@ function etiketliMetniHTML(metin) {
       i++; continue;
     }
 
-    /* Başlık: "## Başlık" veya tamamı büyük harf kısa satır (harf olmayan veya çok kısa satırlar hariç) */
-    // NOT: "1. ..." numaralı satırlar artık başlık sayılmıyor — soru numarası olabilir.
-    // Soru işareti içeren satır asla başlık değildir.
+    /* Başlık: "## Başlık" (PDF'den font-boyutu ile işaretlenmiş veya AI etiketi) VEYA
+       tümüyle büyük harf kısa satır — Türkçe locale ile karşılaştır (İ Ş Ğ Ü Ö Ç düzgün çalışsın) */
     const isBaslik =
       /^#{1,3}\s/.test(satir) ||
       (
-        satir === satir.toUpperCase() &&
-        satir.length > 4 && satir.length < 80 &&
+        satir === satir.toLocaleUpperCase('tr-TR') &&
+        satir.length > 2 && satir.length < 100 &&
         /[A-ZÇĞİÖŞÜ]/.test(satir) &&
         !satir.includes('?') &&
         !/^[A-E][.)]/i.test(satir) &&
         !/^SORU\s*\d/i.test(satir) &&
-        !/^\d+[.)]/.test(satir)   // numaralı satır başlık değil
+        !/^\d+[.)]/.test(satir)
       );
 
     if (isBaslik) {
       soruKapat();
-      const baslikMetni = satir.replace(/^#{1,3}\s/, '');
+      const baslikMetni = satir.replace(/^#{1,3}\s/, '').trim();
       html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 4px;"><h3 style="font-size:12.5px;font-weight:900;color:#1a1a1a;margin:0;">${baslikMetni}</h3></div>`;
       i++; continue;
     }
@@ -1075,6 +1131,12 @@ function pdfSecildi(e) {
   secilenPdfDosyasi = dosya;
   document.getElementById('pdf-dosya-adi').textContent = '✓ ' + dosya.name;
   document.getElementById('hoca-metin-girdisi').value = '';
+  // Dosya adından konu otomatik doldur (uzantı ve boşluk temizlenerek)
+  const konuInp = document.getElementById('inp-konu');
+  if (!konuInp.value.trim()) {
+    konuInp.value = dosya.name.replace(/\.pdf$/i, '').replace(/[-_]+/g, ' ').trim();
+    metaGuncelle();
+  }
   toast('PDF hazır: ' + dosya.name, 'ok');
 }
 
@@ -1089,6 +1151,12 @@ function pdfDustu(e) {
   secilenPdfDosyasi = dosya;
   document.getElementById('pdf-dosya-adi').textContent = '✓ ' + dosya.name;
   document.getElementById('hoca-metin-girdisi').value = '';
+  // Dosya adından konu otomatik doldur
+  const konuInp = document.getElementById('inp-konu');
+  if (!konuInp.value.trim()) {
+    konuInp.value = dosya.name.replace(/\.pdf$/i, '').replace(/[-_]+/g, ' ').trim();
+    metaGuncelle();
+  }
   toast('PDF hazır: ' + dosya.name, 'ok');
 }
 
@@ -1180,7 +1248,7 @@ function splitAtBreaks(htmlKod) {
 
 let cachedMaxH = null;
 async function getMaxH() {
-  if (cachedMaxH) return cachedMaxH;
+  if (cachedMaxH !== null) return cachedMaxH;
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;top:0;left:-99999px;visibility:hidden;pointer-events:none;';
   wrap.innerHTML = sayfaHTML('<div style="height:1px;opacity:0;"></div>', 1, 1);
@@ -1355,8 +1423,11 @@ async function pdfUret() {
   document.querySelectorAll('.sayfa-no-etiket').forEach(e => e.style.visibility = 'hidden');
   await new Promise(r => requestAnimationFrame(r));
 
-  const dosyaAdi = (document.getElementById('inp-konu').value || 'ders-notu')
-    .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') || 'ders-notu';
+  const konuRaw = document.getElementById('inp-konu').value || 'ders-notu';
+  const dosyaAdi = konuRaw
+    .toLocaleLowerCase('tr')
+    .replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') || 'ders-notu';
 
   try {
     const { jsPDF } = window.jspdf;
@@ -1482,9 +1553,9 @@ window.pdfDustu       = pdfDustu;
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
 
-  // Model adını göster
-  const modelAdi = cihazModelSec();
-  document.getElementById('model-adi').textContent = modelAdi;
+  // Model seç ve global değişkene ata (secilenModel boş kalmasın)
+  secilenModel = cihazModelSec();
+  document.getElementById('model-adi').textContent = secilenModel;
 
   metaGuncelle();
 
