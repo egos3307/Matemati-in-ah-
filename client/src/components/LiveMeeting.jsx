@@ -13,7 +13,7 @@ import {
   RoomAudioRenderer,
   useDataChannel
 } from '@livekit/components-react';
-import { Track, ConnectionState } from 'livekit-client';
+import { Track, ConnectionState, LocalVideoTrack } from 'livekit-client';
 import '@livekit/components-styles';
 
 const checkIsTeacher = (participant) => {
@@ -412,6 +412,18 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const connectedTrackIdsRef = useRef(new Set());
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // Virtual background
+  const [virtualBgEnabled, setVirtualBgEnabled] = useState(false);
+  const [virtualBgColor, setVirtualBgColor] = useState('#f97316');
+  const [showVirtualBgMenu, setShowVirtualBgMenu] = useState(false);
+  const [virtualBgLoading, setVirtualBgLoading] = useState(false);
+  const virtualBgEnabledRef = useRef(false);
+  const virtualSegmenterRef = useRef(null);
+  const virtualBgCanvasRef = useRef(null);
+  const virtualRawVideoRef = useRef(null);
+  const virtualBgFrameRef = useRef(null);
+  const virtualBgLKTrackRef = useRef(null);
+
   // Clean up recording context when component unmounts
   useEffect(() => {
     return () => {
@@ -426,8 +438,159 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           audioContextRef.current.close();
         } catch (e) {}
       }
+      cleanupVirtualBg();
     };
   }, []);
+
+  // Sync virtual bg enabled ref with state
+  useEffect(() => {
+    virtualBgEnabledRef.current = virtualBgEnabled;
+  }, [virtualBgEnabled]);
+
+  const cleanupVirtualBg = () => {
+    if (virtualBgFrameRef.current) {
+      cancelAnimationFrame(virtualBgFrameRef.current);
+      virtualBgFrameRef.current = null;
+    }
+    if (virtualSegmenterRef.current) {
+      try { virtualSegmenterRef.current.close(); } catch (e) {}
+      virtualSegmenterRef.current = null;
+    }
+    if (virtualRawVideoRef.current) {
+      virtualRawVideoRef.current.srcObject = null;
+      virtualRawVideoRef.current = null;
+    }
+    if (virtualBgCanvasRef.current) {
+      virtualBgCanvasRef.current = null;
+    }
+  };
+
+  const enableVirtualBackground = async (color) => {
+    if (!localParticipant) return;
+    if (!window.SelfieSegmentation) {
+      alert('Sanal arka plan modeli henüz yüklenmedi. Lütfen birkaç saniye bekleyip tekrar deneyin.');
+      return;
+    }
+    if (!isCameraEnabled) {
+      alert('Sanal arka plan için önce kameranızı açın.');
+      return;
+    }
+
+    setVirtualBgLoading(true);
+    setShowVirtualBgMenu(false);
+
+    try {
+      const cameraPub = localParticipant.getTrackPublication(Track.Source.Camera);
+      if (!cameraPub?.track?.mediaStreamTrack) {
+        alert('Kamera track\'i bulunamadı. Lütfen kamerayı tekrar açıp deneyin.');
+        setVirtualBgLoading(false);
+        return;
+      }
+
+      const rawTrack = cameraPub.track.mediaStreamTrack;
+
+      // Hidden video element for raw camera feed
+      const video = document.createElement('video');
+      video.playsInline = true;
+      video.muted = true;
+      video.srcObject = new MediaStream([rawTrack]);
+      await video.play();
+      virtualRawVideoRef.current = video;
+
+      // Processing canvas (matches camera resolution)
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      virtualBgCanvasRef.current = canvas;
+      const ctx = canvas.getContext('2d');
+
+      // MediaPipe Selfie Segmentation setup
+      const segmenter = new window.SelfieSegmentation({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+      });
+      segmenter.setOptions({ modelSelection: 1 });
+
+      segmenter.onResults((results) => {
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+        // Draw camera frame
+        ctx.drawImage(results.image, 0, 0, width, height);
+        // Keep only person pixels (mask = white where person is)
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+        // Fill background behind person
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, width, height);
+        ctx.globalCompositeOperation = 'source-over';
+      });
+
+      virtualSegmenterRef.current = segmenter;
+
+      // Frame processing loop
+      const runFrame = async () => {
+        if (!virtualBgEnabledRef.current) return;
+        if (video.readyState >= 2) {
+          try { await segmenter.send({ image: video }); } catch (e) { /* skip frame */ }
+        }
+        virtualBgFrameRef.current = requestAnimationFrame(runFrame);
+      };
+      // Warm up the model on first send before publishing
+      await segmenter.send({ image: video });
+      virtualBgFrameRef.current = requestAnimationFrame(runFrame);
+
+      // Capture canvas as MediaStream and publish as camera track
+      const canvasStream = canvas.captureStream(30);
+      const processedVideoTrack = canvasStream.getVideoTracks()[0];
+
+      // Unpublish original camera track
+      await localParticipant.unpublishTrack(cameraPub.track);
+
+      // Publish processed canvas track as camera source
+      const livekitTrack = new LocalVideoTrack(processedVideoTrack, undefined, false);
+      await localParticipant.publishTrack(livekitTrack, { source: Track.Source.Camera });
+      virtualBgLKTrackRef.current = livekitTrack;
+
+      setVirtualBgColor(color);
+      setVirtualBgEnabled(true);
+    } catch (err) {
+      console.error('Sanal arka plan hatası:', err);
+      cleanupVirtualBg();
+      alert('Sanal arka plan başlatılamadı: ' + (err.message || err));
+    } finally {
+      setVirtualBgLoading(false);
+    }
+  };
+
+  const disableVirtualBackground = async () => {
+    setVirtualBgLoading(true);
+    try {
+      // Stop frame loop
+      if (virtualBgFrameRef.current) {
+        cancelAnimationFrame(virtualBgFrameRef.current);
+        virtualBgFrameRef.current = null;
+      }
+
+      // Unpublish virtual bg track
+      if (virtualBgLKTrackRef.current) {
+        try { await localParticipant.unpublishTrack(virtualBgLKTrackRef.current); } catch (e) {}
+        virtualBgLKTrackRef.current = null;
+      }
+
+      cleanupVirtualBg();
+
+      // Re-enable real camera
+      await localParticipant.setCameraEnabled(true);
+
+      setVirtualBgEnabled(false);
+    } catch (err) {
+      console.error('Sanal arka plan kapatma hatası:', err);
+      setVirtualBgEnabled(false);
+    } finally {
+      setVirtualBgLoading(false);
+    }
+  };
 
   const connectAudioTrackToMixer = (mediaStreamTrack) => {
     if (!mediaStreamTrack || !audioContextRef.current || !audioDestinationRef.current) return;
@@ -785,6 +948,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if (!e.target.closest('.device-menu-container')) {
         setShowCameraMenu(false);
         setShowMicMenu(false);
+        setShowVirtualBgMenu(false);
       }
     };
     document.addEventListener('click', handleOutsideClick);
@@ -1119,6 +1283,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const toggleCamera = async () => {
     if (!localParticipant) return;
     try {
+      if (virtualBgEnabled) {
+        await disableVirtualBackground();
+        return;
+      }
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
       console.error("Camera toggle failed:", err);
@@ -1713,6 +1881,57 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+          {/* Virtual Background Button */}
+          <div className="relative device-menu-container">
+            <button
+              onClick={virtualBgEnabled ? disableVirtualBackground : () => setShowVirtualBgMenu(!showVirtualBgMenu)}
+              disabled={virtualBgLoading}
+              className={`p-2.5 sm:p-3 rounded-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border ${
+                virtualBgLoading
+                  ? 'bg-slate-700 text-slate-400 border-slate-700 cursor-not-allowed opacity-60'
+                  : virtualBgEnabled
+                  ? 'border-white/30 text-white shadow-lg'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-750'
+              }`}
+              style={virtualBgEnabled && !virtualBgLoading ? { backgroundColor: virtualBgColor } : {}}
+              title={virtualBgEnabled ? 'Sanal Arka Planı Kapat' : 'Sanal Arka Plan'}
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">
+                {virtualBgLoading ? 'hourglass_empty' : 'person_pin'}
+              </span>
+            </button>
+
+            {showVirtualBgMenu && !virtualBgEnabled && (
+              <div className="absolute bottom-full left-0 mb-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150 w-52">
+                <div className="text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-2 mb-2">
+                  Sanal Arka Plan Rengi
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { color: '#f97316', label: 'Turuncu' },
+                    { color: '#3b82f6', label: 'Mavi' },
+                    { color: '#22c55e', label: 'Yeşil' },
+                    { color: '#a855f7', label: 'Mor' },
+                    { color: '#ef4444', label: 'Kırmızı' },
+                    { color: '#eab308', label: 'Sarı' },
+                    { color: '#ec4899', label: 'Pembe' },
+                    { color: '#0f172a', label: 'Koyu' },
+                  ].map(({ color, label }) => (
+                    <button
+                      key={color}
+                      onClick={() => enableVirtualBackground(color)}
+                      title={label}
+                      className="w-9 h-9 rounded-xl border-2 border-slate-700 hover:border-white hover:scale-110 transition-all cursor-pointer shadow-md"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                <p className="text-[8px] text-slate-500 mt-2 text-center">
+                  Model ilk açılışta birkaç saniye yüklenebilir.
+                </p>
               </div>
             )}
           </div>
