@@ -1900,6 +1900,97 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
+// TEST TARA — Fotoğraftaki soruları Groq Vision ile JSON'a çıkarır
+app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) => {
+  const { gorsel } = req.body; // base64 data URL
+  if (!gorsel) {
+    return res.status(400).json({ error: 'Görsel gönderilmedi.' });
+  }
+
+  try {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GROQ_API_KEY tanımlanmamış.' });
+    }
+
+    const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek.
+Bu fotoğraftaki TÜM soruları tek tek tespit et ve aşağıdaki JSON formatında döndür.
+
+KURALLAR:
+- Fotoğraftaki her soruyu eksiksiz, kelimesi kelimesine al.
+- Matematiksel ifadeleri $...$ arasında LaTeX olarak yaz.
+- Şıkları A) B) C) D) E) formatında ayrı dizi elemanı olarak yaz.
+- Eğer doğru şık işaretliyse dogruSik alanını doldur (örn: "A"), değilse boş bırak "".
+- Görsel içeriyorsa (grafik, şekil vs.) gorselAciklama alanına kısa açıklama yaz.
+- Sadece aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
+
+{"sorular":[
+  {
+    "no": 1,
+    "metin": "Soru metni buraya",
+    "siklar": ["A) ...", "B) ...", "C) ...", "D) ..."],
+    "dogruSik": "",
+    "gorselAciklama": ""
+  }
+]}`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [
+          { role: 'system', content: sistemTalimati },
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: gorsel } },
+              { type: 'text', text: 'Bu fotoğraftaki tüm soruları JSON formatında çıkar.' }
+            ]
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 8000,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Groq test-tara error:', errText);
+      let errorMsg = 'Görsel işlenemedi.';
+      try {
+        const parsedErr = JSON.parse(errText);
+        if (parsedErr.error?.message) errorMsg = `Groq: ${parsedErr.error.message}`;
+      } catch (e) {}
+      return res.status(response.status).json({ error: errorMsg });
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '{}';
+
+    let ayristirilmis;
+    try {
+      ayristirilmis = JSON.parse(rawContent);
+    } catch (e) {
+      console.error('Groq test-tara JSON parse error:', rawContent);
+      return res.status(502).json({ error: 'AI geçerli JSON döndürmedi, tekrar deneyin.' });
+    }
+
+    if (!Array.isArray(ayristirilmis.sorular)) {
+      return res.status(502).json({ error: 'AI beklenen formatta yanıt vermedi.' });
+    }
+
+    res.json(ayristirilmis);
+  } catch (err) {
+    console.error('test-tara error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Ders Notu Oluşturucu — ham metni deneyimli bir öğretmen gibi düzenli bir fasiküle dönüştürür
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
