@@ -352,7 +352,7 @@
     .sayfa-icerik {
       padding: 5mm 10mm;
       display: flex; flex-direction: column;
-      gap: 6mm; align-items: stretch; outline: none;
+      gap: 8mm; align-items: stretch; outline: none;
     }
     .sayfa-icerik:focus { box-shadow: inset 0 0 0 2px rgba(245,197,24,.25); }
     .sayfa-icerik .soru, .sayfa-icerik .soru-kutusu, .sayfa-icerik .soru-kutusu-beyaz {
@@ -377,34 +377,34 @@
     .sorular-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 5mm 6mm;
+      gap: 8mm 7mm;
     }
     .soru-kart {
       background: #fafafa;
       border: 1px solid #e5e7eb;
       border-left: 4px solid #e67e22;
       border-radius: 5px;
-      padding: 9px 10px;
+      padding: 10px 11px;
       break-inside: avoid;
       page-break-inside: avoid;
-      font-size: 10.5px;
-      line-height: 1.5;
+      font-size: 11.5px;
+      line-height: 1.6;
     }
     .soru-kart-baslik {
-      font-size: 11px; font-weight: 900; color: #1a1a1a;
-      margin-bottom: 5px;
+      font-size: 12px; font-weight: 900; color: #1a1a1a;
+      margin-bottom: 6px;
       display: flex; align-items: center; gap: 5px;
     }
     .soru-kart-baslik .soru-no-rozet {
       background: #e67e22; color: #fff;
-      font-size: 9px; font-weight: 900;
+      font-size: 10px; font-weight: 900;
       padding: 1px 6px; border-radius: 10px;
     }
-    .soru-kart-metin { font-size: 10.5px; line-height: 1.55; color: #1a1a1a; margin-bottom: 6px; }
-    .siklar-wrap { display: flex; flex-direction: column; gap: 2px; }
-    .sik-satir { font-size: 10px; color: #374151; padding: 1px 0; }
+    .soru-kart-metin { font-size: 11.5px; line-height: 1.65; color: #1a1a1a; margin-bottom: 7px; }
+    .siklar-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .sik-satir { font-size: 11px; color: #374151; padding: 1px 0; }
     .sik-satir.dogru { color: #e67e22; font-weight: 700; }
-    .soru-gorsel-not { font-size: 9px; color: #6b7280; font-style: italic; margin-top: 4px; padding: 3px 6px; background: #f3f4f6; border-radius: 4px; }
+    .soru-gorsel-not { font-size: 10px; color: #6b7280; font-style: italic; margin-top: 5px; padding: 3px 6px; background: #f3f4f6; border-radius: 4px; }
     .tam-genislik-soru {
       grid-column: 1 / -1;
     }
@@ -1080,7 +1080,7 @@ function bloklarHTML(bloklar) {
           ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${sikStr}</strong></span>`
           : `<span style="margin-right:8px;">${sikStr}</span>`;
       }).join('');
-      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${sikHTML}</div></div>`;
+      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">${sikHTML}</div></div>`;
       continue;
     }
     if (tip === 'tablo') {
@@ -1242,7 +1242,7 @@ function etiketliMetniHTML(metin) {
       soruKapat();
       soruSayaci++;
       const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
-      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">`;
+      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">`;
       i++; continue;
     }
 
