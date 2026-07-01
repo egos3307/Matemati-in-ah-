@@ -84,6 +84,12 @@ const StudentDashboard = () => {
   const [newGoalInput, setNewGoalInput] = useState('');
   const [isEditingMotto, setIsEditingMotto] = useState(false);
   const [aiImage, setAiImage] = useState('');
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowInstallPopup(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let interval = null;
@@ -1757,6 +1763,38 @@ const StudentDashboard = () => {
           <span className="text-[9px] sm:text-[10px] font-bold truncate">Fulle AI</span>
         </button>
       </nav>
+      {/* Safari Install Popup */}
+      {showInstallPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            <div className="relative">
+              <button
+                onClick={() => setShowInstallPopup(false)}
+                className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white text-slate-600 rounded-full p-1.5 shadow transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+              <img
+                src="/Safari için;.png"
+                alt="Uygulamayı Ana Ekrana Ekle"
+                className="w-full object-contain max-h-80"
+              />
+            </div>
+            <div className="p-6 text-center space-y-4">
+              <p className="text-sm font-bold text-slate-700 leading-relaxed">
+                Panelinize daha hızlı erişmek için ekrandaki talimatları uygulayınız.
+              </p>
+              <button
+                onClick={() => setShowInstallPopup(false)}
+                className="w-full py-3 bg-primary text-white font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all cursor-pointer"
+              >
+                Anladım
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Live Class Overlay / Modal */}
       {activeMeeting && (
         activeMeeting.zoomJoinUrl && activeMeeting.zoomJoinUrl.includes('zoom.us') ? (
