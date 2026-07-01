@@ -14,9 +14,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Tesseract.js — Ücretsiz, client-side OCR, API gerektirmez -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;900&display=swap" rel="stylesheet" />
@@ -612,7 +609,7 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
       </div>
 
       <div class="model-info">
-        🔍 Motor: <strong>Tesseract.js (Ücretsiz, Offline OCR)</strong>
+        🔍 Motor: <strong>Groq Vision AI (Llama 4 Scout)</strong>
       </div>
 
       <!-- Buton: Tara -->
@@ -695,10 +692,33 @@ window.testFotoDustu = function(e) {
   files.forEach(f => testFotoEkle(f));
 };
 
+// Groq Vision API base64 isteklerinde 4MB sınırı var — fotoğrafı göndermeden önce küçültüyoruz.
+function resimKucult(dataUrl, maxKenar = 1600, kalite = 0.85) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxKenar || height > maxKenar) {
+        const oran = Math.min(maxKenar / width, maxKenar / height);
+        width = Math.round(width * oran);
+        height = Math.round(height * oran);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', kalite));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function testFotoEkle(file) {
   const reader = new FileReader();
-  reader.onload = ev => {
-    const obj = { file, dataUrl: ev.target.result, tarandi: false };
+  reader.onload = async ev => {
+    const dataUrl = await resimKucult(ev.target.result);
+    const obj = { file, dataUrl, tarandi: false };
     testFotolar.push(obj);
     testFotolariCiz();
     document.getElementById('btn-test-tara').disabled = false;
@@ -726,105 +746,20 @@ window.testFotoSil = function(idx) {
 
 /* ═══════════════════════════════════════════════════════════
    TEST MODU — GROQ VİSİON İLE TARAMA
+   Matematiksel ifadeler (kesir, üs, kök vb.) düz OCR ile sağlıklı
+   çıkmadığından, her fotoğraf Groq'un vizyon modeline gönderilip
+   LaTeX ($...$) içeren yapılandırılmış JSON olarak geri alınır.
 ═══════════════════════════════════════════════════════════ */
-/* ─────────────────────────────────────────────────────
-   TESSERACT.JS — CLIENT-SIDE OCR (API gerektirmez)
-   Türkçe + İngilizce dil paketi kullanır.
-───────────────────────────────────────────────────── */
-let tesseractWorker = null;
-
-async function tesseractHazirla() {
-  if (tesseractWorker) return tesseractWorker;
-  document.getElementById('test-ai-durum').textContent = 'OCR motoru yükleniyor… (ilk kullanımda birkaç saniye sürebilir)';
-  // Tesseract.js v5 API
-  const worker = await Tesseract.createWorker('tur+eng', 1, {
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        const yuzde = Math.round(m.progress * 100);
-        document.getElementById('test-ai-bar').style.width = yuzde + '%';
-      }
-    }
+async function fotoGroqIleTara(dataUrl) {
+  const token = localStorage.getItem('token');
+  const yanit = await fetch('/api/teacher/test-tara', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ gorsel: dataUrl })
   });
-  tesseractWorker = worker;
-  return worker;
-}
-
-/* ─── OCR metninden soru parse et ─── */
-function ocrMetnindenSorular(metin, soruOffset) {
-  const satirlar = metin
-    .split(/\n/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-
-  const sorular = [];
-  let suankiSoru = null;
-
-  // Soru başlangıç deseni: "1." veya "1)" veya "Soru 1:" veya sadece "1 " ile başlayan
-  const SORU_REGEX = /^(\d{1,2})\s*[.):]\s*(.+)/;
-  // Şık deseni: "A)" veya "A." veya "(A)" ile başlayan
-  const SIK_REGEX = /^\(?([A-Ea-e])\)?\s*[.)\s]\s*(.+)/;
-  // Doğru şık: ✓ ★ * veya parantez içinde ya da altı çizili (OCR genellikle * ile işaretler)
-  const DOGRU_ISARETLERI = /[*✓★✗▪►•]/;
-
-  for (let i = 0; i < satirlar.length; i++) {
-    const satir = satirlar[i];
-
-    // Soru satırı mı?
-    const soruEslesme = satir.match(SORU_REGEX);
-    if (soruEslesme) {
-      // Önceki soruyu kaydet
-      if (suankiSoru && suankiSoru.metin.length > 3) {
-        sorular.push(suankiSoru);
-      }
-      suankiSoru = {
-        no: soruOffset + sorular.length + 1,
-        metin: soruEslesme[2].trim(),
-        siklar: [],
-        dogruSik: '',
-        gorselAciklama: ''
-      };
-      continue;
-    }
-
-    // Şık satırı mı?
-    const sikEslesme = satir.match(SIK_REGEX);
-    if (sikEslesme && suankiSoru) {
-      const harf = sikEslesme[1].toUpperCase();
-      let sikMetin = sikEslesme[2].trim();
-      // Doğru işareti varsa
-      const isDogru = DOGRU_ISARETLERI.test(sikMetin) || DOGRU_ISARETLERI.test(satir);
-      sikMetin = sikMetin.replace(/[*✓★✗▪►•]/g, '').trim();
-      suankiSoru.siklar.push(`${harf}) ${sikMetin}`);
-      if (isDogru && !suankiSoru.dogruSik) suankiSoru.dogruSik = harf;
-      continue;
-    }
-
-    // Aktif soruya metin ekle
-    if (suankiSoru && !sikEslesme) {
-      // Şık olmayan ara satır — soru metnine ekle
-      if (suankiSoru.siklar.length === 0) {
-        suankiSoru.metin += ' ' + satir;
-      }
-    }
-  }
-
-  // Son soruyu kaydet
-  if (suankiSoru && suankiSoru.metin.length > 3) {
-    sorular.push(suankiSoru);
-  }
-
-  // Hiç soru bulunamadıysa — tüm metni tek blok olarak sun
-  if (sorular.length === 0 && metin.trim().length > 10) {
-    sorular.push({
-      no: soruOffset + 1,
-      metin: metin.replace(/\s+/g, ' ').trim().substring(0, 500),
-      siklar: [],
-      dogruSik: '',
-      gorselAciklama: ''
-    });
-  }
-
-  return sorular;
+  const veri = await yanit.json();
+  if (!yanit.ok) throw new Error(veri.error || 'Yapay zeka servisi hata döndürdü.');
+  return Array.isArray(veri.sorular) ? veri.sorular : [];
 }
 
 window.testleriTara = async function() {
@@ -839,39 +774,34 @@ window.testleriTara = async function() {
   panel.classList.add('active');
   testSorular = [];
 
-  try {
-    const worker = await tesseractHazirla();
+  for (let i = 0; i < testFotolar.length; i++) {
+    const foto = testFotolar[i];
+    const yuzde = Math.round((i / testFotolar.length) * 100);
+    document.getElementById('test-ai-bar').style.width = yuzde + '%';
+    document.getElementById('test-ai-durum').textContent = `Fotoğraf ${i+1}/${testFotolar.length} taranıyor… (Groq Vision AI)`;
+    document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
 
-    for (let i = 0; i < testFotolar.length; i++) {
-      const foto = testFotolar[i];
-      document.getElementById('test-ai-bar').style.width = '0%';
-      document.getElementById('test-ai-durum').textContent = `Fotoğraf ${i+1}/${testFotolar.length} okunuyor… (Tesseract OCR)`;
-      document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
+    try {
+      const bulunanlarHam = await fotoGroqIleTara(foto.dataUrl);
+      const bulunanlar = bulunanlarHam.map((s, idx) => ({
+        no: testSorular.length + idx + 1,
+        metin: String(s.metin || '').trim(),
+        siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+        dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+        gorselAciklama: String(s.gorselAciklama || '').trim()
+      }));
+      testSorular.push(...bulunanlar);
 
-      try {
-        // Tesseract.js ile OCR — tamamen tarayıcıda, API yok
-        const sonuc = await worker.recognize(foto.dataUrl);
-        const ocrMetin = sonuc.data.text;
-
-        // OCR metninden soruları parse et
-        const bulunanlar = ocrMetnindenSorular(ocrMetin, testSorular.length);
-        testSorular.push(...bulunanlar);
-
-        testFotolar[i].tarandi = true;
-        testFotolariCiz();
-        toast(`Foto ${i+1}: ${bulunanlar.length} soru bulundu`, 'inf');
-      } catch (err) {
-        toast(`Foto ${i+1} hatası: ${err.message}`, 'err');
-      }
+      testFotolar[i].tarandi = true;
+      testFotolariCiz();
+      toast(`Foto ${i+1}: ${bulunanlar.length} soru bulundu`, 'inf');
+    } catch (err) {
+      toast(`Foto ${i+1} hatası: ${err.message}`, 'err');
     }
-  } catch (workerErr) {
-    toast('OCR motoru başlatılamadı: ' + workerErr.message, 'err');
-    btn.disabled = false;
-    return;
   }
 
   document.getElementById('test-ai-bar').style.width = '100%';
-  document.getElementById('test-ai-durum').textContent = `✅ Tamamlandı! ${testSorular.length} soru tarıldı.`;
+  document.getElementById('test-ai-durum').textContent = `✅ Tamamlandı! ${testSorular.length} soru tarandı.`;
   document.getElementById('test-ai-info').textContent = '';
 
   btn.disabled = false;
@@ -881,7 +811,7 @@ window.testleriTara = async function() {
 
   if (testSorular.length > 0) {
     document.getElementById('btn-pdf-test').style.display = 'flex';
-    toast(`${testSorular.length} soru başarıyla tarıldı!`, 'ok');
+    toast(`${testSorular.length} soru başarıyla tarandı!`, 'ok');
   } else {
     toast('Soru bulunamadı. Fotoğraf kalitesini kontrol edin.', 'err');
   }
