@@ -31,7 +31,7 @@ const Blog = () => {
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
         title="Blog"
-        description="Matematik öğrenme tüyoları, sınav stratejileri ve eğitim haberleri. Fullematematik blogu ile matematiği keşfedin!"
+        description="Matematik öğrenme tüyoları, sınav stratejileri ve eğitim haberleri. Fullematematiği blogu ile matematiği keşfedin!"
         path="/blog"
       />
       {/* Header Section */}
@@ -39,7 +39,7 @@ const Blog = () => {
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary mb-4">
             <span className="material-symbols-outlined text-sm">edit_document</span>
-            <span>Fullematematik Blog</span>
+            <span>Fullematematiği Blog</span>
           </span>
           <h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
             Matematik & Başarı <span className="text-primary">Rehberi</span>

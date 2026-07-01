@@ -40,7 +40,7 @@ const Contact = () => {
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
         title="İletişim"
-        description="Fullematematik ile iletişime geçin. Sorularınız için bize WhatsApp veya e-posta ile ulaşabilirsiniz."
+        description="Fullematematiği ile iletişime geçin. Sorularınız için bize WhatsApp veya e-posta ile ulaşabilirsiniz."
         path="/iletisim"
       />
       {/* Background Decorative Blobs */}

@@ -219,7 +219,7 @@ const Home = () => {
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <SEO
-        description="Fullematematik ile online matematik özel dersi alın. LGS, YKS, KPSS ve okul matematiği için uzman eğitim. Hemen kayıt olun!"
+        description="Fullematematiği ile online matematik özel dersi alın. LGS, YKS, KPSS ve okul matematiği için uzman eğitim. Hemen kayıt olun!"
         path="/"
       />
       <main className="flex-1">
@@ -654,7 +654,7 @@ const Home = () => {
           <div className="grid gap-12 border-b border-slate-100 pb-12 md:grid-cols-4">
             <div className="col-span-2 flex flex-col gap-6">
               <div className="flex items-center gap-3 text-slate-900">
-                <img src="/logo.png" alt="Fullematematik Logo" className="h-10 w-10 object-contain" />
+                <img src="/logo.png" alt="Fullematematiği Logo" className="h-10 w-10 object-contain" />
                 <h2 className="text-xl font-bold tracking-tight">Fullematematiği</h2>
               </div>
               <p className="max-w-md leading-relaxed">

@@ -1457,7 +1457,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm relative">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
-            <img src="/logo.png" alt="Fullematematik Logo" className="h-full w-full object-contain" />
+            <img src="/logo.png" alt="Fullematematiği Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">

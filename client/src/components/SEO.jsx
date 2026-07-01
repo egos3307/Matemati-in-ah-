@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_NAME = 'Fullematematik';
+const SITE_NAME = 'Fullematematiği';
 const BASE_URL = 'https://fullematematigi.com.tr';
 const DEFAULT_IMAGE = `${BASE_URL}/hero-image.png`;
 

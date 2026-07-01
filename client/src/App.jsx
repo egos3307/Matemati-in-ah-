@@ -18,7 +18,7 @@ import WatchRecording from './pages/WatchRecording';
 import KVKK from './pages/KVKK';
 
 // Placeholder components for other pages
-const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematik, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
+const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematiği, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
 
 const WhatsAppButton = () => {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ const WhatsAppButton = () => {
 
   return (
     <a
-      href="https://wa.me/905350598950?text=Merhaba,%20Fullematematik%20hakkında%20bilgi%20almak%20istiyorum."
+      href="https://wa.me/905350598950?text=Merhaba,%20Fullematematiği%20hakkında%20bilgi%20almak%20istiyorum."
       target="_blank"
       rel="noopener noreferrer"
       title="WhatsApp'tan ulaşın"
