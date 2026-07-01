@@ -352,26 +352,37 @@
     .sayfa-icerik {
       padding: 5mm 10mm;
       display: flex; flex-direction: column;
+      flex: 1; position: relative;
       gap: 8mm; align-items: stretch; outline: none;
     }
     .sayfa-icerik:focus { box-shadow: inset 0 0 0 2px rgba(245,197,24,.25); }
-    .sayfa-icerik .soru, .sayfa-icerik .soru-kutusu, .sayfa-icerik .soru-kutusu-beyaz {
+    .sayfa-icerik .soru, .sayfa-icerik .soru-kutusu, .sayfa-icerik .soru-kutusu-beyaz,
+    .sayfa-icerik .ornek-kutusu, .sayfa-icerik .cozum-kutusu {
       break-inside: avoid; page-break-inside: avoid;
     }
     .sayfa-icerik img { max-width: 100%; height: auto; display: block; margin: 4px 0; border-radius: 4px; }
 
-    /* ── Ders notundaki fotoğrafları sürükleyerek boyutlandırma ── */
-    .img-resize-wrap { position: relative; display: inline-block; max-width: 100%; }
+    /* ── Ders notundaki fotoğrafları serbestçe taşıma/boyutlandırma ── */
+    .img-resize-wrap { position: absolute; display: inline-block; max-width: 100%; z-index: 5; }
+    .img-move-handle {
+      position: absolute; left: 2px; top: 2px;
+      width: 15px; height: 15px;
+      background: var(--accent); color: #fff; border: 2px solid #fff;
+      border-radius: 4px; cursor: move;
+      opacity: 0; transition: opacity .15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.35);
+    }
     .img-resize-handle {
-      position: absolute; right: 2px; bottom: 6px;
+      position: absolute; right: 2px; bottom: 2px;
       width: 15px; height: 15px;
       background: var(--turuncu); border: 2px solid #fff;
       border-radius: 50%; cursor: nwse-resize;
       opacity: 0; transition: opacity .15s;
       box-shadow: 0 1px 4px rgba(0,0,0,.35);
     }
+    .img-resize-wrap:hover .img-move-handle,
     .img-resize-wrap:hover .img-resize-handle,
-    .img-resize-handle.aktif { opacity: 1; }
+    .img-move-handle.aktif, .img-resize-handle.aktif { opacity: 1; }
     .sayfa-icerik p, .sayfa-icerik div:not([class]) { font-size: 11px; line-height: 1.6; color: #1a1a1a; }
     .sayfa-icerik .tam-genislik, .sayfa-icerik [data-tam], .sayfa-icerik .svg-blok, .sayfa-icerik .tablo-blok {
       display: block !important; clear: both !important; float: none !important; width: 100% !important;
@@ -390,7 +401,7 @@
     .sorular-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8mm 7mm;
+      gap: 11mm 9mm;
     }
     .soru-kart {
       background: #fafafa;
@@ -1093,7 +1104,17 @@ function bloklarHTML(bloklar) {
           ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${sikStr}</strong></span>`
           : `<span style="margin-right:8px;">${sikStr}</span>`;
       }).join('');
-      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">${sikHTML}</div></div>`;
+      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">${sikHTML}</div></div>`;
+      continue;
+    }
+    if (tip === 'ornek') {
+      const ornekMetni = String(blok.metin || '').trim();
+      html += `<div class="ornek-kutusu" style="background:#eff6ff;padding:12px 13px;border-radius:5px;border:1px solid #dbeafe;border-left:4px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:11px;font-weight:900;color:var(--accent);letter-spacing:.04em;">📘 ÖRNEK</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0 0;color:#1a1a1a;">${ornekMetni}</p></div>`;
+      continue;
+    }
+    if (tip === 'cozum') {
+      const cozumMetni = String(blok.metin || '').trim();
+      html += `<div class="cozum-kutusu" style="background:#f0fdf4;padding:12px 13px;border-radius:5px;border:1px solid #dcfce7;border-left:4px solid var(--green);box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:11px;font-weight:900;color:#16a34a;letter-spacing:.04em;">✅ ÇÖZÜM</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0 0;color:#1a1a1a;">${cozumMetni}</p></div>`;
       continue;
     }
     if (tip === 'tablo') {
@@ -1255,7 +1276,7 @@ function etiketliMetniHTML(metin) {
       soruKapat();
       soruSayaci++;
       const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
-      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">`;
+      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p><div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">`;
       i++; continue;
     }
 
@@ -1488,20 +1509,68 @@ function tumResimleriBoyutlandirilabilirYap(kok) {
 function resimBoyutlandirilabilirYap(img) {
   if (img.closest('.img-resize-wrap')) return; // zaten sarılı
 
+  const kapsayici = img.closest('.sayfa-icerik');
   const wrap = document.createElement('span');
   wrap.className = 'img-resize-wrap';
   img.parentNode.insertBefore(wrap, img);
   wrap.appendChild(img);
 
-  const tutamac = document.createElement('span');
-  tutamac.className = 'img-resize-handle';
-  tutamac.contentEditable = 'false';
-  wrap.appendChild(tutamac);
+  // Metin akışından çıkarıp geldiği konumda serbest (mutlak) konumlandır —
+  // böylece kullanıcı sayfa üzerinde istediği yere sürükleyebilir.
+  if (kapsayici) {
+    const kapRect = kapsayici.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    wrap.style.left = Math.max(0, Math.round(wrapRect.left - kapRect.left)) + 'px';
+    wrap.style.top = Math.max(0, Math.round(wrapRect.top - kapRect.top)) + 'px';
+  } else {
+    wrap.style.left = '0px';
+    wrap.style.top = '0px';
+  }
 
-  tutamac.addEventListener('mousedown', e => {
+  const tasiTutamaci = document.createElement('span');
+  tasiTutamaci.className = 'img-move-handle';
+  tasiTutamaci.contentEditable = 'false';
+  tasiTutamaci.title = 'Sürükleyerek taşı';
+  wrap.appendChild(tasiTutamaci);
+
+  const boyutTutamaci = document.createElement('span');
+  boyutTutamaci.className = 'img-resize-handle';
+  boyutTutamaci.contentEditable = 'false';
+  boyutTutamaci.title = 'Sürükleyerek boyutlandır';
+  wrap.appendChild(boyutTutamaci);
+
+  tasiTutamaci.addEventListener('mousedown', e => {
     e.preventDefault();
     e.stopPropagation();
-    tutamac.classList.add('aktif');
+    tasiTutamaci.classList.add('aktif');
+    const kap = wrap.closest('.sayfa-icerik');
+    const baslangicX = e.clientX, baslangicY = e.clientY;
+    const baslangicSol = parseFloat(wrap.style.left) || 0;
+    const baslangicUst = parseFloat(wrap.style.top) || 0;
+
+    function surukle(ev) {
+      let yeniSol = baslangicSol + (ev.clientX - baslangicX);
+      let yeniUst = baslangicUst + (ev.clientY - baslangicY);
+      if (kap) {
+        yeniSol = Math.min(Math.max(0, yeniSol), Math.max(0, kap.clientWidth - wrap.offsetWidth));
+        yeniUst = Math.min(Math.max(0, yeniUst), Math.max(0, kap.clientHeight - wrap.offsetHeight));
+      }
+      wrap.style.left = Math.round(yeniSol) + 'px';
+      wrap.style.top = Math.round(yeniUst) + 'px';
+    }
+    function birak() {
+      tasiTutamaci.classList.remove('aktif');
+      document.removeEventListener('mousemove', surukle);
+      document.removeEventListener('mouseup', birak);
+    }
+    document.addEventListener('mousemove', surukle);
+    document.addEventListener('mouseup', birak);
+  });
+
+  boyutTutamaci.addEventListener('mousedown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    boyutTutamaci.classList.add('aktif');
     const baslangicX = e.clientX;
     const baslangicGenislik = img.getBoundingClientRect().width;
 
@@ -1510,7 +1579,7 @@ function resimBoyutlandirilabilirYap(img) {
       img.style.width = Math.max(40, yeniGenislik) + 'px';
     }
     function birak() {
-      tutamac.classList.remove('aktif');
+      boyutTutamaci.classList.remove('aktif');
       document.removeEventListener('mousemove', surukle);
       document.removeEventListener('mouseup', birak);
     }
@@ -1649,7 +1718,7 @@ async function _pdfUretGenel(sayfaListesi, mod) {
       klon.style.boxShadow = 'none';
       klon.style.borderRadius = '0';
       klon.querySelectorAll('.sayfa-no-etiket').forEach(el => el.remove());
-      klon.querySelectorAll('.img-resize-handle').forEach(el => el.remove());
+      klon.querySelectorAll('.img-resize-handle, .img-move-handle').forEach(el => el.remove());
 
       klon.querySelectorAll('svg').forEach(svg => {
         try {

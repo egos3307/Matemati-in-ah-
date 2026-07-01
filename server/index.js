@@ -2011,11 +2011,14 @@ KURALLAR:
 - Matematiksel ifadeleri LaTeX ile $...$ arasında yaz (örn: $x^2+5x+6=0$).
 - Konu başlıklarını kısa, tek satır, açıklayıcı başlıklara dönüştür.
 - Çoktan seçmeli soruları tespit et; şıkları A) B) C) D) E) biçiminde ayrı ayrı yaz. Metinde doğru şıkkı işaretleyen bir ipucu varsa (=, *, altı çizili, kalın vb.) onu dogruSik alanına yansıt; yoksa dogruSik alanını boş bırak, şık uydurma.
+- Metinde "Örnek", "Örn.", "Örnek Problem" gibi bir başlıkla sunulan çözümlü örnek varsa: örneğin problem/soru kısmını "ornek" tipinde, hemen ardından gelen çözüm/adımları "cozum" tipinde AYRI bloklar olarak yaz (şıklı bir çoktan seçmeli soru değilse "soru" tipini kullanma).
 - Yalnızca aşağıdaki JSON şemasında yanıt ver, şema dışında hiçbir açıklama, markdown veya metin ekleme:
 
 {"bloklar":[
   {"tip":"baslik","metin":"..."},
   {"tip":"paragraf","metin":"..."},
+  {"tip":"ornek","metin":"Örnek problemin metni..."},
+  {"tip":"cozum","metin":"Örneğin çözüm adımları..."},
   {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A"},
   {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
 ]}`;
