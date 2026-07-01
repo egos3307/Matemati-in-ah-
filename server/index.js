@@ -1900,6 +1900,88 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
+// Ders Notu Oluşturucu — ham metni deneyimli bir öğretmen gibi düzenli bir fasiküle dönüştürür
+app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
+  const { metin } = req.body;
+  if (!metin || !metin.trim()) {
+    return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
+  }
+
+  try {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
+    }
+
+    const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini, sanki kendi elinle temize çekmiş gibi düzenli bir fasiküle dönüştürüyorsun.
+
+KURALLAR:
+- İçeriği ASLA kısaltma, özetleme veya SİLME. Tüm konu anlatımı ve tüm sorular eksiksiz, kelimesi kelimesine korunmalı (yalnızca PDF çıkarımından kaynaklanan bozuk satır sıralaması/tekrar gibi teknik gürültüyü düzelt).
+- Matematiksel ifadeleri LaTeX ile $...$ arasında yaz (örn: $x^2+5x+6=0$).
+- Konu başlıklarını kısa, tek satır, açıklayıcı başlıklara dönüştür.
+- Çoktan seçmeli soruları tespit et; şıkları A) B) C) D) E) biçiminde ayrı ayrı yaz. Metinde doğru şıkkı işaretleyen bir ipucu varsa (=, *, altı çizili, kalın vb.) onu dogruSik alanına yansıt; yoksa dogruSik alanını boş bırak, şık uydurma.
+- Yalnızca aşağıdaki JSON şemasında yanıt ver, şema dışında hiçbir açıklama, markdown veya metin ekleme:
+
+{"bloklar":[
+  {"tip":"baslik","metin":"..."},
+  {"tip":"paragraf","metin":"..."},
+  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A"},
+  {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
+]}`;
+
+    const maxCikisTokeni = Math.min(32000, Math.max(2000, Math.ceil(metin.length * 1.2)));
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: sistemTalimati },
+          { role: 'user', content: metin }
+        ],
+        temperature: 0.2,
+        max_tokens: maxCikisTokeni,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Groq API Error details:', errText);
+      let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
+      try {
+        const parsedErr = JSON.parse(errText);
+        if (parsedErr.error?.message) errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
+      } catch (e) {}
+      return res.status(response.status).json({ error: errorMsg });
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '{}';
+
+    let ayristirilmis;
+    try {
+      ayristirilmis = JSON.parse(rawContent);
+    } catch (e) {
+      console.error('Groq JSON ayrıştırma hatası:', rawContent);
+      return res.status(502).json({ error: 'Yapay zeka geçerli bir JSON döndürmedi. Lütfen tekrar deneyin.' });
+    }
+
+    if (!Array.isArray(ayristirilmis.bloklar)) {
+      return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
+    }
+
+    res.json(ayristirilmis);
+  } catch (err) {
+    console.error('Ders notu AI error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Parent Routes
 app.get('/api/parent/student', auth, checkRole('PARENT'), async (req, res) => {
   try {

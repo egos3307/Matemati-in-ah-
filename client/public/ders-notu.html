@@ -482,7 +482,7 @@
   <img src="/logo.png" alt="Logo" onerror="this.style.display='none'" />
   <h1>Ders Notu Oluştur</h1>
   <span>— Fullematematiği Öğretmen Araçları</span>
-  <div class="ai-badge" id="ai-badge">Yerel AI Hazır</div>
+  <div class="ai-badge" id="ai-badge">☁ Groq Cloud AI</div>
 </div>
 
 <div class="workspace">
@@ -556,7 +556,7 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
 
     <!-- Model bilgi -->
     <div class="model-info" id="model-info">
-      🧠 Model: <strong id="model-adi">Tespit ediliyor…</strong>
+      ☁️ Model: <strong id="model-adi">Groq Llama 3.3 70B (Cloud)</strong>
     </div>
 
     <!-- ANA BAŞLAT BUTONU -->
@@ -606,27 +606,8 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
 /* ═══════════════════════════════════════════════════════════
    MODÜL KAPSAMLI DEĞİŞKENLER
 ═══════════════════════════════════════════════════════════ */
-let webllmEngine   = null;
-let secilenModel   = '';
 let nihaiEtiketliMetin = '';
 let secilenPdfDosyasi  = null;
-
-/* ═══════════════════════════════════════════════════════════
-   CİHAZ TESPİTİ & MODEL SEÇİMİ
-═══════════════════════════════════════════════════════════ */
-function cihazModelSec() {
-  const ua = navigator.userAgent || '';
-  const isTabletOrMobile = /iPad|iPhone|iPod|Android|Mobile|Tablet/i.test(ua);
-  const maxMemGB = navigator.deviceMemory || 4;
-  const coreCount = navigator.hardwareConcurrency || 2;
-  const isWeakDevice = isTabletOrMobile || maxMemGB <= 4 || coreCount <= 4;
-
-  if (isWeakDevice) {
-    return 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';   // iPad / hafif cihaz
-  } else {
-    return 'Llama-3.1-8B-Instruct-q4f32_1-MLC';    // Güçlü masaüstü
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════
    PDF.JS İLE PDF METİN OKUMA
@@ -732,118 +713,86 @@ async function pdfdenMetinAl(dosya) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AKILLI PARÇALAYICI
-   – LaTeX ($...$), [TABLO]...[/TABLO], [SVG]...[/SVG]
-     bloklarını ortadan bölmez.
-   – Satır bazlı, 3000 karakter limiti
+   GROQ CLOUD AI — ham metni tek istekte yapılandırılmış
+   JSON bloklarına dönüştürür (bkz. server: /api/teacher/ders-notu-ai)
 ═══════════════════════════════════════════════════════════ */
-function metniParcala(metin, limitChar = 3000) {
-  const satirlar = metin.split('\n');
-  const parcalar = [];
-  let suankiParça = '';
-  let tablodaMi   = false;
-  let svgdeMi     = false;
-  let latexSayac  = 0; // tek $ sayısı (çift → LaTeX blok)
+async function groqIleEtiketle(hamMetin) {
+  const token = localStorage.getItem('token');
+  const yanit = await fetch('/api/teacher/ders-notu-ai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ metin: hamMetin })
+  });
 
-  for (const satir of satirlar) {
-    // Blok başlangıç/bitiş takibi
-    if (satir.includes('[TABLO]'))  tablodaMi = true;
-    if (satir.includes('[/TABLO]')) tablodaMi = false;
-    if (satir.includes('[SVG]'))    svgdeMi   = true;
-    if (satir.includes('[/SVG]'))   svgdeMi   = false;
+  const veri = await yanit.json();
+  if (!yanit.ok) {
+    throw new Error(veri.error || 'Yapay zeka servisi hata döndürdü.');
+  }
+  return Array.isArray(veri.bloklar) ? veri.bloklar : [];
+}
 
-    // Satırda tek $ sayısını say (LaTeX bütünlüğü)
-    const dolarlar = (satir.match(/(?<!\$)\$(?!\$)/g) || []).length;
-    latexSayac += dolarlar;
-    const latexAcik = (latexSayac % 2 !== 0);
+/* ═══════════════════════════════════════════════════════════
+   YAPILANDIRILMIŞ BLOKLAR → HTML
+   (Groq'un döndürdüğü {tip, metin, sikkar, dogruSik, ...} dizisini
+   sayfa şablonunun beklediği HTML parçalarına çevirir)
+═══════════════════════════════════════════════════════════ */
+function bloklarHTML(bloklar) {
+  let html = '';
+  let soruSayaci = 0;
 
-    const eklenecek = suankiParça ? suankiParça + '\n' + satir : satir;
+  for (const blok of (bloklar || [])) {
+    if (!blok || typeof blok !== 'object') continue;
+    const tip = String(blok.tip || '').toLowerCase();
 
-    // Blok içinde veya LaTeX açıksa — zorla birleştir
-    if (tablodaMi || svgdeMi || latexAcik) {
-      suankiParça = eklenecek;
+    if (tip === 'baslik') {
+      const baslikMetni = String(blok.metin || '').trim();
+      if (!baslikMetni) continue;
+      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 4px;"><h3 style="font-size:12.5px;font-weight:900;color:#1a1a1a;margin:0;">${baslikMetni}</h3></div>`;
       continue;
     }
 
-    // Limit aşıldıysa parçayı kapat
-    if (eklenecek.length > limitChar && suankiParça.length > 0) {
-      parcalar.push(suankiParça.trim());
-      suankiParça   = satir;
-      latexSayac    = dolarlar;
-    } else {
-      suankiParça   = eklenecek;
+    if (tip === 'soru') {
+      soruSayaci++;
+      const soruMetni  = String(blok.metin || '').trim();
+      const dogruHarf  = String(blok.dogruSik || '').trim().toUpperCase().charAt(0);
+      const sikkar     = Array.isArray(blok.sikkar) ? blok.sikkar : [];
+      const sikHTML = sikkar.map(sik => {
+        const sikStr = String(sik).trim();
+        const harf   = sikStr.charAt(0).toUpperCase();
+        return harf && harf === dogruHarf
+          ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${sikStr}</strong></span>`
+          : `<span style="margin-right:8px;">${sikStr}</span>`;
+      }).join('');
+      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #2c3e50;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${sikHTML}</div></div>`;
+      continue;
+    }
+
+    if (tip === 'tablo') {
+      const basliklar = Array.isArray(blok.basliklar) ? blok.basliklar : [];
+      const satirlar  = Array.isArray(blok.satirlar) ? blok.satirlar : [];
+      let tabloIci = '';
+      if (basliklar.length) {
+        tabloIci += '<tr>' + basliklar.map(b => `<th>${b}</th>`).join('') + '</tr>';
+      }
+      for (const satir of satirlar) {
+        const hucreler = Array.isArray(satir) ? satir : [satir];
+        tabloIci += '<tr>' + hucreler.map(h => `<td>${h}</td>`).join('') + '</tr>';
+      }
+      html += `<div class="tablo-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;"><table>${tabloIci}</table></div>`;
+      continue;
+    }
+
+    // "paragraf" veya bilinmeyen tip → düz paragraf
+    const paragrafMetni = String(blok.metin || '').trim();
+    if (paragrafMetni) {
+      html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:3px 0;">${paragrafMetni}</div>`;
     }
   }
 
-  if (suankiParça.trim()) parcalar.push(suankiParça.trim());
-  return parcalar.filter(p => p.length > 0);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   WEBLLM MOTORU YÜKLE
-═══════════════════════════════════════════════════════════ */
-async function webllmYukle(modelAdi) {
-  aiDurumYaz('Yerel AI modeli indiriliyor…', 20);
-  document.getElementById('ai-badge').textContent = '⬇ Model İndiriliyor…';
-
-  try {
-    const { CreateMLCEngine } = await import(
-      'https://esm.run/@mlc-ai/web-llm'
-    );
-
-    webllmEngine = await CreateMLCEngine(modelAdi, {
-      initProgressCallback: (progress) => {
-        const yuzdeTam = Math.round((progress.progress || 0) * 60) + 20; // 20→80
-        const mesaj = progress.text || `İndiriliyor… ${Math.round((progress.progress || 0) * 100)}%`;
-        aiDurumYaz(mesaj, Math.min(80, yuzdeTam));
-      }
-    });
-
-    document.getElementById('ai-badge').textContent = '✓ Yerel AI Hazır';
-    return true;
-  } catch (e) {
-    throw new Error('WebLLM yüklenemedi: ' + e.message);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   TEK PARÇAYI AI'YA GÖNDER
-═══════════════════════════════════════════════════════════ */
-async function parcayiEtiketle(parcaMetni) {
-  // Küçük modeller için kısa ve net talimat
-  const sistemTalimati =
-    'Aşağıdaki ders metnini kelimesi kelimesine koru, HİÇBİR İÇERİĞİ SİLME veya özetleme. ' +
-    'Yalnızca şu etiketleri ekle:\n' +
-    '1) Bölüm/konu başlıklarını (kısa, tek satır, büyük harfle başlayan, fiil içermeyen) "## Başlık" biçimine sok.\n' +
-    '2) YALNIZCA A) B) C) D) E) şıkları olan çoktan seçmeli soruların önüne "SORU X:" yaz (X=sıra numarası). ' +
-       'Açıklama veya düz metin cümleleri SORU olarak etiketleme.\n' +
-    '3) Çoktan seçmeli şıkları her biri ayrı satırda "A) ... " "B) ..." biçiminde yaz; doğru şıkkın başına = ekle.\n' +
-    '4) Matematik ifadelerini $...$ ile çevrelе.\n' +
-    'HTML, açıklama veya özet yazma. Sadece düzenlenmiş metni döndür.';
-
-  let cikti = '';
-  try {
-    const yanit = await webllmEngine.chat.completions.create({
-      messages: [
-        { role: 'system', content: sistemTalimati },
-        { role: 'user',   content: parcaMetni }
-      ],
-      temperature: 0.1,
-      max_tokens: Math.min(2048, parcaMetni.length * 3),
-    });
-    cikti = yanit.choices?.[0]?.message?.content?.trim() || '';
-  } catch(e) {
-    console.warn('WebLLM parça hatası, orijinal kullanılıyor:', e);
-    return parcaMetni;
-  }
-
-  // GÜVENLİK: Eğer çıktı girişin %40'ından kısaysa model içeriği yutmuştur → orijinali kullan
-  if (cikti.length < parcaMetni.length * 0.4) {
-    console.warn(`AI çıktısı çok kısa (${cikti.length}/${parcaMetni.length}), orijinal kullanılıyor.`);
-    return parcaMetni;
-  }
-
-  return cikti;
+  return html;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -868,7 +817,7 @@ async function fasikuluBaslat() {
       toast(`PDF okundu: ${hamMetin.length} karakter`, 'ok');
     } else if (textarea) {
       hamMetin = textarea;
-      aiDurumYaz('Metin alındı, parçalanıyor…', 10);
+      aiDurumYaz('Metin alındı…', 10);
     } else {
       toast('Lütfen bir PDF yükleyin veya metin yapıştırın!', 'err');
       btnBaslat.disabled = false;
@@ -876,39 +825,18 @@ async function fasikuluBaslat() {
       return;
     }
 
-    /* ─── 2. Parçala ─── */
-    // Küçük modeller için parça boyutunu 900 karakterde tut
-    const parcaBoyutu = secilenModel.includes('1.5B') || secilenModel.includes('2B') || secilenModel.includes('Tiny') ? 900 : 2000;
-    const parcalar = metniParcala(hamMetin, parcaBoyutu);
-    aiDurumYaz(`${parcalar.length} parçaya bölündü, AI hazırlanıyor…`, 15);
+    /* ─── 2. Groq Cloud AI'ya tek istekte gönder ─── */
+    aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
     document.getElementById('ai-parca-info').textContent =
-      `Toplam ${parcalar.length} parça tespit edildi`;
+      `${hamMetin.length} karakter tek seferde işleniyor`;
 
-    /* ─── 3. WebLLM model seç & yükle ─── */
-    secilenModel = cihazModelSec();
-    document.getElementById('model-adi').textContent = secilenModel;
+    const bloklar = await groqIleEtiketle(hamMetin);
+    nihaiEtiketliMetin = JSON.stringify(bloklar);
 
-    if (!webllmEngine) {
-      await webllmYukle(secilenModel);
-    } else {
-      aiDurumYaz('AI motoru hazır, işleniyor…', 82);
-    }
+    aiDurumYaz('✅ Etiketleme tamamlandı! Fasikül oluşturuluyor…', 90);
 
-    /* ─── 4. Parçaları sırayla işle ─── */
-    for (let i = 0; i < parcalar.length; i++) {
-      const ilerleme = 82 + Math.round(((i + 1) / parcalar.length) * 15);
-      aiDurumYaz(`Parça ${i + 1}/${parcalar.length} etiketleniyor…`, ilerleme);
-      document.getElementById('ai-parca-info').textContent =
-        `Parça ${i + 1} / ${parcalar.length} işleniyor`;
-
-      const etiketli = await parcayiEtiketle(parcalar[i]);
-      nihaiEtiketliMetin += (nihaiEtiketliMetin ? '\n\n' : '') + etiketli;
-    }
-
-    aiDurumYaz('✅ Etiketleme tamamlandı! Fasikül oluşturuluyor…', 98);
-
-    /* ─── 5. Şablon motoruna gönder ─── */
-    await fasikuluOlusturVeCiz(nihaiEtiketliMetin);
+    /* ─── 3. Şablon motoruna gönder ─── */
+    await fasikuluOlusturVeCiz(bloklarHTML(bloklar));
 
     aiDurumYaz('✅ Fasikül hazır!', 100);
     toast('Fasikül başarıyla oluşturuldu!', 'ok');
@@ -1053,9 +981,7 @@ function etiketliMetniHTML(metin) {
 /* ═══════════════════════════════════════════════════════════
    ANA ŞABLON MOTORU: fasikuluOlusturVeCiz()
 ═══════════════════════════════════════════════════════════ */
-async function fasikuluOlusturVeCiz(etiketliMetin) {
-  const icerikHTML = etiketliMetniHTML(etiketliMetin);
-
+async function fasikuluOlusturVeCiz(icerikHTML) {
   // Explicit sayfa kesmelerinde böl
   const gruplar = splitAtBreaks(icerikHTML);
   const maxH    = await getMaxH();
@@ -1123,7 +1049,7 @@ async function hizliGoster() {
 
     aiDurumYaz('Ham metin render ediliyor…', 80);
     nihaiEtiketliMetin = hamMetin;
-    await fasikuluOlusturVeCiz(hamMetin);
+    await fasikuluOlusturVeCiz(etiketliMetniHTML(hamMetin));
     aiDurumYaz('✅ Hızlı görünüm hazır!', 100);
     toast('Hızlı görünüm oluşturuldu (AI etiketleme olmadan)', 'inf');
   } catch(err) {
@@ -1563,10 +1489,6 @@ window.pdfDustu       = pdfDustu;
 /* ─── BAŞLANGIÇ ─── */
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
-
-  // Model seç ve global değişkene ata (secilenModel boş kalmasın)
-  secilenModel = cihazModelSec();
-  document.getElementById('model-adi').textContent = secilenModel;
 
   metaGuncelle();
 
