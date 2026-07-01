@@ -28,6 +28,68 @@ const checkIsTeacher = (participant) => {
   return participant.identity.includes('Öğretmen') || participant.identity.includes('TEACHER');
 };
 
+// Sanal arka planda segmentasyon maskesi birden fazla kişiyi (ör. arkada geçen biri)
+// "kişi" olarak işaretleyebilir. Bu fonksiyon, bağlı bileşen analizi ile sadece en
+// büyük (kameraya en yakın, yani sunum yapan) kişi bölgesini tutar; diğer tüm
+// kişi piksellerini arka plan olarak işaretler (md dizisini yerinde değiştirir).
+const suppressSecondaryPeople = (md, w, h, parent) => {
+  const n = w * h;
+  const threshold = 77; // 0.3 * 255 — bağlantıyı korumak için gevşek bir eşik
+  const isPerson = (idx) => md[idx * 4] >= threshold;
+
+  for (let i = 0; i < n; i++) parent[i] = i;
+
+  const find = (x) => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const union = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+
+  for (let y = 0; y < h; y++) {
+    const rowOffset = y * w;
+    for (let x = 0; x < w; x++) {
+      const idx = rowOffset + x;
+      if (!isPerson(idx)) continue;
+      if (x > 0 && isPerson(idx - 1)) union(idx, idx - 1);
+      if (y > 0 && isPerson(idx - w)) union(idx, idx - w);
+    }
+  }
+
+  const areas = new Map();
+  for (let i = 0; i < n; i++) {
+    if (!isPerson(i)) continue;
+    const root = find(i);
+    areas.set(root, (areas.get(root) || 0) + 1);
+  }
+  if (areas.size <= 1) return; // tek bileşen (veya hiç kişi yok) — değiştirilecek bir şey yok
+
+  let bestRoot = -1;
+  let bestArea = 0;
+  for (const [root, area] of areas) {
+    if (area > bestArea) {
+      bestArea = area;
+      bestRoot = root;
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (!isPerson(i)) continue;
+    if (find(i) !== bestRoot) {
+      const p = i * 4;
+      md[p] = 0;
+      md[p + 1] = 0;
+      md[p + 2] = 0;
+    }
+  }
+};
+
 // WHITEBOARD COMPONENT
 const Whiteboard = ({ role, whiteboardCanvasRef }) => {
   const isTeacher = role === 'TEACHER';
@@ -329,6 +391,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const recordingStartTimeRef = useRef(0);
   const [mutingParticipant, setMutingParticipant] = useState(null);
 
+  // Live chat state
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+  const showChatRef = useRef(false);
+  const chatEndRef = useRef(null);
+
   const muteParticipantTrack = async (participant, trackType) => {
     const tracks = trackType === 'audio' ? micTracks : cameraTracks;
     const trackRef = tracks.find(t => t.participant.identity === participant.identity);
@@ -400,6 +470,41 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       console.error("Failed to parse data message:", err);
     }
   });
+
+  // Handle incoming LiveKit data channel messages (Live chat)
+  const { send: sendChatData } = useDataChannel('chat', (msg) => {
+    try {
+      const text = new TextDecoder().decode(msg.payload);
+      const packet = JSON.parse(text);
+      setChatMessages((prev) => [...prev, packet]);
+      if (!showChatRef.current) {
+        setHasUnreadChat(true);
+      }
+    } catch (err) {
+      console.error("Failed to parse chat message:", err);
+    }
+  });
+
+  const sendChatMessage = () => {
+    const text = chatInput.trim();
+    if (!text || !localParticipant) return;
+
+    const packet = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      senderIdentity: localParticipant.identity,
+      senderName: userName,
+      senderRole: role,
+      text,
+      time: Date.now(),
+    };
+
+    const encoder = new TextEncoder();
+    sendChatData(encoder.encode(JSON.stringify(packet)), { reliable: true });
+    // LiveKit veri kanalı mesajı gönderene geri yansıtmaz, o yüzden kendi mesajımızı elle ekliyoruz
+    setChatMessages((prev) => [...prev, packet]);
+    setChatInput('');
+  };
+
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -424,6 +529,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const virtualRawVideoRef = useRef(null);
   const virtualBgFrameRef = useRef(null);
   const virtualBgLKTrackRef = useRef(null);
+  const virtualCCParentRef = useRef(null);
 
   // Clean up recording context when component unmounts
   useEffect(() => {
@@ -463,6 +569,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
     virtualBgCanvasRef.current = null;
     virtualMaskCanvasRef.current = null;
+    virtualCCParentRef.current = null;
   };
 
   const enableVirtualBackground = async (color) => {
@@ -519,6 +626,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
       virtualMaskCanvasRef.current = maskCanvas;
 
+      // Bağlı bileşen analizinde tekrar tekrar kullanılacak union-find dizisi
+      virtualCCParentRef.current = new Int32Array(w * h);
+
       // Pre-parse background color into R,G,B components
       const hex = color.replace('#', '');
       const bgR = parseInt(hex.substring(0, 2), 16);
@@ -550,6 +660,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
         const fd = frameData.data;
         const md = maskData.data;
+
+        // Arkada başka biri varsa onu da arka plan olarak işaretle; sadece en
+        // büyük (öndeki, sunum yapan) kişi bölgesi korunur
+        if (virtualCCParentRef.current) {
+          suppressSecondaryPeople(md, w, h, virtualCCParentRef.current);
+        }
 
         // confidence: 0 = arka plan, 1 = kişi
         // Sert kesim yerine yumuşak harman (feathering)
@@ -1006,6 +1122,20 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
   }, []);
+
+  useEffect(() => {
+    showChatRef.current = showChat;
+  }, [showChat]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const toggleChat = () => {
+    if (!showChat) setHasUnreadChat(false);
+    setShowChat((prev) => !prev);
+    setShowParticipants(false);
+  };
 
   const selectMicrophone = async (deviceId) => {
     if (!localParticipant) return;
@@ -1832,6 +1962,78 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </div>
           </div>
         )}
+
+        {/* D. SIDEBAR: LIVE CHAT (GLASSMORPHISM) */}
+        {showChat && (
+          <div className="w-80 h-full bg-slate-900/90 backdrop-blur-lg border-l border-slate-800/80 p-5 flex flex-col gap-3 z-15 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+              <h5 className="font-extrabold text-xs md:text-sm text-slate-100 flex items-center gap-2 uppercase tracking-wider">
+                <span className="material-symbols-outlined text-base text-primary">chat</span>
+                Sohbet
+              </h5>
+              <button
+                onClick={() => setShowChat(false)}
+                className="text-slate-400 hover:text-slate-200 cursor-pointer p-1 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-0.5">
+              {chatMessages.length === 0 && (
+                <p className="text-[10px] text-slate-500 font-semibold text-center mt-4">
+                  Henüz mesaj yok. İlk mesajı sen gönder!
+                </p>
+              )}
+              {chatMessages.map((msg) => {
+                const isLocal = msg.senderIdentity === localParticipant?.identity;
+                const isTeacherMsg = msg.senderRole === 'TEACHER' || msg.senderRole === 'HEAD_TEACHER';
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col max-w-[85%] ${isLocal ? 'self-end items-end' : 'self-start items-start'}`}
+                  >
+                    <span className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isTeacherMsg ? 'text-primary' : 'text-slate-400'}`}>
+                      {isLocal ? 'Sen' : msg.senderName}
+                    </span>
+                    <div
+                      className={`px-3 py-2 rounded-2xl text-xs font-semibold break-words ${
+                        isLocal
+                          ? 'bg-primary text-slate-950 rounded-br-sm'
+                          : 'bg-slate-800 text-slate-100 rounded-bl-sm border border-slate-750'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
+              className="flex items-center gap-2 border-t border-slate-850 pt-3"
+            >
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Mesaj yaz..."
+                maxLength={500}
+                className="flex-1 bg-slate-800 border border-slate-750 rounded-xl px-3 py-2 text-xs font-semibold text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-primary/60"
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim()}
+                className="p-2.5 rounded-xl bg-primary text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition-all cursor-pointer shadow-md"
+                title="Gönder"
+              >
+                <span className="material-symbols-outlined text-base">send</span>
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Control Bar (Mute, Video, Screen Share, Participants, Leave) */}
@@ -1989,18 +2191,35 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           </div>
         </div>
 
-        {/* 2. Custom Middle: Participants List Toggle */}
-        <button
-          onClick={() => setShowParticipants(!showParticipants)}
-          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 ${
-            showParticipants 
-              ? 'bg-slate-100 text-slate-900 border-white font-extrabold' 
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
-          }`}
-        >
-          <span className="material-symbols-outlined text-base">group</span>
-          <span className="hidden sm:inline">Katılımcılar</span>
-        </button>
+        {/* 2. Custom Middle: Participants & Chat Toggles */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            onClick={() => { setShowParticipants(!showParticipants); setShowChat(false); }}
+            className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 ${
+              showParticipants
+                ? 'bg-slate-100 text-slate-900 border-white font-extrabold'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">group</span>
+            <span className="hidden sm:inline">Katılımcılar</span>
+          </button>
+
+          <button
+            onClick={toggleChat}
+            className={`relative px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102 ${
+              showChat
+                ? 'bg-slate-100 text-slate-900 border-white font-extrabold'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">chat</span>
+            <span className="hidden sm:inline">Sohbet</span>
+            {hasUnreadChat && !showChat && (
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border border-slate-900 animate-pulse"></span>
+            )}
+          </button>
+        </div>
 
         {/* 3. Action Buttons (Share & Hangup) */}
         <div className="flex items-center gap-2 sm:gap-3">
