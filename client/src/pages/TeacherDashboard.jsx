@@ -128,6 +128,7 @@ const TeacherDashboard = () => {
   });
   const [campView, setCampView] = useState('list');
   const [deleteConfirmCampId, setDeleteConfirmCampId] = useState(null);
+  const [editingCampId, setEditingCampId] = useState(null);
 
   const trMonths = [
     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
@@ -543,6 +544,7 @@ const TeacherDashboard = () => {
 
   const handleCreateCamp = async (e) => {
     e.preventDefault();
+    const isEditing = !!editingCampId;
     try {
       const highlightsArray = newCamp.highlights
         .split('\n')
@@ -574,7 +576,11 @@ const TeacherDashboard = () => {
         whatsappLink: waLink
       };
 
-      await axios.post('/api/teacher/camps', payload);
+      if (isEditing) {
+        await axios.put(`/api/teacher/camps/${editingCampId}`, payload);
+      } else {
+        await axios.post('/api/teacher/camps', payload);
+      }
       setNewCamp({
         badge: '',
         title: '',
@@ -588,11 +594,12 @@ const TeacherDashboard = () => {
         toplamDers: '',
         egitimTuru: 'Online Canlı Eğitim (Zoom)'
       });
+      setEditingCampId(null);
       setCampView('list');
       fetchCamps();
-      alert('Eğitim kampı başarıyla yayınlandı!');
+      alert(isEditing ? 'Kamp başarıyla güncellendi!' : 'Eğitim kampı başarıyla yayınlandı!');
     } catch (err) {
-      alert('Eğitim kampı yayınlanırken hata oluştu.');
+      alert(isEditing ? 'Kamp güncellenirken hata oluştu.' : 'Eğitim kampı yayınlanırken hata oluştu.');
     }
   };
 
@@ -654,6 +661,44 @@ const TeacherDashboard = () => {
     } catch (err) {
       alert('Kamp silinirken hata oluştu.');
     }
+  };
+
+  const handleEditCampClick = (camp) => {
+    let highlightsText = '';
+    try {
+      const arr = JSON.parse(camp.highlights || '[]');
+      highlightsText = Array.isArray(arr) ? arr.join('\n') : '';
+    } catch {
+      highlightsText = camp.highlights || '';
+    }
+
+    let tarih = '', dersProgrami = '', toplamDers = '', egitimTuru = 'Online Canlı Eğitim (Zoom)';
+    try {
+      const details = JSON.parse(camp.details || '[]');
+      details.forEach(d => {
+        const value = d.value === 'Belirtilmedi' ? '' : d.value;
+        if (d.label === 'Tarih') tarih = value;
+        if (d.label === 'Ders Programı') dersProgrami = value;
+        if (d.label === 'Toplam') toplamDers = value;
+        if (d.label === 'Eğitim Türü') egitimTuru = value || 'Online Canlı Eğitim (Zoom)';
+      });
+    } catch {}
+
+    setNewCamp({
+      badge: camp.badge || '',
+      title: camp.title || '',
+      subtitle: camp.subtitle || '',
+      image: camp.image || '',
+      description: camp.description || '',
+      highlights: highlightsText,
+      whatsappLink: camp.whatsappLink || '',
+      tarih,
+      dersProgrami,
+      toplamDers,
+      egitimTuru
+    });
+    setEditingCampId(camp.id);
+    setCampView('create');
   };
 
   const handleCreateBlog = async (e) => {
@@ -731,7 +776,7 @@ const TeacherDashboard = () => {
       {/* Side Navigation */}
       <aside className="w-72 border-r border-primary/10 bg-slate-50/50 p-6 flex flex-col gap-8 hidden md:flex">
         <div className="flex items-center gap-3 px-2">
-          <img src="/logo.png" alt="Fullematematik Logo" className="h-12 w-12 object-contain" />
+          <img src="/logo.png" alt="Fullematematiği Logo" className="h-12 w-12 object-contain" />
           <div>
             <h1 className="text-lg font-black leading-none">Fullematematiği</h1>
             <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Öğretmen Paneli</p>
@@ -2047,7 +2092,23 @@ const TeacherDashboard = () => {
                       <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Sitede yayında olan tüm kampları yönetin</p>
                     </div>
                     <button
-                      onClick={() => setCampView('create')}
+                      onClick={() => {
+                        setEditingCampId(null);
+                        setNewCamp({
+                          badge: '',
+                          title: '',
+                          subtitle: '',
+                          image: '',
+                          description: '',
+                          highlights: '',
+                          whatsappLink: '',
+                          tarih: '',
+                          dersProgrami: '',
+                          toplamDers: '',
+                          egitimTuru: 'Online Canlı Eğitim (Zoom)'
+                        });
+                        setCampView('create');
+                      }}
                       className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-lg">add</span>
@@ -2073,17 +2134,17 @@ const TeacherDashboard = () => {
                             <h4 className="font-bold text-slate-900 truncate text-base">{camp.title}</h4>
                             <p className="text-xs text-slate-400 truncate mt-0.5">{camp.subtitle}</p>
                             
-                            <div className="mt-4 flex items-center justify-end">
+                            <div className="mt-4 flex items-center justify-end gap-4">
                               {deleteConfirmCampId === camp.id ? (
                                 <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100 animate-in fade-in duration-200">
                                   <span className="text-xs font-bold text-red-600 px-2">Emin misiniz?</span>
-                                  <button 
+                                  <button
                                     onClick={() => handleDeleteCamp(camp.id)}
                                     className="bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-red-700"
                                   >
                                     Evet, Sil
                                   </button>
-                                  <button 
+                                  <button
                                     onClick={() => setDeleteConfirmCampId(null)}
                                     className="bg-white text-slate-500 border border-slate-200 px-3 py-1 rounded-lg text-xs font-bold hover:bg-slate-50"
                                   >
@@ -2091,13 +2152,22 @@ const TeacherDashboard = () => {
                                   </button>
                                 </div>
                               ) : (
-                                <button 
-                                  onClick={() => setDeleteConfirmCampId(camp.id)}
-                                  className="text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 text-xs font-bold"
-                                >
-                                  <span className="material-symbols-outlined text-sm">delete</span>
-                                  Kampı Sil
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleEditCampClick(camp)}
+                                    className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 text-xs font-bold"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">edit</span>
+                                    Düzenle
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmCampId(camp.id)}
+                                    className="text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 text-xs font-bold"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                    Kampı Sil
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -2111,30 +2181,30 @@ const TeacherDashboard = () => {
                 <div className="bg-white rounded-[40px] border border-slate-100 p-8 md:p-12 shadow-sm max-w-4xl mx-auto space-y-8">
                   <div className="flex justify-between items-center border-b border-slate-100 pb-6">
                     <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => { setCampView('list'); setDeleteConfirmCampId(null); }}
+                      <button
+                        onClick={() => { setCampView('list'); setDeleteConfirmCampId(null); setEditingCampId(null); }}
                         className="h-10 w-10 rounded-full hover:bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 hover:text-primary transition-all"
                       >
                         <span className="material-symbols-outlined text-lg">arrow_back</span>
                       </button>
                       <div>
-                        <h3 className="text-2xl font-black text-slate-900">Yeni Kamp Yayınla</h3>
+                        <h3 className="text-2xl font-black text-slate-900">{editingCampId ? 'Kampı Düzenle' : 'Yeni Kamp Yayınla'}</h3>
                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Kart kapak resmi ve kamp detaylarını girin</p>
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button 
-                        onClick={() => { setCampView('list'); setDeleteConfirmCampId(null); }}
+                      <button
+                        onClick={() => { setCampView('list'); setDeleteConfirmCampId(null); setEditingCampId(null); }}
                         className="px-6 py-3 border border-slate-200 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all"
                       >
                         Vazgeç
                       </button>
-                      <button 
+                      <button
                         onClick={handleCreateCamp}
                         className="bg-primary text-white px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
                       >
-                        <span className="material-symbols-outlined text-lg">publish</span>
-                        Yayınla
+                        <span className="material-symbols-outlined text-lg">{editingCampId ? 'save' : 'publish'}</span>
+                        {editingCampId ? 'Güncelle' : 'Yayınla'}
                       </button>
                     </div>
                   </div>

@@ -1655,6 +1655,29 @@ app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
   }
 });
 
+app.put('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { badge, title, subtitle, image, details, description, highlights, whatsappLink } = req.body;
+  try {
+    const camp = await prisma.camp.update({
+      where: { id },
+      data: {
+        badge,
+        title,
+        subtitle,
+        image,
+        details: typeof details === 'string' ? details : JSON.stringify(details),
+        description,
+        highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
+        whatsappLink
+      }
+    });
+    res.json(camp);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
