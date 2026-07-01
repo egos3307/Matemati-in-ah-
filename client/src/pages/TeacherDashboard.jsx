@@ -76,6 +76,16 @@ const TeacherDashboard = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [newLessonZoomUrl, setNewLessonZoomUrl] = useState('');
+
+  // Recurring (haftalık tekrar eden) ders serisi states
+  const [recurringTitle, setRecurringTitle] = useState('');
+  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState(1);
+  const [recurringTime, setRecurringTime] = useState('18:00');
+  const [recurringWeeks, setRecurringWeeks] = useState(8);
+  const [recurringStudentIds, setRecurringStudentIds] = useState([]);
+  const [recurringStudentSearch, setRecurringStudentSearch] = useState('');
+  const [recurringZoomUrl, setRecurringZoomUrl] = useState('');
+  const [creatingRecurring, setCreatingRecurring] = useState(false);
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [newBlog, setNewBlog] = useState({ title: '', content: '', excerpt: '', coverImage: '' });
@@ -135,6 +145,15 @@ const TeacherDashboard = () => {
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
   ];
   const trDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+  const recurringDayOptions = [
+    { value: 1, label: 'Pazartesi' },
+    { value: 2, label: 'Salı' },
+    { value: 3, label: 'Çarşamba' },
+    { value: 4, label: 'Perşembe' },
+    { value: 5, label: 'Cuma' },
+    { value: 6, label: 'Cumartesi' },
+    { value: 0, label: 'Pazar' },
+  ];
 
   const getWhatsAppLink = (phone, message = '') => {
     if (!phone) return '#';
@@ -437,6 +456,34 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleCreateRecurringLessons = async (e) => {
+    e.preventDefault();
+    if (recurringStudentIds.length === 0) {
+      alert('Lütfen bu ders serisi için en az bir öğrenci seçin.');
+      return;
+    }
+    setCreatingRecurring(true);
+    try {
+      const res = await axios.post('/api/teacher/create-recurring-lessons', {
+        title: recurringTitle,
+        dayOfWeek: recurringDayOfWeek,
+        time: recurringTime,
+        weeks: recurringWeeks,
+        studentIds: recurringStudentIds,
+        zoomJoinUrl: recurringZoomUrl
+      });
+      setRecurringTitle('');
+      setRecurringStudentIds([]);
+      setRecurringZoomUrl('');
+      fetchLessons();
+      alert(`${res.data.lessons.length} haftalık ders serisi başarıyla oluşturuldu!`);
+    } catch (err) {
+      alert('Ders serisi oluşturulurken hata oluştu: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setCreatingRecurring(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'blog') {
       fetchBlogs();
@@ -628,10 +675,26 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleDeleteLesson = async (lessonId) => {
+  const handleDeleteLesson = async (lesson) => {
+    if (lesson.seriesId) {
+      const deleteWholeSeries = window.confirm(
+        'Bu ders, haftalık tekrar eden bir ders serisinin parçası.\n\nSeriye ait TÜM dersleri silmek için Tamam\'a, sadece bu dersi silmek için İptal\'e basın.'
+      );
+      if (deleteWholeSeries) {
+        try {
+          const res = await axios.delete(`/api/teacher/lesson-series/${lesson.seriesId}`);
+          fetchLessons();
+          alert(`${res.data.count} ders (tüm seri) başarıyla silindi!`);
+        } catch (err) {
+          alert('Ders serisi silinirken hata oluştu.');
+        }
+        return;
+      }
+    }
+
     if (!window.confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
     try {
-      await axios.delete(`/api/teacher/lessons/${lessonId}`);
+      await axios.delete(`/api/teacher/lessons/${lesson.id}`);
       fetchLessons();
       alert('Ders başarıyla silindi!');
     } catch (err) {
@@ -1019,7 +1082,7 @@ const TeacherDashboard = () => {
                               <span className="material-symbols-outlined text-base font-bold">notifications_active</span>
                             </button>
                             <button
-                              onClick={() => handleDeleteLesson(lesson.id)}
+                              onClick={() => handleDeleteLesson(lesson)}
                               className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-2.5 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
                               title="Dersi Sil"
                             >
@@ -1482,6 +1545,7 @@ const TeacherDashboard = () => {
           )}
 
           {activeTab === 'new-lesson' && (
+            <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column: Calendar */}
               <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
@@ -1660,7 +1724,7 @@ const TeacherDashboard = () => {
                               </button>
 
                               <button 
-                                onClick={() => handleDeleteLesson(lesson.id)}
+                                onClick={() => handleDeleteLesson(lesson)}
                                 className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
                                 title="Dersi Sil"
                               >
@@ -1791,6 +1855,122 @@ const TeacherDashboard = () => {
                   </form>
                 </div>
               </div>
+            </div>
+
+            {/* Recurring Weekly Lesson Series */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <h4 className="font-black text-slate-900 mb-1 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-lg">event_repeat</span>
+                Haftalık Tekrar Eden Ders Serisi Oluştur
+              </h4>
+              <p className="text-xs text-slate-400 font-semibold mb-6">
+                Seçtiğiniz gün ve saatte, belirlediğiniz hafta sayısı kadar ders otomatik olarak oluşturulur.
+              </p>
+              <form onSubmit={handleCreateRecurringLessons} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Başlığı</label>
+                  <input
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    placeholder="Örn: TYT Fonksiyonlar"
+                    value={recurringTitle}
+                    onChange={(e) => setRecurringTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Haftanın Günü</label>
+                  <select
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    value={recurringDayOfWeek}
+                    onChange={(e) => setRecurringDayOfWeek(parseInt(e.target.value))}
+                  >
+                    {recurringDayOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Saat</label>
+                  <input
+                    type="time"
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    value={recurringTime}
+                    onChange={(e) => setRecurringTime(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kaç Hafta Sürecek</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="52"
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    value={recurringWeeks}
+                    onChange={(e) => setRecurringWeeks(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi (Birden fazla seçebilirsiniz)</label>
+                  <input
+                    type="text"
+                    placeholder="Öğrenci adı ile ara..."
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-2.5 text-slate-900 font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-xs mb-2"
+                    value={recurringStudentSearch}
+                    onChange={(e) => setRecurringStudentSearch(e.target.value)}
+                  />
+                  <div className="max-h-48 overflow-y-auto border border-primary/10 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
+                    {students.filter(student =>
+                      student.name.toLowerCase().includes(recurringStudentSearch.toLowerCase())
+                    ).map(student => {
+                      const isChecked = recurringStudentIds.includes(student.id);
+                      return (
+                        <label key={student.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setRecurringStudentIds(prev =>
+                                prev.includes(student.id)
+                                  ? prev.filter(id => id !== student.id)
+                                  : [...prev, student.id]
+                              );
+                            }}
+                            className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5 cursor-pointer"
+                          />
+                          <span className="text-sm font-bold text-slate-800">
+                            {student.name} <span className="text-xs text-slate-400">({(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`})</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Linki (Zoom, Meet vb. - boş bırakılırsa otomatik oluşturulur)</label>
+                  <input
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    placeholder="https://zoom.us/j/... veya Google Meet linki"
+                    value={recurringZoomUrl}
+                    onChange={(e) => setRecurringZoomUrl(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={creatingRecurring}
+                  className="md:col-span-2 w-full py-4 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] hover:shadow-xl transition-all text-sm mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {creatingRecurring ? 'Oluşturuluyor...' : 'Ders Serisini Oluştur'}
+                </button>
+              </form>
+            </div>
             </div>
           )}
 

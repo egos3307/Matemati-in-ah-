@@ -72,6 +72,7 @@ model Lesson {
   studentId      Int?
   student        User?    @relation("StudentLessons", fields: [studentId], references: [id])
   studentIds     String?  // JSON array of student IDs for group lessons, e.g. "[1,2,3]"
+  seriesId       String?  // Haftalık tekrarlayan ders serisi kimliği, aynı seriden gelen dersler için ortak
   homeworks      Homework[]
   createdAt      DateTime @default(now())
 }

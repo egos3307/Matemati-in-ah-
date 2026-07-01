@@ -363,6 +363,74 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
   }
 });
 
+// Her hafta aynı gün/saatte tekrar eden ders serisi oluşturur (ör. 10 hafta boyunca her Pazartesi 18:00)
+app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), async (req, res) => {
+  const { title, description, dayOfWeek, time, weeks, studentIds, zoomJoinUrl } = req.body;
+  try {
+    const weekCount = parseInt(weeks);
+    const targetDay = parseInt(dayOfWeek);
+    const [hours, minutes] = (time || '12:00').split(':').map(Number);
+
+    if (isNaN(weekCount) || weekCount < 1 || weekCount > 52) {
+      return res.status(400).json({ error: 'Hafta sayısı 1 ile 52 arasında olmalıdır.' });
+    }
+    if (isNaN(targetDay) || targetDay < 0 || targetDay > 6) {
+      return res.status(400).json({ error: 'Geçersiz gün seçimi.' });
+    }
+
+    let targetIds = [];
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      targetIds = studentIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    }
+    if (targetIds.length === 0) {
+      return res.status(400).json({ error: 'Lütfen bu ders serisi için en az bir öğrenci seçin.' });
+    }
+
+    let finalUrl = zoomJoinUrl;
+    if (!finalUrl) {
+      finalUrl = await createDailyRoom();
+    }
+    if (!finalUrl) {
+      const uniqueId = Math.random().toString(36).substring(2, 9);
+      finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
+    }
+
+    // İlk dersin tarihini bul: bugünden itibaren seçilen haftanın gününe denk gelen ilk tarih
+    const firstDate = new Date();
+    firstDate.setHours(hours, minutes, 0, 0);
+    const currentDay = new Date().getDay();
+    let dayDiff = (targetDay - currentDay + 7) % 7;
+    if (dayDiff === 0 && firstDate.getTime() <= Date.now()) {
+      dayDiff = 7; // Bugünün saati zaten geçtiyse bir sonraki haftaya kaydır
+    }
+    firstDate.setDate(firstDate.getDate() + dayDiff);
+
+    const seriesId = crypto.randomUUID();
+    const lessons = [];
+    for (let i = 0; i < weekCount; i++) {
+      const lessonDate = new Date(firstDate);
+      lessonDate.setDate(lessonDate.getDate() + i * 7);
+      const lesson = await prisma.lesson.create({
+        data: {
+          title,
+          description,
+          date: lessonDate,
+          teacherId: req.user.id,
+          studentId: targetIds[0],
+          studentIds: JSON.stringify(targetIds),
+          zoomJoinUrl: finalUrl,
+          seriesId,
+        },
+      });
+      lessons.push(lesson);
+    }
+
+    res.json({ success: true, seriesId, lessons });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
@@ -377,6 +445,24 @@ app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, r
       where: { id }
     });
     res.json({ success: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Tekrarlayan bir ders serisindeki tüm gelecek/geçmiş dersleri toplu siler
+app.delete('/api/teacher/lesson-series/:seriesId', auth, checkRole('TEACHER'), async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    await prisma.homework.updateMany({
+      where: { lesson: { seriesId } },
+      data: { lessonId: null }
+    });
+
+    const deleted = await prisma.lesson.deleteMany({
+      where: { seriesId }
+    });
+    res.json({ success: true, count: deleted.count });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
