@@ -382,7 +382,7 @@
     .soru-kart {
       background: #fafafa;
       border: 1px solid #e5e7eb;
-      border-left: 4px solid #2c3e50;
+      border-left: 4px solid #e67e22;
       border-radius: 5px;
       padding: 9px 10px;
       break-inside: avoid;
@@ -396,7 +396,7 @@
       display: flex; align-items: center; gap: 5px;
     }
     .soru-kart-baslik .soru-no-rozet {
-      background: #2c3e50; color: #fff;
+      background: #e67e22; color: #fff;
       font-size: 9px; font-weight: 900;
       padding: 1px 6px; border-radius: 10px;
     }
@@ -1080,7 +1080,7 @@ function bloklarHTML(bloklar) {
           ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${sikStr}</strong></span>`
           : `<span style="margin-right:8px;">${sikStr}</span>`;
       }).join('');
-      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #2c3e50;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${sikHTML}</div></div>`;
+      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${sikHTML}</div></div>`;
       continue;
     }
     if (tip === 'tablo') {
@@ -1242,7 +1242,7 @@ function etiketliMetniHTML(metin) {
       soruKapat();
       soruSayaci++;
       const soruMetni = satir.replace(/^SORU\s*\d+\s*:\s*/i, '');
-      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #2c3e50;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">`;
+      suankiSoruHTML = `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:10px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;break-inside:avoid;"><strong style="font-size:12px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:11.5px;line-height:1.55;margin:5px 0;">${soruMetni}</p><div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">`;
       i++; continue;
     }
 
