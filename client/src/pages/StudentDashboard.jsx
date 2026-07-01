@@ -1775,7 +1775,7 @@ const StudentDashboard = () => {
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
               <img
-                src="/Safari için;.png"
+                src="/safari-install.png"
                 alt="Uygulamayı Ana Ekrana Ekle"
                 className="w-full object-contain max-h-80"
               />
