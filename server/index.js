@@ -86,6 +86,7 @@ async function seedCamps() {
               'Çözümlü örneklerle soru çözüm tekniklerini öğren',
               'LGS ve okul sınavları için sağlam altyapı oluştur'
             ]),
+            price: '2500 TL',
             whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
           },
           {
@@ -107,6 +108,7 @@ async function seedCamps() {
               'Kaçırılan dersleri dilediğiniz zaman tekrar izleme imkanı',
               'Sınava sağlam ve eksiksiz bir hazırlık süreci'
             ]),
+            price: '3500 TL',
             whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
           }
         ]
@@ -1721,7 +1723,7 @@ app.get('/api/camps', async (req, res) => {
 });
 
 app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
-  const { badge, title, subtitle, image, details, description, highlights, whatsappLink } = req.body;
+  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink } = req.body;
   try {
     const camp = await prisma.camp.create({
       data: {
@@ -1732,6 +1734,7 @@ app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
         details: typeof details === 'string' ? details : JSON.stringify(details),
         description,
         highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
+        price,
         whatsappLink
       }
     });
@@ -1743,7 +1746,7 @@ app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
 
 app.put('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { badge, title, subtitle, image, details, description, highlights, whatsappLink } = req.body;
+  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink } = req.body;
   try {
     const camp = await prisma.camp.update({
       where: { id },
@@ -1755,6 +1758,7 @@ app.put('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) =
         details: typeof details === 'string' ? details : JSON.stringify(details),
         description,
         highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
+        price,
         whatsappLink
       }
     });

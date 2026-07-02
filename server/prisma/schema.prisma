@@ -120,6 +120,7 @@ model Camp {
   details      String   // JSON string: [{ icon, label, value }]
   description  String
   highlights   String   // JSON string: string[]
+  price        String?
   whatsappLink String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

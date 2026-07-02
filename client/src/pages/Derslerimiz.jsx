@@ -23,6 +23,7 @@ const FALLBACK_CAMPS = [
       'Çözümlü örneklerle soru çözüm tekniklerini öğren',
       'LGS ve okul sınavları için sağlam altyapı oluştur'
     ],
+    price: '2500 TL',
     whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
   },
   {
@@ -45,6 +46,7 @@ const FALLBACK_CAMPS = [
       'Kaçırılan dersleri dilediğiniz zaman tekrar izleme imkanı',
       'Sınava sağlam ve eksiksiz bir hazırlık süreci'
     ],
+    price: '3500 TL',
     whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
   }
 ];
@@ -119,11 +121,16 @@ const Derslerimiz = () => {
             >
               {/* Card Header */}
               <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
-                <img 
-                  src={camp.image} 
-                  alt={camp.title} 
+                <img
+                  src={camp.image}
+                  alt={camp.title}
                   className="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
                 />
+                {camp.price && (
+                  <span className="absolute top-4 right-4 rounded-full bg-white px-4 py-1.5 text-sm font-black text-primary shadow-lg">
+                    {camp.price}
+                  </span>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent flex flex-col justify-end p-6">
                   <span className="w-fit rounded-full bg-primary px-3 py-1 text-xs font-bold text-white uppercase tracking-wider mb-2">
                     {camp.badge}

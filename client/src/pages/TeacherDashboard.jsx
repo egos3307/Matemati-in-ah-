@@ -130,6 +130,7 @@ const TeacherDashboard = () => {
     image: '',
     description: '',
     highlights: '',
+    price: '',
     whatsappLink: '',
     tarih: '',
     dersProgrami: '',
@@ -620,6 +621,7 @@ const TeacherDashboard = () => {
         description: newCamp.description,
         highlights: JSON.stringify(highlightsArray),
         details: JSON.stringify(detailsArray),
+        price: newCamp.price,
         whatsappLink: waLink
       };
 
@@ -635,6 +637,7 @@ const TeacherDashboard = () => {
         image: '',
         description: '',
         highlights: '',
+        price: '',
         whatsappLink: '',
         tarih: '',
         dersProgrami: '',
@@ -754,6 +757,7 @@ const TeacherDashboard = () => {
       image: camp.image || '',
       description: camp.description || '',
       highlights: highlightsText,
+      price: camp.price || '',
       whatsappLink: camp.whatsappLink || '',
       tarih,
       dersProgrami,
@@ -2281,6 +2285,7 @@ const TeacherDashboard = () => {
                           image: '',
                           description: '',
                           highlights: '',
+                          price: '',
                           whatsappLink: '',
                           tarih: '',
                           dersProgrami: '',
@@ -2313,7 +2318,10 @@ const TeacherDashboard = () => {
                             <span className="inline-block text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-full mb-1">{camp.badge}</span>
                             <h4 className="font-bold text-slate-900 truncate text-base">{camp.title}</h4>
                             <p className="text-xs text-slate-400 truncate mt-0.5">{camp.subtitle}</p>
-                            
+                            {camp.price && (
+                              <span className="inline-block text-xs font-black text-emerald-600 mt-1.5">{camp.price}</span>
+                            )}
+
                             <div className="mt-4 flex items-center justify-end gap-4">
                               {deleteConfirmCampId === camp.id ? (
                                 <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100 animate-in fade-in duration-200">
@@ -2426,13 +2434,24 @@ const TeacherDashboard = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp Kayıt Numarası veya Link (Opsiyonel)</label>
-                        <input 
-                          className="w-full text-base font-bold outline-none border-b border-slate-100 pb-2 focus:border-primary/20 transition-colors placeholder:text-slate-200 font-bold text-slate-700" 
-                          placeholder="Boş bırakılırsa ana iletişim numarası kullanılır" 
-                          value={newCamp.whatsappLink} 
-                          onChange={(e) => setNewCamp({...newCamp, whatsappLink: e.target.value})} 
+                        <input
+                          className="w-full text-base font-bold outline-none border-b border-slate-100 pb-2 focus:border-primary/20 transition-colors placeholder:text-slate-200 font-bold text-slate-700"
+                          placeholder="Boş bırakılırsa ana iletişim numarası kullanılır"
+                          value={newCamp.whatsappLink}
+                          onChange={(e) => setNewCamp({...newCamp, whatsappLink: e.target.value})}
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kamp Fiyatı</label>
+                      <input
+                        className="w-full text-base font-bold outline-none border-b border-slate-100 pb-2 focus:border-primary/20 transition-colors placeholder:text-slate-200 font-bold text-slate-700"
+                        placeholder="Örn: 2500 TL"
+                        value={newCamp.price}
+                        onChange={(e) => setNewCamp({...newCamp, price: e.target.value})}
+                        required
+                      />
                     </div>
 
                     {/* Camp Cover Image */}
