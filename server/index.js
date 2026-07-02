@@ -2103,7 +2103,7 @@ KURALLAR:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
         messages: [
           { role: 'system', content: sistemTalimati },
           { role: 'user', content: metin }
