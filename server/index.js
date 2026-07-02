@@ -1902,17 +1902,16 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
   }
 });
 
-// Real Groq Multimodal AI endpoint
+// Groq Multimodal AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
   
   try {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) tanımlanmamış. Lütfen ekleyin.' });
     }
 
-    // Log API Key prefix for debugging purposes (never log full key)
     console.log(`Using GROQ_API_KEY prefix: ${apiKey.substring(0, 6)}...`);
 
     const messages = [
@@ -1925,34 +1924,20 @@ app.post('/api/ai/ask', auth, async (req, res) => {
     const userContent = [];
     
     if (image) {
-      // Decode image base64
-      // Groq expects image in content list with type: "image_url"
       userContent.push({
         type: "image_url",
-        image_url: {
-          url: image
-        }
+        image_url: { url: image }
       });
     }
 
     if (question && question.trim()) {
-      userContent.push({
-        type: "text",
-        text: question
-      });
+      userContent.push({ type: "text", text: question });
     } else if (!image) {
-      userContent.push({
-        type: "text",
-        text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?"
-      });
+      userContent.push({ type: "text", text: "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?" });
     }
 
-    messages.push({
-      role: "user",
-      content: userContent
-    });
+    messages.push({ role: "user", content: userContent });
 
-    // Call Groq API
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1969,15 +1954,11 @@ app.post('/api/ai/ask', auth, async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Groq API Error details:', errText);
-      
       let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
       try {
         const parsedErr = JSON.parse(errText);
-        if (parsedErr.error?.message) {
-          errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
-        }
+        if (parsedErr.error?.message) errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
       } catch (e) {}
-      
       return res.status(response.status).json({ error: errorMsg });
     }
 
@@ -2091,7 +2072,7 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   try {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) Vercel üzerinde tanımlanmamış. Lütfen ekleyin.' });
+      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) tanımlanmamış. Lütfen ekleyin.' });
     }
 
     const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini, sanki kendi elinle temize çekmiş gibi düzenli bir fasiküle dönüştürüyorsun.
@@ -2122,7 +2103,7 @@ KURALLAR:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama3-70b-8192',
         messages: [
           { role: 'system', content: sistemTalimati },
           { role: 'user', content: metin }
