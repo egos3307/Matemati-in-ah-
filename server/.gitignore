@@ -3,3 +3,7 @@ node_modules
 .env
 
 /generated/prisma
+
+# OAuth helper scripts (hassas, repoya gitmesin)
+get_refresh_token.js
+test_drive.js

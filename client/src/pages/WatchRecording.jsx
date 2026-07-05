@@ -25,7 +25,18 @@ const WatchRecording = () => {
     
     const decodedUrl = decodeURIComponent(url);
     
-    // 1. Google Drive Link Detector
+    // 1. Güvenli Drive stream (drive:FILEID formatı)
+    if (decodedUrl.startsWith('drive:')) {
+      const fileId = decodedUrl.replace('drive:', '');
+      const apiBase = import.meta.env.VITE_API_URL || '';
+      const token = localStorage.getItem('token') || '';
+      return {
+        type: 'native',
+        url: `${apiBase}/api/drive/stream/${fileId}?token=${encodeURIComponent(token)}`
+      };
+    }
+    
+    // 2. Google Drive Link Detector (eski kayıtlar için)
     if (decodedUrl.includes('drive.google.com')) {
       let fileId = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -46,7 +57,7 @@ const WatchRecording = () => {
       }
     }
     
-    // 2. GoFile Link Detector (iframe'i blokluyor, yeni sekme açılacak)
+    // 3. GoFile Link Detector (iframe'i blokluyor, yeni sekme açılacak)
     if (decodedUrl.includes('gofile.io')) {
       return { type: 'gofile', url: decodedUrl };
     }

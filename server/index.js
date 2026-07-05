@@ -779,31 +779,70 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   const fileId = fileData.id;
   console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
   
-  try {
-    console.log(`Setting public reader permission for Google Drive file ${fileId}...`);
-    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        role: 'reader',
-        type: 'anyone'
-      })
-    });
-    if (!permRes.ok) {
-      const permErrText = await permRes.text();
-      console.warn(`Failed to set permissions for file ${fileId}: ${permErrText}`);
-    } else {
-      console.log(`Public reader permission set successfully for Google Drive file ${fileId}.`);
-    }
-  } catch (permErr) {
-    console.warn("Failed to set public view permission on Google Drive file, continuing...", permErr);
-  }
+  // Dosyayı herkese açık YAPMA — URL sadece API üzerinden token ile verilecek
+  // Bu sayede öğrenci URL'yi paylaşsa bile başkası erişemez
   
-  return `https://drive.google.com/file/d/${fileId}/view?usp=drivesdk`;
+  return `drive:${fileId}`;
 }
+
+// 🔒 Güvenli Drive Video Endpoint'i
+// Öğrenci URL'yi paylaşsa bile başkası erişemez — JWT token zorunlu
+app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
+  const { fileId } = req.params;
+
+  // Sadece harf, rakam, tire ve alt çizgi — injection koruması
+  if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) {
+    return res.status(400).json({ error: 'Geçersiz dosya ID.' });
+  }
+
+  try {
+    const accessToken = await getGoogleDriveAccessToken();
+    if (!accessToken) {
+      return res.status(503).json({ error: 'Drive erişimi yapılandırılmamış.' });
+    }
+
+    // Range header'ı destekle (video seeking için şart)
+    const rangeHeader = req.headers['range'];
+    const driveRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...(rangeHeader ? { Range: rangeHeader } : {}),
+        },
+      }
+    );
+
+    if (!driveRes.ok) {
+      const err = await driveRes.text();
+      console.error(`Drive stream hatası (${fileId}):`, err);
+      return res.status(driveRes.status).json({ error: 'Dosyaya erişilemedi.' });
+    }
+
+    // Drive'dan gelen header'ları öğrenciye ilet
+    const contentType = driveRes.headers.get('content-type') || 'video/mp4';
+    const contentLength = driveRes.headers.get('content-length');
+    const contentRange = driveRes.headers.get('content-range');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, no-store'); // Önbelleğe alınmasın
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    if (contentRange) res.setHeader('Content-Range', contentRange);
+
+    res.status(rangeHeader ? 206 : 200);
+
+    // Stream et — tüm videoyu belleğe alma
+    const { Readable } = require('stream');
+    Readable.fromWeb(driveRes.body).pipe(res);
+
+  } catch (err) {
+    console.error('Drive stream hatası:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Sunucu hatası.' });
+    }
+  }
+});
 
 app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
@@ -2295,6 +2334,82 @@ if (require.main === module) {
     });
   });
 }
+
+// ─────────────────────────────────────────────────────────
+// 🗑️ Otomatik Kayıt Silme — 8 aydan eski ders kayıtları
+// ─────────────────────────────────────────────────────────
+
+async function deleteFromGoogleDrive(fileId) {
+  try {
+    const accessToken = await getGoogleDriveAccessToken();
+    if (!accessToken) return;
+
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (res.status === 204 || res.status === 200) {
+      console.log(`🗑️ Drive dosyası silindi: ${fileId}`);
+    } else {
+      const err = await res.text();
+      console.warn(`Drive silme uyarısı (${fileId}): ${err}`);
+    }
+  } catch (err) {
+    console.error(`Drive silme hatası (${fileId}):`, err.message);
+  }
+}
+
+async function cleanupOldRecordings() {
+  try {
+    const eightMonthsAgo = new Date();
+    eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
+
+    // 8 aydan eski, kaydı olan dersleri bul
+    const oldLessons = await prisma.lesson.findMany({
+      where: {
+        recordingUrl: { not: null },
+        date: { lt: eightMonthsAgo },
+      },
+      select: { id: true, title: true, date: true, recordingUrl: true },
+    });
+
+    if (oldLessons.length === 0) {
+      console.log('🗑️ Silinecek eski ders kaydı bulunamadı.');
+      return;
+    }
+
+    console.log(`🗑️ ${oldLessons.length} adet 8 aydan eski ders kaydı temizlenecek...`);
+
+    for (const lesson of oldLessons) {
+      // Drive'dan sil (drive:FILEID formatındaysa)
+      if (lesson.recordingUrl?.startsWith('drive:')) {
+        const fileId = lesson.recordingUrl.replace('drive:', '');
+        await deleteFromGoogleDrive(fileId);
+      }
+
+      // DB'den kaydı temizle
+      await prisma.lesson.update({
+        where: { id: lesson.id },
+        data: { recordingUrl: null },
+      });
+
+      console.log(`🗑️ Ders kaydı temizlendi: [${lesson.id}] ${lesson.title} (${lesson.date.toLocaleDateString('tr-TR')})`);
+    }
+
+    console.log(`✅ Eski kayıt temizleme tamamlandı. ${oldLessons.length} kayıt silindi.`);
+  } catch (err) {
+    console.error('Kayıt temizleme hatası:', err.message);
+  }
+}
+
+// Sunucu başlayınca bir kez çalıştır, sonra her 24 saatte bir kontrol et
+cleanupOldRecordings();
+setInterval(cleanupOldRecordings, 24 * 60 * 60 * 1000);
+
 
 // YouTube RSS Feed (API key gereksiz)
 let ytCacheData = null;

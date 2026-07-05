@@ -1,7 +1,10 @@
 const jwt = require('jsonwebtoken');
 
 const auth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+  // Önce header'dan al, yoksa query param'dan al (video stream için)
+  const token =
+    req.header('Authorization')?.replace('Bearer ', '') ||
+    req.query.token;
 
   if (!token) {
     return res.status(401).json({ message: 'No token, authorization denied' });
