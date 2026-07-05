@@ -741,15 +741,46 @@ async function convertToMp4(inputBuffer) {
   return outputBuffer;
 }
 
+async function verifyDriveFolder(accessToken, folderId) {
+  if (!folderId) return false;
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.warn(`[Drive] Klasör doğrulama başarısız (${folderId}): ${err}`);
+      return false;
+    }
+    const data = await res.json();
+    console.log(`[Drive] Klasör doğrulandı: "${data.name}" (${data.id})`);
+    return true;
+  } catch (e) {
+    console.warn(`[Drive] Klasör doğrulama hatası: ${e.message}`);
+    return false;
+  }
+}
+
 async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
   const accessToken = await getGoogleDriveAccessToken();
   if (!accessToken) {
     return null;
   }
+
+  // Klasör erişilebilir mi kontrol et; yoksa root'a yükle
+  let resolvedFolderId = folderId;
+  if (folderId) {
+    const folderOk = await verifyDriveFolder(accessToken, folderId);
+    if (!folderOk) {
+      console.warn(`[Drive] Klasör erişilemez (${folderId}), root'a yüklenecek.`);
+      resolvedFolderId = null;
+    }
+  }
+
   const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
   const metadata = {
     name: fileName,
-    parents: folderId ? [folderId] : []
+    parents: resolvedFolderId ? [resolvedFolderId] : []
   };
   const parts = [];
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
@@ -759,7 +790,7 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   
   const payload = Buffer.concat(parts);
   
-  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive...`);
+  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive${resolvedFolderId ? ` (klasör: ${resolvedFolderId})` : ' (root)'}...`);
   const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
     method: 'POST',
     headers: {
