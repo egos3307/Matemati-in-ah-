@@ -104,7 +104,55 @@
     .mod-btn:hover { color: #e5e7eb; }
     .mod-btn.aktif-ders { color: var(--sari); border-bottom-color: var(--sari); }
     .mod-btn.aktif-test { color: #a78bfa; border-bottom-color: #a78bfa; }
+    .mod-btn.aktif-gpt  { color: #34d399; border-bottom-color: #34d399; }
     .mod-btn .mod-icon { font-size: 16px; }
+
+    /* ── GPT Üret paneli ── */
+    .panel-gpt { display: flex; flex-direction: column; gap: 10px; }
+    .gpt-tip-grup {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .gpt-tip-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 10px; border-radius: 8px;
+      font-family: 'Lexend', sans-serif; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all .18s;
+      background: var(--panel2); border: 1.5px solid var(--panel3); color: #9ca3af;
+    }
+    .gpt-tip-btn.secili-konu { background: rgba(245,197,24,.1); border-color: var(--sari); color: var(--sari); }
+    .gpt-tip-btn.secili-test { background: rgba(52,211,153,.1); border-color: #34d399; color: #34d399; }
+    .gpt-soru-sayisi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+    .gpt-sayi-btn {
+      padding: 6px 4px; border-radius: 7px; border: 1.5px solid var(--panel3);
+      background: var(--panel2); color: #9ca3af;
+      font-family: 'Lexend', sans-serif; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .gpt-sayi-btn.aktif { background: rgba(52,211,153,.15); border-color: #34d399; color: #34d399; }
+    .badge-gpt {
+      font-size: 9px; font-weight: 800; padding: 2px 7px;
+      border-radius: 20px; background: #059669; color: #fff;
+    }
+    .btn-gpt {
+      background: linear-gradient(135deg, #059669, #34d399);
+      color: #fff; box-shadow: 0 4px 12px rgba(52,211,153,.35);
+    }
+    .btn-gpt:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(52,211,153,.45); }
+    .btn-gpt:disabled { opacity: .55; pointer-events: none; }
+    .gpt-ai-panel {
+      background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.25);
+      border-radius: 10px; padding: 11px 12px;
+      display: none; flex-direction: column; gap: 8px;
+    }
+    .gpt-ai-panel.active { display: flex; }
+    #gpt-ai-durum { font-size: 11px; font-weight: 600; color: #6ee7b7; min-height: 16px; }
+    #gpt-ai-bar {
+      height: 100%; border-radius: 20px;
+      background: linear-gradient(90deg, #059669, #34d399, #6ee7b7);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s linear infinite;
+      transition: width .4s ease; width: 0%;
+    }
 
     /* ── Çalışma alanı ── */
     .workspace { display: flex; flex: 1; overflow: hidden; }
@@ -413,6 +461,8 @@
       page-break-inside: avoid;
       font-size: 11.5px;
       line-height: 1.6;
+      display: flex;
+      flex-direction: column;
     }
     .soru-kart-baslik {
       font-size: 12px; font-weight: 900; color: #1a1a1a;
@@ -428,7 +478,43 @@
     .siklar-wrap { display: flex; flex-direction: column; gap: 4px; }
     .sik-satir { font-size: 11px; color: #374151; padding: 1px 0; }
     .sik-satir.dogru { color: #e67e22; font-weight: 700; }
-    .soru-gorsel-not { font-size: 10px; color: #6b7280; font-style: italic; margin-top: 5px; padding: 3px 6px; background: #f3f4f6; border-radius: 4px; }
+    /* Şıklı sorular için çalışma alanı */
+    .islem-alani {
+      margin-top: 8px;
+      border-top: 1px dashed #d1d5db;
+      padding-top: 5px;
+    }
+    .islem-cizgi {
+      height: 18px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 2px;
+    }
+    /* Açık uçlu soru işlem alanı — daha geniş */
+    .acik-uclu-alan {
+      margin-top: 10px;
+      border-top: 2px dashed #d1d5db;
+      padding-top: 6px;
+    }
+    .acik-uclu-cizgi {
+      height: 22px;
+      border-bottom: 1px solid #c8ccd0;
+      margin-bottom: 3px;
+    }
+    .acik-uclu-etiket {
+      font-size: 8.5px; color: #9ca3af; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 5px; display: flex; align-items: center; gap: 4px;
+    }
+    .acik-uclu-etiket::before { content: '✎'; font-size: 9px; }
+    .soru-gorsel-not {
+      font-size: 10px; color: #374151; font-style: italic;
+      margin-top: 5px; margin-bottom: 4px;
+      padding: 4px 8px;
+      background: #f0f4ff;
+      border-left: 3px solid #6366f1;
+      border-radius: 0 4px 4px 0;
+      line-height: 1.5;
+    }
     .tam-genislik-soru {
       grid-column: 1 / -1;
     }
@@ -474,6 +560,7 @@
     /* Panel visibility */
     .panel-ders { display: flex; flex-direction: column; gap: 10px; }
     .panel-test { display: flex; flex-direction: column; gap: 10px; }
+    .panel-gpt  { display: flex; flex-direction: column; gap: 10px; }
     .hidden { display: none !important; }
 
     @media (max-width: 900px) { .left-panel { width: 260px; min-width: 220px; } }
@@ -504,6 +591,9 @@
   </button>
   <button class="mod-btn" id="btn-mod-test" onclick="modDegistir('test')">
     <span class="mod-icon">📸</span> Test Oluştur
+  </button>
+  <button class="mod-btn" id="btn-mod-gpt" onclick="modDegistir('gpt')">
+    <span class="mod-icon">✨</span> GPT Üret
   </button>
 </div>
 
@@ -654,6 +744,90 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
       <button class="btn btn-clear" onclick="testTemizle()">Temizle</button>
     </div>
 
+    <!-- ════ GPT ÜRET PANELİ ════ -->
+    <div class="panel-gpt hidden" id="panel-gpt">
+      <div class="input-section-title">
+        <span>AI ile İçerik Üret</span>
+        <span class="badge-gpt">GPT</span>
+      </div>
+
+      <!-- Konu girişi -->
+      <div class="fg">
+        <p class="lbl">Konu / Başlık</p>
+        <input id="gpt-inp-konu" type="text" placeholder="Ör: Üçgenlerde Alan – 8. Sınıf" />
+      </div>
+
+      <!-- Sınıf -->
+      <div class="fg">
+        <p class="lbl">Sınıf / Seviye</p>
+        <select id="gpt-inp-sinif">
+          <option value="">Genel</option>
+          <option>5. Sınıf</option><option>6. Sınıf</option><option>7. Sınıf</option>
+          <option>8. Sınıf</option><option>9. Sınıf</option><option>10. Sınıf</option>
+          <option>11. Sınıf</option><option>12. Sınıf</option>
+          <option>LGS</option><option>YKS</option><option>KPSS</option><option>ALES</option>
+        </select>
+      </div>
+
+      <!-- Üretim tipi -->
+      <div class="fg">
+        <p class="lbl">Üretim Türü</p>
+        <div class="gpt-tip-grup">
+          <button class="gpt-tip-btn secili-konu" id="gpt-btn-konu" onclick="gptTipSec('konu')">
+            📖 Konu Anlatımı
+          </button>
+          <button class="gpt-tip-btn" id="gpt-btn-test" onclick="gptTipSec('test')">
+            📝 Test
+          </button>
+        </div>
+      </div>
+
+      <!-- Soru sayısı (sadece test tipinde göster) -->
+      <div class="fg" id="gpt-soru-sayisi-wrap">
+        <p class="lbl">Soru Sayısı</p>
+        <div class="gpt-soru-sayisi">
+          <button class="gpt-sayi-btn" onclick="gptSayiSec(5, this)">5</button>
+          <button class="gpt-sayi-btn aktif" onclick="gptSayiSec(10, this)">10</button>
+          <button class="gpt-sayi-btn" onclick="gptSayiSec(15, this)">15</button>
+          <button class="gpt-sayi-btn" onclick="gptSayiSec(20, this)">20</button>
+        </div>
+      </div>
+
+      <!-- Zorluk -->
+      <div class="fg">
+        <p class="lbl">Zorluk Seviyesi</p>
+        <select id="gpt-zorluk">
+          <option value="karma">Karma (Başlangıç → Zor)</option>
+          <option value="kolay">Kolay</option>
+          <option value="orta">Orta</option>
+          <option value="zor">Zor / YKS Seviyesi</option>
+        </select>
+      </div>
+
+      <!-- AI Durum -->
+      <div class="gpt-ai-panel" id="gpt-ai-panel">
+        <div id="gpt-ai-durum">Üretiliyor…</div>
+        <div class="progress-bar-wrap"><div id="gpt-ai-bar"></div></div>
+        <div class="ai-parca-info" id="gpt-ai-info"></div>
+      </div>
+
+      <div class="model-info">
+        ✨ Model: <strong>Cerebras gpt-oss-120b</strong>
+      </div>
+
+      <button class="btn btn-gpt" id="btn-gpt-uret" onclick="gptUret()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        İçerik Üret
+      </button>
+
+      <button class="btn btn-pdf" id="btn-pdf-gpt" onclick="gptPdfUret()" style="display:none;">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        PDF Üret
+      </button>
+
+      <button class="btn btn-clear" onclick="gptTemizle()">Temizle</button>
+    </div>
+
   </aside>
 
   <!-- ══ SAĞ PANEL ══ -->
@@ -671,7 +845,7 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
 /* ═══════════════════════════════════════════════════════════
    GLOBAL DURUM
 ═══════════════════════════════════════════════════════════ */
-let aktifMod = 'ders'; // 'ders' | 'test'
+let aktifMod = 'ders'; // 'ders' | 'test' | 'gpt'
 let nihaiEtiketliMetin = '';
 let secilenPdfDosyasi  = null;
 
@@ -679,24 +853,144 @@ let secilenPdfDosyasi  = null;
 let testFotolar = []; // { file, dataUrl, tarandi }
 let testSorular = []; // tüm taranan sorular
 
+// GPT mod için
+let gptTip = 'konu'; // 'konu' | 'test'
+let gptSoruSayisi = 10;
+
 /* ═══════════════════════════════════════════════════════════
    MOD DEĞİŞTİRME
 ═══════════════════════════════════════════════════════════ */
 window.modDegistir = function(mod) {
   aktifMod = mod;
-  const isTest = mod === 'test';
 
-  document.getElementById('btn-mod-ders').className = 'mod-btn' + (isTest ? '' : ' aktif-ders');
-  document.getElementById('btn-mod-test').className = 'mod-btn' + (isTest ? ' aktif-test' : '');
+  document.getElementById('btn-mod-ders').className = 'mod-btn' + (mod === 'ders' ? ' aktif-ders' : '');
+  document.getElementById('btn-mod-test').className = 'mod-btn' + (mod === 'test' ? ' aktif-test' : '');
+  document.getElementById('btn-mod-gpt').className  = 'mod-btn' + (mod === 'gpt'  ? ' aktif-gpt'  : '');
 
-  document.getElementById('panel-ders').classList.toggle('hidden', isTest);
-  document.getElementById('panel-test').classList.toggle('hidden', !isTest);
-  document.getElementById('top-baslik').textContent = isTest ? 'Test Oluştur' : 'Ders Notu Oluştur';
+  document.getElementById('panel-ders').classList.toggle('hidden', mod !== 'ders');
+  document.getElementById('panel-test').classList.toggle('hidden', mod !== 'test');
+  document.getElementById('panel-gpt').classList.toggle('hidden',  mod !== 'gpt');
+
+  const basliklar = { ders: 'Ders Notu Oluştur', test: 'Test Oluştur', gpt: 'GPT Üret' };
+  document.getElementById('top-baslik').textContent = basliklar[mod] || 'Ders Notu Oluştur';
 
   // Önizlemeyi sıfırla
   const konteyner = document.getElementById('sayfalar-konteyner');
   konteyner.innerHTML = sayfaHTML('', 1, 1, mod);
   document.getElementById('sayfa-badge').textContent = 'A4 • 1 Sayfa';
+};
+
+/* ════════════════════════════════════════════════════════════
+   GPT MOD — TİP / SAYI SEÇİM
+═══════════════════════════════════════════════════════════ */
+window.gptTipSec = function(tip) {
+  gptTip = tip;
+  document.getElementById('gpt-btn-konu').className = 'gpt-tip-btn' + (tip === 'konu' ? ' secili-konu' : '');
+  document.getElementById('gpt-btn-test').className = 'gpt-tip-btn' + (tip === 'test' ? ' secili-test' : '');
+  // Soru sayısı sadece test tipinde görünür
+  document.getElementById('gpt-soru-sayisi-wrap').style.display = tip === 'test' ? 'flex' : 'none';
+};
+// Başlangıçta soru sayısı gizli
+document.addEventListener('DOMContentLoaded', () => {
+  const w = document.getElementById('gpt-soru-sayisi-wrap');
+  if (w) w.style.display = 'none';
+});
+
+window.gptSayiSec = function(sayi, el) {
+  gptSoruSayisi = sayi;
+  document.querySelectorAll('.gpt-sayi-btn').forEach(b => b.classList.remove('aktif'));
+  el.classList.add('aktif');
+};
+
+/* ═══════════════════════════════════════════════════════════
+   GPT MOD — İÇERİK ÜRET
+═══════════════════════════════════════════════════════════ */
+window.gptUret = async function() {
+  const konu   = document.getElementById('gpt-inp-konu').value.trim();
+  const sinif  = document.getElementById('gpt-inp-sinif').value.trim();
+  const zorluk = document.getElementById('gpt-zorluk').value;
+
+  if (!konu) {
+    toast('Lütfen bir konu / başlık girin!', 'err');
+    return;
+  }
+
+  const btn   = document.getElementById('btn-gpt-uret');
+  const panel = document.getElementById('gpt-ai-panel');
+  const bar   = document.getElementById('gpt-ai-bar');
+  const durum = document.getElementById('gpt-ai-durum');
+  const info  = document.getElementById('gpt-ai-info');
+
+  btn.disabled = true;
+  panel.classList.add('active');
+  bar.style.width = '10%';
+  durum.textContent = 'Üretiliyor…';
+  info.textContent = `${sinif ? sinif + ' • ' : ''}${konu}`;
+
+  try {
+    const token = localStorage.getItem('token');
+    bar.style.width = '40%';
+    durum.textContent = `GPT ile ${gptTip === 'test' ? 'test' : 'konu anlatımı'} hazırlanıyor…`;
+
+    const yanit = await fetch('/api/teacher/gpt-uret', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ konu, sinif, zorluk, tip: gptTip, soruSayisi: gptSoruSayisi })
+    });
+    const veri = await yanit.json();
+    if (!yanit.ok) throw new Error(veri.error || 'GPT servisi hata döndürdü.');
+
+    bar.style.width = '80%';
+    durum.textContent = '✅ Üretildi! Önizleme hazırlanıyor…';
+
+    // meta güncelle
+    document.getElementById('inp-konu').value = sinif ? `${konu} – ${sinif}` : konu;
+    if (sinif) document.getElementById('inp-sinif').value = sinif;
+    metaGuncelle();
+
+    if (gptTip === 'konu') {
+      // Ders notu modu ile aynı render
+      const bloklar = Array.isArray(veri.bloklar) ? veri.bloklar : [];
+      nihaiEtiketliMetin = JSON.stringify(bloklar);
+      await fasikuluOlusturVeCiz(bloklarHTML(bloklar));
+    } else {
+      // Test modu ile aynı render
+      testSorular = Array.isArray(veri.sorular) ? veri.sorular : [];
+      if (!testSorular.length) throw new Error('GPT soru üretemedi, tekrar deneyin.');
+      testSoruListesiniCiz();
+      testOnizlemeCiz();
+      document.getElementById('btn-pdf-gpt').style.display = 'flex';
+    }
+
+    bar.style.width = '100%';
+    durum.textContent = `✅ ${gptTip === 'test' ? testSorular.length + ' soru üretildi!' : 'Fasikül hazır!'}`;
+    toast(`✨ ${gptTip === 'test' ? testSorular.length + ' soru başarıyla üretildi!' : 'Konu anlatımı hazır!'}`, 'ok');
+  } catch (err) {
+    console.error(err);
+    durum.textContent = '❌ Hata: ' + err.message;
+    toast('Hata: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+window.gptPdfUret = async function() {
+  const sayfaListesi = Array.from(document.querySelectorAll('.a4-sayfa'));
+  if (!sayfaListesi.length) { toast('Önce içerik üretin!', 'err'); return; }
+  await _pdfUretGenel(sayfaListesi, gptTip === 'test' ? 'test' : 'ders');
+};
+
+window.gptTemizle = function() {
+  testSorular = [];
+  document.getElementById('gpt-ai-panel').classList.remove('active');
+  document.getElementById('gpt-ai-bar').style.width = '0%';
+  document.getElementById('gpt-ai-durum').textContent = 'Üretiliyor…';
+  document.getElementById('gpt-ai-info').textContent = '';
+  document.getElementById('btn-pdf-gpt').style.display = 'none';
+  const konteyner = document.getElementById('sayfalar-konteyner');
+  konteyner.innerHTML = sayfaHTML('', 1, 1, 'ders');
+  document.getElementById('sayfa-badge').textContent = 'A4 • 1 Sayfa';
+  toast('GPT içeriği temizlendi.', 'inf');
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -901,6 +1195,7 @@ function testSayfaHTML(sorular, sayfaNo, toplamSayfa) {
     const globalIdx = (sayfaNo - 1) * 10 + i;
     const dogruSik = String(s.dogruSik || '').trim().toUpperCase().charAt(0);
     const siklar = Array.isArray(s.siklar) ? s.siklar : [];
+    const acikUclu = siklar.length === 0;
 
     const sikHTML = siklar.map(sik => {
       const harf = String(sik).trim().charAt(0).toUpperCase();
@@ -912,14 +1207,26 @@ function testSayfaHTML(sorular, sayfaNo, toplamSayfa) {
       ? `<div class="soru-gorsel-not">📊 ${s.gorselAciklama}</div>`
       : '';
 
+    // Açık uçlu: 6 geniş çizgi; şıklı: 3 kısa çizgi
+    const islemAlani = acikUclu
+      ? `<div class="acik-uclu-alan">
+           <div class="acik-uclu-etiket">Çözüm / İşlem Alanı</div>
+           ${'<div class="acik-uclu-cizgi"></div>'.repeat(6)}
+         </div>`
+      : `<div class="islem-alani">
+           ${'<div class="islem-cizgi"></div>'.repeat(3)}
+         </div>`;
+
     return `
-      <div class="soru-kart" data-soru-idx="${globalIdx}">
+      <div class="soru-kart${acikUclu ? ' tam-genislik-soru' : ''}" data-soru-idx="${globalIdx}">
         <div class="soru-kart-baslik">
           <span class="soru-no-rozet">${s.no}</span>
+          ${acikUclu ? '<span style="font-size:9px;color:#6b7280;font-weight:600;">Açık Uçlu</span>' : ''}
         </div>
         <div class="soru-kart-metin">${s.metin}</div>
         ${gorselNot}
-        <div class="siklar-wrap">${sikHTML}</div>
+        ${acikUclu ? '' : `<div class="siklar-wrap">${sikHTML}</div>`}
+        ${islemAlani}
       </div>`;
   }).join('');
 
@@ -1136,6 +1443,53 @@ function bloklarHTML(bloklar) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PDF → GÖRSEL — Sayfa canvas olarak render edilir, base64 döner
+═══════════════════════════════════════════════════════════ */
+async function pdfSayfasiniGorselYap(pdfDoc, sayfaNo, olcek = 2) {
+  const sayfa = await pdfDoc.getPage(sayfaNo);
+  const goruntuleme = sayfa.getViewport({ scale: olcek });
+  const canvas = document.createElement('canvas');
+  canvas.width  = goruntuleme.width;
+  canvas.height = goruntuleme.height;
+  await sayfa.render({ canvasContext: canvas.getContext('2d'), viewport: goruntuleme }).promise;
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+async function pdfGorselIleAiTara(dosya) {
+  let pdfjsLib;
+  try {
+    pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+  } catch(e) {
+    throw new Error('pdf.js yüklenemedi: ' + e.message);
+  }
+
+  const buffer = await dosya.arrayBuffer();
+  const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const toplamSayfa = pdfDoc.numPages;
+  const token = localStorage.getItem('token');
+  let tumBloklar = [];
+
+  for (let s = 1; s <= toplamSayfa; s++) {
+    aiDurumYaz(`Görsel AI: Sayfa ${s}/${toplamSayfa} taranıyor…`, 20 + Math.round((s / toplamSayfa) * 60));
+    document.getElementById('ai-parca-info').textContent = `PDF sayfa ${s}/${toplamSayfa} — Vision AI ile okunuyor`;
+
+    const gorsel = await pdfSayfasiniGorselYap(pdfDoc, s);
+
+    const yanit = await fetch('/api/teacher/ders-notu-gorsel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ gorsel })
+    });
+    const veri = await yanit.json();
+    if (!yanit.ok) throw new Error(veri.error || 'Vision AI servisi hata döndürdü.');
+    if (Array.isArray(veri.bloklar)) tumBloklar.push(...veri.bloklar);
+  }
+
+  return tumBloklar;
+}
+
+/* ═══════════════════════════════════════════════════════════
    DERS NOTU — ANA BAŞLAT
 ═══════════════════════════════════════════════════════════ */
 window.fasikuluBaslat = async function() {
@@ -1146,12 +1500,26 @@ window.fasikuluBaslat = async function() {
   nihaiEtiketliMetin = '';
 
   try {
-    let hamMetin = '';
+    let bloklar;
+
     if (secilenPdfDosyasi) {
-      hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
-      toast(`PDF okundu: ${hamMetin.length} karakter`, 'ok');
+      // Önce metni çıkar
+      const hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
+      toast(`PDF okundu: ${hamMetin.length} karakter`, hamMetin.length >= 150 ? 'ok' : 'inf');
+
+      if (hamMetin.length < 150) {
+        // Metin yetersiz → Vision AI ile tara
+        toast('⚡ Metin az çıktı, Vision AI devreye giriyor…', 'inf');
+        aiDurumYaz('Vision AI ile PDF sayfaları taranıyor…', 15);
+        bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
+      } else {
+        // Normal metin yolu
+        aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
+        document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
+        bloklar = await groqIleEtiketle(hamMetin);
+      }
     } else {
-      hamMetin = document.getElementById('hoca-metin-girdisi').value.trim();
+      const hamMetin = document.getElementById('hoca-metin-girdisi').value.trim();
       if (!hamMetin) {
         toast('Lütfen bir PDF yükleyin veya metin yapıştırın!', 'err');
         btnBaslat.disabled = false;
@@ -1159,12 +1527,11 @@ window.fasikuluBaslat = async function() {
         return;
       }
       aiDurumYaz('Metin alındı…', 10);
+      aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
+      document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
+      bloklar = await groqIleEtiketle(hamMetin);
     }
 
-    aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
-    document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
-
-    const bloklar = await groqIleEtiketle(hamMetin);
     nihaiEtiketliMetin = JSON.stringify(bloklar);
     aiDurumYaz('✅ Etiketleme tamamlandı!', 90);
     await fasikuluOlusturVeCiz(bloklarHTML(bloklar));

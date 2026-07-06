@@ -2061,8 +2061,9 @@ KURALLAR:
 - Fotoğraftaki her soruyu eksiksiz, kelimesi kelimesine al.
 - Matematiksel ifadeleri $...$ arasında LaTeX olarak yaz.
 - Şıkları A) B) C) D) E) formatında ayrı dizi elemanı olarak yaz.
+- EĞER SORU AÇIK UÇLUYSA (şık yoksa, boşluk doldurma, yazılı cevap gerektiriyorsa) siklar alanını BOŞ DİZİ olarak bırak: "siklar": [].
 - Eğer doğru şık işaretliyse dogruSik alanını doldur (örn: "A"), değilse boş bırak "".
-- Görsel içeriyorsa (grafik, şekil vs.) gorselAciklama alanına kısa açıklama yaz.
+- Görsel içeriyorsa (grafik, şekil, sayı doğrusu, koordinat ekseni, tablo vs.) gorselAciklama alanına görseli tam olarak betimle: eksenlerin aralığı, işaretli noktalar, değerler, şeklin özellikleri.
 - Sadece aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
 
 {"sorular":[
@@ -2070,6 +2071,13 @@ KURALLAR:
     "no": 1,
     "metin": "Soru metni buraya",
     "siklar": ["A) ...", "B) ...", "C) ...", "D) ..."],
+    "dogruSik": "",
+    "gorselAciklama": ""
+  },
+  {
+    "no": 2,
+    "metin": "Açık uçlu soru örneği",
+    "siklar": [],
     "dogruSik": "",
     "gorselAciklama": ""
   }
@@ -2213,6 +2221,219 @@ KURALLAR:
     res.json(ayristirilmis);
   } catch (err) {
     console.error('Ders notu AI error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ders Notu Görsel Okuyucu — PDF sayfasının görselini Vision AI ile okuyup blok JSON döndürür
+// (PDF metin çıkarımı yetersiz kaldığında devreye girer)
+app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
+  const { gorsel } = req.body;
+  if (!gorsel) {
+    return res.status(400).json({ error: 'Görsel gönderilmedi.' });
+  }
+
+  try {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GROQ_API_KEY tanımlanmamış.' });
+    }
+
+    const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana bir ders notu veya soru kağıdı fotoğrafı/görseli gönderiliyor.
+Görseldeki içeriği eksiksiz oku ve aşağıdaki JSON formatında fasikül bloklarına dönüştür.
+
+KURALLAR:
+- Tüm içeriği eksiksiz al; hiçbir şeyi kısaltma veya atlama.
+- Matematiksel ifadeleri $...$ arasında LaTeX olarak yaz (örn: $x^2+5x+6=0$).
+- Konu başlıklarını "baslik" tipine al.
+- Çoktan seçmeli soruları "soru" tipine al; şıkları A) B) C) D) formatında yaz.
+- Çözümlü örnekleri "ornek" + "cozum" tipine al.
+- Tabloları "tablo" tipine al.
+- Düz açıklama metinleri "paragraf" tipine al.
+- Yalnızca aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
+
+{"bloklar":[
+  {"tip":"baslik","metin":"..."},
+  {"tip":"paragraf","metin":"..."},
+  {"tip":"ornek","metin":"Örnek problemin metni..."},
+  {"tip":"cozum","metin":"Örneğin çözüm adımları..."},
+  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":""},
+  {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
+]}`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [
+          { role: 'system', content: sistemTalimati },
+          {
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: gorsel } },
+              { type: 'text', text: 'Bu görseldeki ders notu / soru kağıdı içeriğini JSON formatında çıkar.' }
+            ]
+          }
+        ],
+        temperature: 0.15,
+        max_tokens: 8000,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Groq ders-notu-gorsel error:', errText);
+      let errorMsg = 'Görsel işlenemedi.';
+      try {
+        const parsedErr = JSON.parse(errText);
+        if (parsedErr.error?.message) errorMsg = `Groq: ${parsedErr.error.message}`;
+      } catch (e) {}
+      return res.status(response.status).json({ error: errorMsg });
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '{}';
+
+    let ayristirilmis;
+    try {
+      ayristirilmis = JSON.parse(rawContent);
+    } catch (e) {
+      console.error('Groq ders-notu-gorsel JSON parse error:', rawContent);
+      return res.status(502).json({ error: 'AI geçerli JSON döndürmedi, tekrar deneyin.' });
+    }
+
+    if (!Array.isArray(ayristirilmis.bloklar)) {
+      return res.status(502).json({ error: 'AI beklenen formatta yanıt vermedi.' });
+    }
+
+    res.json(ayristirilmis);
+  } catch (err) {
+    console.error('ders-notu-gorsel error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GPT İçerik Üretici — Cerebras API (gpt-oss-120b) ile detaylı konu anlatımı veya test oluşturur
+// CEREBRAS_API_KEY ortam değişkenine eklenmeli
+app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) => {
+  const { konu, sinif, zorluk, tip, soruSayisi } = req.body;
+  if (!konu || !konu.trim()) {
+    return res.status(400).json({ error: 'Konu / başlık gönderilmedi.' });
+  }
+
+  try {
+    const apiKey = process.env.CEREBRAS_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'CEREBRAS_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
+    }
+
+    const sinifStr  = sinif  ? ` (${sinif})` : '';
+    const zorlukStr = zorluk === 'karma'  ? 'Karma (başlangıç seviyesinden YKS/LGS zorluğuna kadar)'
+                    : zorluk === 'kolay'  ? 'Kolay / Temel seviye'
+                    : zorluk === 'zor'    ? 'Zor / YKS-LGS seviyesi, mantık yoğun'
+                    :                      'Orta seviye';
+
+    let sistemTalimati, kullaniciMesaji;
+
+    if (tip === 'test') {
+      const adet = Math.min(Math.max(parseInt(soruSayisi) || 10, 5), 30);
+      sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda ${adet} adet çok detaylı, özgün, ${zorlukStr} seviyesinde çoktan seçmeli veya açık uçlu matematik sorusu üretmeni istiyorum.
+
+KURALLAR:
+- Sorular birbirinden tamamen farklı alt konuları kapsamalı (geniş yelpaze).
+- Çoktan seçmeli sorularda A) B) C) D) formatında 4 şık yaz ve dogruSik alanını doldur.
+- Açık uçlu sorularda siklar alanını BOŞ DİZİ bırak: "siklar": [].
+- Matematiksel ifadeleri $..$ içinde LaTeX ile yaz (örn: $\\frac{a}{b}$, $\\sqrt{x}$).
+- Her soru özgün, gerçekçi ve öğretici olsun.
+- Sadece aşağıdaki JSON şemasında yanıt ver:
+
+{"sorular":[
+  {"no":1,"metin":"Soru metni $x^2-5x+6=0$ ...","siklar":["A) 1","B) 2","C) 3","D) 4"],"dogruSik":"B","gorselAciklama":""},
+  {"no":2,"metin":"Açık uçlu soru...","siklar":[],"dogruSik":"","gorselAciklama":""}
+]}`;
+      kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\nSoru sayısı: ${adet}\n\nBu konuda ${adet} adet kapsamlı, özgün matematik sorusu üret.`;
+
+    } else {
+      sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda son derece detaylı, kapsamlı ve öğretici bir ders notu / fasikül hazırlamanı istiyorum.
+
+KURALLAR:
+- Konuyu sıfırdan açıkla: tanım, özellikler, formüller, ispatlar (gerekirse).
+- Her önemli noktayı ayrı başlık altında ver.
+- En az 3-5 çözümlü örnek ekle (ornek + cozum blokları).
+- En az 5 alıştırma sorusu ekle (soru tipi).
+- Matematiksel ifadeleri $..$ içinde LaTeX ile yaz.
+- İçeriği asla kısaltma; ne kadar uzun ve detaylı olursa o kadar iyi.
+- Sadece aşağıdaki JSON şemasında yanıt ver, şema dışında hiçbir metin ekleme:
+
+{"bloklar":[
+  {"tip":"baslik","metin":"..."},
+  {"tip":"paragraf","metin":"..."},
+  {"tip":"ornek","metin":"Örnek problem metni..."},
+  {"tip":"cozum","metin":"Adım adım çözüm..."},
+  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A"},
+  {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
+]}`;
+      kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\n\nBu konu için son derece detaylı, kapsamlı bir ders notu / fasikül hazırla. Hiçbir şeyi kısaltma, tüm alt konuları, formülleri, örnekleri ve alıştırmaları ekle.`;
+    }
+
+    const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-oss-120b',
+        messages: [
+          { role: 'system', content: sistemTalimati },
+          { role: 'user',   content: kullaniciMesaji }
+        ],
+        temperature: 0.7,
+        max_tokens: 16000,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!yanit.ok) {
+      const errText = await yanit.text();
+      console.error('Cerebras gpt-uret error:', errText);
+      let errorMsg = 'Cerebras servisi yanıt vermedi.';
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
+      } catch(e) {}
+      return res.status(yanit.status).json({ error: errorMsg });
+    }
+
+    const data = await yanit.json();
+    const rawContent = data.choices?.[0]?.message?.content || '{}';
+
+    let ayristirilmis;
+    try {
+      ayristirilmis = JSON.parse(rawContent);
+    } catch(e) {
+      console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
+      return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
+    }
+
+    if (tip === 'test') {
+      if (!Array.isArray(ayristirilmis.sorular)) {
+        return res.status(502).json({ error: 'Model beklenen soru formatında yanıt vermedi.' });
+      }
+    } else {
+      if (!Array.isArray(ayristirilmis.bloklar)) {
+        return res.status(502).json({ error: 'Model beklenen blok formatında yanıt vermedi.' });
+      }
+    }
+
+    res.json(ayristirilmis);
+  } catch (err) {
+    console.error('gpt-uret error:', err);
     res.status(500).json({ error: err.message });
   }
 });
