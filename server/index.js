@@ -2342,21 +2342,29 @@ app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) =
 
     if (tip === 'test') {
       const adet = Math.min(Math.max(parseInt(soruSayisi) || 10, 5), 30);
-      sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda ${adet} adet çok detaylı, özgün, ${zorlukStr} seviyesinde çoktan seçmeli veya açık uçlu matematik sorusu üretmeni istiyorum.
+      const yarimAdet = Math.floor(adet / 2);
+      const kalanAdet = adet - yarimAdet;
+      sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda TAM OLARAK ${adet} adet özgün matematik sorusu üretmeni istiyorum.
 
-KURALLAR:
+ZORUNLU KURAL — SORU DAĞILIMI:
+- İlk ${yarimAdet} soru: Çoktan seçmeli (A, B, C, D şıklı)
+- Son ${kalanAdet} soru: Açık uçlu (şıksız, yazılı cevap gerektiren)
+Bu dağılıma kesinlikle uy, farklı yapamazsın.
+
+DİĞER KURALLAR:
 - Sorular birbirinden tamamen farklı alt konuları kapsamalı (geniş yelpaze).
-- Çoktan seçmeli sorularda A) B) C) D) formatında 4 şık yaz ve dogruSik alanını doldur.
-- Açık uçlu sorularda siklar alanını BOŞ DİZİ bırak: "siklar": [].
-- Matematiksel ifadeleri $..$ içinde LaTeX ile yaz (örn: $\\frac{a}{b}$, $\\sqrt{x}$).
+- ${zorlukStr} seviyesinde olsun.
+- Çoktan seçmeli sorular: A) B) C) D) formatında 4 şık yaz, dogruSik alanını doldur, cevap alanını boş bırak.
+- Açık uçlu sorular: siklar alanını BOŞ DİZİ [] bırak, cevap alanına adım adım model çözümü yaz.
+- Matematiksel ifadeleri $..$ içinde LaTeX ile yaz (örn: $\\frac{a}{b}$, $\\sqrt{x}$, $x^2$).
 - Her soru özgün, gerçekçi ve öğretici olsun.
-- Sadece aşağıdaki JSON şemasında yanıt ver:
+- Sadece aşağıdaki JSON şemasında yanıt ver, başka hiçbir şey ekleme:
 
 {"sorular":[
-  {"no":1,"metin":"Soru metni $x^2-5x+6=0$ ...","siklar":["A) 1","B) 2","C) 3","D) 4"],"dogruSik":"B","gorselAciklama":""},
-  {"no":2,"metin":"Açık uçlu soru...","siklar":[],"dogruSik":"","gorselAciklama":""}
+  {"no":1,"metin":"Çoktan seçmeli soru metni...","siklar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"B","gorselAciklama":"","cevap":""},
+  {"no":${yarimAdet + 1},"metin":"Açık uçlu soru metni...","siklar":[],"dogruSik":"","gorselAciklama":"","cevap":"Adım adım çözüm: 1) ... 2) ... Sonuç: ..."}
 ]}`;
-      kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\nSoru sayısı: ${adet}\n\nBu konuda ${adet} adet kapsamlı, özgün matematik sorusu üret.`;
+      kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\nSoru sayısı: ${adet} (${yarimAdet} çoktan seçmeli + ${kalanAdet} açık uçlu)\n\nBu konuda TAM OLARAK ${adet} soru üret: ilk ${yarimAdet} tanesi çoktan seçmeli, son ${kalanAdet} tanesi açık uçlu.`;
 
     } else {
       sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda son derece detaylı, kapsamlı ve öğretici bir ders notu / fasikül hazırlamanı istiyorum.

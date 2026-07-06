@@ -477,7 +477,8 @@
     .soru-kart-metin { font-size: 11.5px; line-height: 1.65; color: #1a1a1a; margin-bottom: 7px; }
     .siklar-wrap { display: flex; flex-direction: column; gap: 4px; }
     .sik-satir { font-size: 11px; color: #374151; padding: 1px 0; }
-    .sik-satir.dogru { color: #e67e22; font-weight: 700; }
+    /* Cevap kağıdında doğru şık gösterilir, test kağıdında değil */
+    .sik-satir.dogru-cevap { color: #e67e22; font-weight: 700; }
     /* Şıklı sorular için çalışma alanı */
     .islem-alani {
       margin-top: 8px;
@@ -1106,7 +1107,8 @@ window.testleriTara = async function() {
         metin: String(s.metin || '').trim(),
         siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
         dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
-        gorselAciklama: String(s.gorselAciklama || '').trim()
+        gorselAciklama: String(s.gorselAciklama || '').trim(),
+        cevap: String(s.cevap || '').trim()
       }));
       testSorular.push(...bulunanlar);
 
@@ -1155,24 +1157,118 @@ window.testSoruVurgula = function(idx) {
   if (soruEl) soruEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
+/* ═══════════════════════════════════════════════════════════
+   CEVAP KAĞIDI SAYFASI
+═══════════════════════════════════════════════════════════ */
+function cevapKagidiHTML(sorular, sayfaNo) {
+  const { konu, sinif, tarih } = getMeta();
+
+  const sikliSorular  = sorular.filter(s => s.siklar && s.siklar.length > 0);
+  const acikSorular   = sorular.filter(s => !s.siklar || s.siklar.length === 0);
+
+  // Şıklı sorular: 5 sütunlu tablo — "1) A"
+  const sikliHTML = sikliSorular.length > 0 ? `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:900;color:#e67e22;text-transform:uppercase;letter-spacing:.09em;
+                  border-bottom:2px solid #e67e22;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span style="background:#e67e22;color:#fff;border-radius:4px;padding:1px 6px;">Çoktan Seçmeli</span>
+        <span style="font-weight:600;color:#6b7280;">${sikliSorular.length} soru</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px 8px;">
+        ${sikliSorular.map(s => `
+          <div style="display:flex;align-items:center;gap:4px;padding:5px 7px;
+                      background:#fff8f0;border:1px solid #fed7aa;border-radius:5px;font-size:11.5px;">
+            <span style="font-weight:700;color:#6b7280;min-width:18px;">${s.no})</span>
+            <span style="font-weight:900;color:#e67e22;font-size:13px;">${s.dogruSik || '—'}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
+  // Açık uçlu sorular: çözüm metni
+  const acikHTML = acikSorular.length > 0 ? `
+    <div>
+      <div style="font-size:10px;font-weight:900;color:#7c3aed;text-transform:uppercase;letter-spacing:.09em;
+                  border-bottom:2px solid #7c3aed;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span style="background:#7c3aed;color:#fff;border-radius:4px;padding:1px 6px;">Açık Uçlu</span>
+        <span style="font-weight:600;color:#6b7280;">${acikSorular.length} soru</span>
+      </div>
+      ${acikSorular.map(s => `
+        <div style="margin-bottom:9px;padding:8px 10px;
+                    background:#faf5ff;border:1px solid #e9d5ff;border-left:4px solid #7c3aed;
+                    border-radius:0 5px 5px 0;break-inside:avoid;">
+          <div style="font-size:10.5px;font-weight:900;color:#6d28d9;margin-bottom:3px;">
+            ${s.no}. Soru Cevabı
+          </div>
+          <div style="font-size:10.5px;line-height:1.65;color:#1a1a1a;">
+            ${s.cevap || '<em style="color:#9ca3af;">—</em>'}
+          </div>
+        </div>
+      `).join('')}
+    </div>` : '';
+
+  return `
+  <div class="a4-sayfa" data-no="${sayfaNo}">
+    <div class="sayfa-no-etiket">Cevap Kağıdı • ${sayfaNo} / ${sayfaNo}</div>
+
+    <header class="sayfa-header">
+      <div class="header-ust">
+        <div class="logo-daire">
+          <img src="/logo.png" alt="" onerror="this.parentElement.style.background='#F5C518';this.style.display='none'" />
+        </div>
+        <div class="header-metin">
+          <div class="header-marka">Fullемatematiği</div>
+          <div class="header-altyazi">Online Matematik Özel Dersi</div>
+        </div>
+        <div class="header-meta">
+          <div class="meta-row"><strong>${sinif || '—'}</strong></div>
+          <div class="meta-row">${tarih}</div>
+        </div>
+      </div>
+      <div class="sari-serit"></div>
+    </header>
+
+    <div class="konu-bar">
+      <span class="konu-bar-lbl">Konu:</span>
+      <span class="konu-text">${konu || '—'}</span>
+      ${sinif ? `<span class="sinif-rozet">${sinif}</span>` : ''}
+      <span class="tur-rozet" style="background:#1a1a1a;color:#F5C518;">CEVAP KAĞIDI</span>
+    </div>
+
+    <div class="sayfa-icerik-test" style="padding:6mm 10mm;">
+      ${sikliHTML}
+      ${acikHTML}
+    </div>
+
+    <footer class="sayfa-footer">
+      <div class="footer-serit"></div>
+      <div class="footer-ic">
+        <div class="footer-marka"><strong>Burak Çelik</strong> / Fullемatematiği</div>
+        <div class="footer-sayfa">fullematematigi.com.tr</div>
+      </div>
+    </footer>
+  </div>`;
+}
+
 function testOnizlemeCiz() {
   if (testSorular.length === 0) return;
 
-  // Soruları 2'li sayfalara böl (tahminsel, A4 boyutu için)
-  const SORU_PER_SAYFA = 10; // yaklaşık — auto-split mevcut değil test için
+  // Açık uçlu sorular tam genişlik kapladığından sayfa başına 8 soru
+  const SORU_PER_SAYFA = 8;
   const sayfalar = [];
 
   for (let i = 0; i < testSorular.length; i += SORU_PER_SAYFA) {
     sayfalar.push(testSorular.slice(i, i + SORU_PER_SAYFA));
   }
 
-  const toplam = sayfalar.length;
+  const toplamTest = sayfalar.length;
+  const toplamToplam = toplamTest + 1; // +1 cevap kağidı
   const konteyner = document.getElementById('sayfalar-konteyner');
   konteyner.innerHTML = sayfalar
-    .map((grp, idx) => testSayfaHTML(grp, idx + 1, toplam))
-    .join('');
+    .map((grp, idx) => testSayfaHTML(grp, idx + 1, toplamToplam))
+    .join('') + cevapKagidiHTML(testSorular, toplamToplam);
 
-  document.getElementById('sayfa-badge').textContent = `A4 • 210mm • ${toplam} Sayfa`;
+  document.getElementById('sayfa-badge').textContent = `A4 • 210mm • ${toplamToplam} Sayfa`;
 
   // KaTeX
   if (typeof renderMathInElement === 'function') {
@@ -1198,9 +1294,7 @@ function testSayfaHTML(sorular, sayfaNo, toplamSayfa) {
     const acikUclu = siklar.length === 0;
 
     const sikHTML = siklar.map(sik => {
-      const harf = String(sik).trim().charAt(0).toUpperCase();
-      const isDogru = harf === dogruSik && dogruSik;
-      return `<div class="sik-satir${isDogru ? ' dogru' : ''}">${sik}</div>`;
+      return `<div class="sik-satir">${sik}</div>`;
     }).join('');
 
     const gorselNot = s.gorselAciklama
