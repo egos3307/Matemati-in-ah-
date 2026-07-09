@@ -1609,7 +1609,13 @@ window.fasikuluBaslat = async function() {
       } else {
         // Normal metin yolu
         aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
-        document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
+        const parcaSayisi = Math.ceil(hamMetin.length / 6000);
+        if (parcaSayisi > 1) {
+          document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter — ${parcaSayisi} parçaya bölünüyor`;
+          toast(`📄 Büyük PDF: ${parcaSayisi} parça halinde işleniyor…`, 'inf');
+        } else {
+          document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
+        }
         bloklar = await groqIleEtiketle(hamMetin);
       }
     } else {

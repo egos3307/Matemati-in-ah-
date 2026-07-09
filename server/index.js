@@ -2141,6 +2141,7 @@ KURALLAR:
 });
 
 // Ders Notu Oluşturucu — ham metni deneyimli bir öğretmen gibi düzenli bir fasiküle dönüştürür
+// Büyük metinler otomatik olarak parçalara bölünür ve bloklar birleştirilir
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
   if (!metin || !metin.trim()) {
@@ -2172,53 +2173,87 @@ KURALLAR:
   {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
 ]}`;
 
-    const maxCikisTokeni = Math.min(32000, Math.max(2000, Math.ceil(metin.length * 1.2)));
+    // Büyük metinleri parçalara böl (her parça ~6000 karakter, satır sınırında kes)
+    const MAX_PARCA = 6000;
+    const parcalar = [];
+    if (metin.length <= MAX_PARCA) {
+      parcalar.push(metin.trim());
+    } else {
+      const satirlar = metin.split('\n');
+      let parca = '';
+      for (const satir of satirlar) {
+        if (parca.length + satir.length + 1 > MAX_PARCA && parca.length > 0) {
+          parcalar.push(parca.trim());
+          parca = '';
+        }
+        parca += satir + '\n';
+      }
+      if (parca.trim()) parcalar.push(parca.trim());
+    }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [
-          { role: 'system', content: sistemTalimati },
-          { role: 'user', content: metin }
-        ],
-        temperature: 0.2,
-        max_tokens: maxCikisTokeni,
-        response_format: { type: 'json_object' }
-      })
-    });
+    const tumBloklar = [];
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Groq API Error details:', errText);
-      let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
+    for (let pi = 0; pi < parcalar.length; pi++) {
+      const parca = parcalar[pi];
+      const parcaEtiketi = parcalar.length > 1 ? ` (Parça ${pi + 1}/${parcalar.length})` : '';
+      console.log(`Groq ders-notu-ai: işleniyor${parcaEtiketi} — ${parca.length} karakter`);
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [
+            { role: 'system', content: sistemTalimati },
+            { role: 'user', content: parca }
+          ],
+          temperature: 0.2,
+          max_tokens: 16000,
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('Groq API Error details:', errText);
+        let errorMsg = 'Yapay zeka servisi yanıt vermedi.';
+        try {
+          const parsedErr = JSON.parse(errText);
+          if (parsedErr.error?.message) errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
+        } catch (e) {}
+        return res.status(response.status).json({ error: errorMsg });
+      }
+
+      const data = await response.json();
+      const choice = data.choices?.[0];
+      const rawContent = choice?.message?.content || '{}';
+
+      // Model token limitine ulaşıp JSON'u kestiyse uyar
+      if (choice?.finish_reason === 'length') {
+        console.warn(`Groq ders-notu-ai${parcaEtiketi}: finish_reason=length — JSON kesilebilir!`);
+      }
+
+      let ayristirilmis;
       try {
-        const parsedErr = JSON.parse(errText);
-        if (parsedErr.error?.message) errorMsg = `Groq API Hatası: ${parsedErr.error.message}`;
-      } catch (e) {}
-      return res.status(response.status).json({ error: errorMsg });
+        ayristirilmis = JSON.parse(rawContent);
+      } catch (e) {
+        console.error(`Groq JSON ayrıştırma hatası${parcaEtiketi}:`, rawContent.substring(0, 300));
+        return res.status(502).json({ error: `Yapay zeka geçerli bir JSON döndürmedi${parcaEtiketi}. Lütfen tekrar deneyin.` });
+      }
+
+      if (Array.isArray(ayristirilmis.bloklar)) {
+        tumBloklar.push(...ayristirilmis.bloklar);
+      }
     }
 
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '{}';
-
-    let ayristirilmis;
-    try {
-      ayristirilmis = JSON.parse(rawContent);
-    } catch (e) {
-      console.error('Groq JSON ayrıştırma hatası:', rawContent);
-      return res.status(502).json({ error: 'Yapay zeka geçerli bir JSON döndürmedi. Lütfen tekrar deneyin.' });
-    }
-
-    if (!Array.isArray(ayristirilmis.bloklar)) {
+    if (tumBloklar.length === 0) {
       return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
 
-    res.json(ayristirilmis);
+    res.json({ bloklar: tumBloklar });
   } catch (err) {
     console.error('Ders notu AI error:', err);
     res.status(500).json({ error: err.message });
