@@ -28,15 +28,29 @@ const checkIsTeacher = (participant) => {
   return participant.identity.includes('Öğretmen') || participant.identity.includes('TEACHER');
 };
 
-// Sanal arka planda segmentasyon maskesi birden fazla kişiyi (ör. arkada geçen biri)
-// "kişi" olarak işaretleyebilir. Bu fonksiyon, bağlı bileşen analizi ile sadece en
-// büyük (kameraya en yakın, yani sunum yapan) kişi bölgesini tutar; diğer tüm
-// kişi piksellerini arka plan olarak işaretler (md dizisini yerinde değiştirir).
+// ---------------------------------------------------------------------------
+// Gelişmiş kişi tespiti: sadece öndeki (kameraya bakan) kişiyi tutar.
+//
+// Strateji:
+//  1. Yüksek threshold (0.55) ile gürültülü / düşük-confidence pikselleri
+//     (ör. arka plandaki tişörtler) baştan siler.
+//  2. 4-bağlantılı union-find ile bağlı bileşenleri bulur.
+//  3. Her bileşeni "büyüklük × merkeze yakınlık" skoru ile değerlendirir.
+//     Kameraya bakan kişi tipik olarak görüntünün orta-alt bölgesinde olur.
+//  4. Temporal smoothing: bir önceki karede seçilen bileşenin piksel
+//     merkezine en yakın bileşeni tercih eder (ani atlamaları engeller).
+//  5. Seçilmeyen bileşenlerin piksellerini sıfırlar (arka plan yapar).
+// ---------------------------------------------------------------------------
+const _bgState = { prevCx: -1, prevCy: -1 }; // frame'ler arası durum
+
 const suppressSecondaryPeople = (md, w, h, parent) => {
   const n = w * h;
-  const threshold = 77; // 0.3 * 255 — bağlantıyı korumak için gevşek bir eşik
+  // Yüksek eşik: sadece model gerçekten emin olduğu pikselleri "kişi" say.
+  // 140 ≈ 0.55*255. Tişört gibi nesneler genellikle 0.3-0.5 arasında kalır.
+  const threshold = 140;
   const isPerson = (idx) => md[idx * 4] >= threshold;
 
+  // Union-Find başlat
   for (let i = 0; i < n; i++) parent[i] = i;
 
   const find = (x) => {
@@ -52,6 +66,7 @@ const suppressSecondaryPeople = (md, w, h, parent) => {
     if (ra !== rb) parent[ra] = rb;
   };
 
+  // Bağlı bileşenler
   for (let y = 0; y < h; y++) {
     const rowOffset = y * w;
     for (let x = 0; x < w; x++) {
@@ -62,23 +77,85 @@ const suppressSecondaryPeople = (md, w, h, parent) => {
     }
   }
 
-  const areas = new Map();
+  // Her bileşenin alan + ağırlıklı centroid'ini hesapla
+  const compData = new Map(); // root -> { area, sumX, sumY }
   for (let i = 0; i < n; i++) {
     if (!isPerson(i)) continue;
     const root = find(i);
-    areas.set(root, (areas.get(root) || 0) + 1);
+    const cx = i % w;
+    const cy = (i / w) | 0;
+    if (!compData.has(root)) compData.set(root, { area: 0, sumX: 0, sumY: 0 });
+    const d = compData.get(root);
+    d.area++;
+    d.sumX += cx;
+    d.sumY += cy;
   }
-  if (areas.size <= 1) return; // tek bileşen (veya hiç kişi yok) — değiştirilecek bir şey yok
+
+  if (compData.size === 0) return; // hiç kişi yok
+  if (compData.size === 1) return; // tek bileşen — yapacak bir şey yok
+
+  // Küçük gürültü bileşenlerini hemen ele: toplam kişi pikselinin %3'ünden
+  // küçük bileşenleri dikkate alma
+  let totalPersonPx = 0;
+  for (const { area } of compData.values()) totalPersonPx += area;
+  const minArea = Math.max(200, totalPersonPx * 0.03);
+
+  // Merkez referans noktası: görüntünün yatay ortası, dikey %70'i
+  // (kameraya bakan kişi genellikle burada olur)
+  const refX = w * 0.5;
+  const refY = h * 0.70;
 
   let bestRoot = -1;
-  let bestArea = 0;
-  for (const [root, area] of areas) {
-    if (area > bestArea) {
-      bestArea = area;
+  let bestScore = -Infinity;
+
+  for (const [root, d] of compData) {
+    if (d.area < minArea) continue;
+    const cx = d.sumX / d.area;
+    const cy = d.sumY / d.area;
+
+    // Normalizasyon: maksimum mesafe köşegen
+    const diag = Math.sqrt(w * w + h * h);
+
+    // Temporal bonus: önceki karede bulduğumuz centroide yakınlık
+    let temporalBonus = 0;
+    if (_bgState.prevCx >= 0) {
+      const prevDist = Math.sqrt((cx - _bgState.prevCx) ** 2 + (cy - _bgState.prevCy) ** 2);
+      // Öncekine çok yakınsa güçlü bonus (ani atlamaları engelle)
+      temporalBonus = Math.max(0, 1 - prevDist / (diag * 0.4)) * 1.5;
+    }
+
+    // Merkeze yakınlık skoru (0-1)
+    const centerDist = Math.sqrt((cx - refX) ** 2 + (cy - refY) ** 2);
+    const centerScore = 1 - centerDist / diag;
+
+    // Büyüklük skoru (normalize)
+    const sizeScore = d.area / totalPersonPx;
+
+    // Nihai skor: büyüklük 50% + merkez 30% + temporal 20%
+    const score = sizeScore * 0.50 + centerScore * 0.30 + temporalBonus * 0.20;
+
+    if (score > bestScore) {
+      bestScore = score;
       bestRoot = root;
     }
   }
 
+  if (bestRoot === -1) {
+    // Hepsi küçük bileşen — en büyüğünü seç
+    let biggestArea = 0;
+    for (const [root, d] of compData) {
+      if (d.area > biggestArea) { biggestArea = d.area; bestRoot = root; }
+    }
+  }
+
+  // Seçilen bileşenin centroid'ini bir sonraki frame için kaydet
+  if (bestRoot !== -1 && compData.has(bestRoot)) {
+    const d = compData.get(bestRoot);
+    _bgState.prevCx = d.sumX / d.area;
+    _bgState.prevCy = d.sumY / d.area;
+  }
+
+  // Seçilmeyenleri sıfırla
   for (let i = 0; i < n; i++) {
     if (!isPerson(i)) continue;
     if (find(i) !== bestRoot) {
@@ -570,6 +647,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     virtualBgCanvasRef.current = null;
     virtualMaskCanvasRef.current = null;
     virtualCCParentRef.current = null;
+    // Temporal smoothing state'ini sıfırla
+    _bgState.prevCx = -1;
+    _bgState.prevCy = -1;
   };
 
   const enableVirtualBackground = async (color) => {
@@ -646,47 +726,55 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       segmenter.onResults((results) => {
         if (!results.segmentationMask) return;
 
-        // Temiz frame: doğrudan video elementinden çek (results.image kısmen işlenmiş olabilir)
+        // Temiz frame: doğrudan video elementinden çek
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(video, 0, 0, w, h);
         const frameData = ctx.getImageData(0, 0, w, h);
 
-        // Maskeyi blur ile çiz: kenarları yumuşatır + vücut alanını hafif genişletir
+        // ── ADIM 1: Ham maskeyi oku (blur YOK) — CC analizi için net sınır lazım ──
         maskCtx.clearRect(0, 0, w, h);
-        maskCtx.filter = 'blur(8px)';
+        maskCtx.filter = 'none';
         maskCtx.drawImage(results.segmentationMask, 0, 0, w, h);
+        const rawMaskData = maskCtx.getImageData(0, 0, w, h);
+
+        // ── ADIM 2: Ham maskede CC analizi — öndeki kişiyi seç, diğerlerini sil ──
+        if (virtualCCParentRef.current) {
+          suppressSecondaryPeople(rawMaskData.data, w, h, virtualCCParentRef.current);
+        }
+
+        // ── ADIM 3: Temizlenmiş ham maskeyi geri yaz, sonra blur uygula ──
+        // Böylece blur sadece seçilen kişinin kenarlarını yumuşatır;
+        // silinmiş bileşenler blura dahil olmaz.
+        maskCtx.putImageData(rawMaskData, 0, 0);
+        maskCtx.filter = 'blur(4px)'; // daha az blur → daha sıkı kenar
+        maskCtx.drawImage(maskCanvas, 0, 0);
         maskCtx.filter = 'none';
         const maskData = maskCtx.getImageData(0, 0, w, h);
 
         const fd = frameData.data;
         const md = maskData.data;
 
-        // Arkada başka biri varsa onu da arka plan olarak işaretle; sadece en
-        // büyük (öndeki, sunum yapan) kişi bölgesi korunur
-        if (virtualCCParentRef.current) {
-          suppressSecondaryPeople(md, w, h, virtualCCParentRef.current);
-        }
-
-        // confidence: 0 = arka plan, 1 = kişi
-        // Sert kesim yerine yumuşak harman (feathering)
+        // ── ADIM 4: Piksel harmanlama ──
+        // Eşikler daraltıldı: < 0.25 tam arka plan, > 0.75 tam kişi
+        // Aradaki dar bant (~50px genişlik) yumuşak kenar geçişi için
         for (let i = 0; i < fd.length; i += 4) {
           const confidence = md[i] / 255;
 
-          if (confidence < 0.15) {
+          if (confidence < 0.25) {
             // Tam arka plan → düz renk
             fd[i]     = bgR;
             fd[i + 1] = bgG;
             fd[i + 2] = bgB;
             fd[i + 3] = 255;
-          } else if (confidence < 0.85) {
-            // Kenar bölgesi → kamera ile arka plan rengi arasında lineer harman
-            const t = (confidence - 0.15) / 0.7;
+          } else if (confidence < 0.75) {
+            // Dar kenar geçiş bandı → lineer harman
+            const t = (confidence - 0.25) / 0.50;
             fd[i]     = Math.round(fd[i]     * t + bgR * (1 - t));
             fd[i + 1] = Math.round(fd[i + 1] * t + bgG * (1 - t));
             fd[i + 2] = Math.round(fd[i + 2] * t + bgB * (1 - t));
             fd[i + 3] = 255;
           }
-          // confidence >= 0.85 → tam kişi, kamera pikseli olduğu gibi kalır
+          // confidence >= 0.75 → tam kişi, orijinal piksel kalır
         }
 
         ctx.putImageData(frameData, 0, 0);
@@ -1565,7 +1653,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   // Render loading state if connection is not ready
   if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
     return (
-      <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center gap-4 bg-[#080b11] text-white font-sans overflow-hidden">
+      <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center gap-4 text-white font-sans overflow-hidden" style={{ backgroundColor: '#0a1628' }}>
         <div className="relative w-12 h-12 flex items-center justify-center">
           <div className="absolute w-full h-full border-4 border-primary/20 rounded-full"></div>
           <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -1580,11 +1668,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   return (
     <div
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
-      style={{ backgroundImage: 'url(/IMG_3071.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#080b11' }}
+      style={{ backgroundColor: '#0a1628' }}
     >
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: 'rgba(8, 11, 17, 0.65)' }} />
       {/* Top Header */}
-      <div className="bg-slate-900/80 backdrop-blur-md px-5 py-3.5 flex items-center justify-between border-b border-slate-800/50 z-10 shadow-sm relative">
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-[#162540] z-10 shadow-sm relative" style={{ backgroundColor: '#0d1e35' }}>
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
             <img src="/logo.png" alt="Fullematematiği Logo" className="h-full w-full object-contain" />
@@ -1636,8 +1723,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         <div className="flex-1 relative overflow-hidden flex flex-col justify-center">
           {/* Whiteboard view - always mounted but conditionally visible */}
           <div 
-            className="w-full h-full flex items-center justify-center p-3 relative bg-slate-900"
-            style={{ display: showWhiteboard ? 'flex' : 'none' }}
+            className="w-full h-full flex items-center justify-center p-3 relative"
+            style={{ display: showWhiteboard ? 'flex' : 'none', backgroundColor: '#0a1628' }}
           >
             <Whiteboard role={role} whiteboardCanvasRef={whiteboardCanvasRef} />
             
@@ -1766,6 +1853,41 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
                   </div>
 
+                  {/* Kamera ve Mikrofon kontrol butonları */}
+                  <div className="no-drag flex gap-1.5 px-0.5">
+                    {/* Mikrofon butonu */}
+                    <button
+                      onClick={toggleMicrophone}
+                      title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                        isMicrophoneEnabled
+                          ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                      </span>
+                      <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
+                    </button>
+
+                    {/* Kamera butonu */}
+                    <button
+                      onClick={toggleCamera}
+                      title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                        isCameraEnabled
+                          ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                      </span>
+                      <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
+                    </button>
+                  </div>
+
                   {/* Active camera feeds only */}
                   <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto no-drag pr-0.5">
                     {cameraTracks.length === 0 ? (
@@ -1776,6 +1898,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       cameraTracks.map((trackRef) => {
                         const p = trackRef.participant;
                         const isTeacher = checkIsTeacher(p);
+                        const isLocal = p.isLocal;
                         const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${p.identity}_camera`;
                         return (
                           <div
@@ -1784,7 +1907,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                               isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
                             }`}
                           >
-                            <VideoTrack trackRef={trackRef} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+                            {/* Sadece kendi kameran aynada görünür (scaleX(-1)), diğerleri normal */}
+                            <VideoTrack
+                              trackRef={trackRef}
+                              className="w-full h-full object-cover"
+                              style={isLocal ? { transform: 'scaleX(-1)' } : {}}
+                            />
 
                             {/* Speaking indicator */}
                             {p.isSpeaking && (
@@ -1811,6 +1939,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
                   {cameraTracks.map((trackRef) => {
                     const isTeacher = checkIsTeacher(trackRef.participant);
+                    const isLocal = trackRef.participant.isLocal;
                     const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
                     return (
                       <div 
@@ -1821,7 +1950,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                             : 'border-slate-800 hover:border-primary/30'
                         }`}
                       >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={{ transform: 'scaleX(-1)' }} />
+                        {/* Sadece kendi kameran aynada (scaleX(-1)), diğerleri düz */}
+                        <VideoTrack
+                          trackRef={trackRef}
+                          className="w-full h-full object-cover animate-in fade-in duration-300"
+                          style={isLocal ? { transform: 'scaleX(-1)' } : {}}
+                        />
 
                         {/* Floating tag inside camera panel */}
                         <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
@@ -2037,7 +2171,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       </div>
 
       {/* Control Bar (Mute, Video, Screen Share, Participants, Leave) */}
-      <div className="bg-slate-900/90 backdrop-blur-md py-3 px-4 sm:px-6 flex items-center justify-between border-t border-slate-800/60 z-10 shadow-lg select-none relative">
+      <div className="py-3 px-4 sm:px-6 flex items-center justify-between border-t border-[#162540] z-10 shadow-lg select-none relative" style={{ backgroundColor: '#0d1e35' }}>
         
         {/* 1. Mic & Cam Toggles */}
         <div className="flex items-center gap-1.5 sm:gap-2">
