@@ -1907,12 +1907,46 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                               isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
                             }`}
                           >
-                            {/* Sadece kendi kameran aynada görünür (scaleX(-1)), diğerleri normal */}
+                            {/* Kamera normal gösterim (ayna efekti kaldırıldı) */}
                             <VideoTrack
                               trackRef={trackRef}
                               className="w-full h-full object-cover"
-                              style={isLocal ? { transform: 'scaleX(-1)' } : {}}
                             />
+
+                            {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
+                            {isLocal && (
+                              <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
+                                {/* Mikrofon butonu */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
+                                  title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                                  className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                    isMicrophoneEnabled
+                                      ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                      : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                                  }`}
+                                >
+                                  <span className="material-symbols-outlined text-[11px] font-bold">
+                                    {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                                  </span>
+                                </button>
+
+                                {/* Kamera butonu */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
+                                  title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                                  className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                    isCameraEnabled
+                                      ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                      : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                                  }`}
+                                >
+                                  <span className="material-symbols-outlined text-[11px] font-bold">
+                                    {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                                  </span>
+                                </button>
+                              </div>
+                            )}
 
                             {/* Speaking indicator */}
                             {p.isSpeaking && (
@@ -1950,11 +1984,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                             : 'border-slate-800 hover:border-primary/30'
                         }`}
                       >
-                        {/* Sadece kendi kameran aynada (scaleX(-1)), diğerleri düz */}
+                        {/* Kamera normal gösterim (ayna efekti kaldırıldı) */}
                         <VideoTrack
                           trackRef={trackRef}
                           className="w-full h-full object-cover animate-in fade-in duration-300"
-                          style={isLocal ? { transform: 'scaleX(-1)' } : {}}
                         />
 
                         {/* Floating tag inside camera panel */}
