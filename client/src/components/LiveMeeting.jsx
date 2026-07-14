@@ -1797,7 +1797,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                         }`}
                       >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={p.isLocal ? { transform: 'scaleX(-1)' } : undefined} />
 
                         {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
                         {p.isLocal && (
@@ -2005,10 +2005,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                               isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
                             }`}
                           >
-                            {/* Kamera normal gösterim (ayna efekti kaldırıldı) */}
+                            {/* Kendi kameran ayna gibi görünür, karşı taraf seni ters görmez */}
                             <VideoTrack
                               trackRef={trackRef}
                               className="w-full h-full object-cover"
+                              style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
                             />
 
                             {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
@@ -2082,10 +2083,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                             : 'border-slate-800 hover:border-primary/30'
                         }`}
                       >
-                        {/* Kamera normal gösterim (ayna efekti kaldırıldı) */}
+                        {/* Kendi kameran ayna gibi görünür, karşı taraf seni ters görmez */}
                         <VideoTrack
                           trackRef={trackRef}
                           className="w-full h-full object-cover animate-in fade-in duration-300"
+                          style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
                         />
 
                         {/* Floating tag inside camera panel */}
