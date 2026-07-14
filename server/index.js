@@ -2211,7 +2211,7 @@ KURALLAR:
             { role: 'user', content: parca }
           ],
           temperature: 0.2,
-          max_tokens: 16000,
+          max_tokens: 8000,
           response_format: { type: 'json_object' }
         })
       });
