@@ -1747,24 +1747,90 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 </span>
                 <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
               </div>
-              
+
+              {/* Kamera ve Mikrofon kontrol butonları */}
+              <div className="no-drag flex gap-1.5 px-0.5">
+                <button
+                  onClick={toggleMicrophone}
+                  title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    isMicrophoneEnabled
+                      ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[13px]">
+                    {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                  </span>
+                  <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
+                </button>
+
+                <button
+                  onClick={toggleCamera}
+                  title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    isCameraEnabled
+                      ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[13px]">
+                    {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                  </span>
+                  <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
+                </button>
+              </div>
+
               {/* Videos */}
               <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto no-drag pr-0.5">
                 {participants.map((p) => {
                   const isTeacher = checkIsTeacher(p);
                   const trackRef = cameraTracks.find(t => t.participant.identity === p.identity);
                   const initial = p.name ? p.name.charAt(0).toUpperCase() : p.identity.charAt(0).toUpperCase();
-                  
+
                   if (trackRef) {
                     const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${p.identity}_camera`;
                     return (
-                      <div 
-                        key={trackKey} 
+                      <div
+                        key={trackKey}
                         className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
                           isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
                         }`}
                       >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={{ transform: 'scaleX(-1)' }} />
+                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" />
+
+                        {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
+                        {p.isLocal && (
+                          <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
+                              title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                isMicrophoneEnabled
+                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[11px] font-bold">
+                                {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
+                              title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                isCameraEnabled
+                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[11px] font-bold">
+                                {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                              </span>
+                            </button>
+                          </div>
+                        )}
 
                         {/* Speaking indicator overlay */}
                         {p.isSpeaking && (
@@ -1788,6 +1854,38 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           isTeacher ? 'border-primary/30' : 'border-slate-900'
                         }`}
                       >
+                        {p.isLocal && (
+                          <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
+                              title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                isMicrophoneEnabled
+                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[11px] font-bold">
+                                {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
+                              title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
+                                isCameraEnabled
+                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
+                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[11px] font-bold">
+                                {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-inner ${
                           isTeacher ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'
                         }`}>
@@ -1801,7 +1899,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           <span className="material-symbols-outlined text-[8px]">videocam_off</span>
                           Kamera Kapalı
                         </span>
-                        
+
                         {/* Speaking indicator overlay */}
                         {p.isSpeaking && (
                           <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
