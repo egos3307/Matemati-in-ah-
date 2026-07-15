@@ -2005,11 +2005,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                               isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
                             }`}
                           >
-                            {/* Kendi kameran ayna gibi görünür, karşı taraf seni ters görmez */}
                             <VideoTrack
                               trackRef={trackRef}
                               className="w-full h-full object-cover"
-                              style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
                             />
 
                             {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
