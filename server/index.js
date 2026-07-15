@@ -761,37 +761,6 @@ async function verifyDriveFolder(accessToken, folderId) {
   }
 }
 
-// Vercel fonksiyon süre sınırı yüzünden uzun videoları kendi sunucumuzdan akıtamıyoruz
-// (40-90 dk'lık kayıtlar fonksiyon zaman aşımına takılıyordu). Bu yüzden dosyaya
-// "bağlantıyı bilen görüntüleyebilir" izni verip öğrenciyi doğrudan Google'a yönlendiriyoruz.
-async function ensurePublicViewPermission(accessToken, fileId) {
-  const listRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}/permissions?fields=permissions(id,type,role)&supportsAllDrives=true`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  if (listRes.ok) {
-    const data = await listRes.json();
-    const alreadyPublic = data.permissions?.some(p => p.type === 'anyone');
-    if (alreadyPublic) return;
-  }
-
-  const createRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-    }
-  );
-  if (!createRes.ok) {
-    const err = await createRes.text();
-    throw new Error(`Drive izin ayarlanamadı (${fileId}): ${err}`);
-  }
-}
-
 async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
   const accessToken = await getGoogleDriveAccessToken();
   if (!accessToken) {
@@ -841,17 +810,20 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   const fileId = fileData.id;
   console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
   
-  // Dosya yüklenirken herkese açık yapılmıyor; "anyone with link" izni sadece
-  // izleme anında /api/drive/stream/:fileId üzerinden JWT'li istek geldiğinde açılır
-  // (bkz. ensurePublicViewPermission).
+  // Dosya herkese açık yapılmıyor — video izlenirken /api/drive/stream/:fileId
+  // kısa ömürlü bir erişim jetonuyla Google'ın medya uç noktasına yönlendirir.
 
   return `drive:${fileId}`;
 }
 
 // 🔒 Güvenli Drive Video Endpoint'i
 // JWT token zorunlu — token'ı olmayan biri bu endpoint'i tetikleyemez.
-// Asıl video verisi Vercel fonksiyonu üzerinden değil, doğrudan Google'dan akar
-// (uzun ders kayıtları Vercel'in fonksiyon süre sınırını aşıp izlenemiyordu).
+// Dosya public yapılmıyor; öğrenci, Google'ın alt=media uç noktasına kısa ömürlü
+// (yaklaşık 1 saat geçerli) bir erişim jetonuyla yönlendirilir. Böylece video verisi
+// Vercel fonksiyonu üzerinden değil doğrudan Google'dan akar (uzun ders kayıtları
+// Vercel'in fonksiyon süre sınırını aşıp izlenemiyordu) ve indirme yerine oynatma
+// davranışı korunur (drive.usercontent.google.com'daki indirme linki tarayıcıda
+// Content-Disposition: attachment yüzünden <video> içinde oynamıyordu).
 app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   const { fileId } = req.params;
 
@@ -866,9 +838,10 @@ app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
       return res.status(503).json({ error: 'Drive erişimi yapılandırılmamış.' });
     }
 
-    await ensurePublicViewPermission(accessToken, fileId);
-
-    res.redirect(302, `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`);
+    res.redirect(
+      302,
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${encodeURIComponent(accessToken)}`
+    );
   } catch (err) {
     console.error('Drive stream hatası:', err);
     if (!res.headersSent) {
