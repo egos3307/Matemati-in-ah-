@@ -11,8 +11,9 @@ const WatchRecording = () => {
   const { user } = useAuth();
   const videoUrl = searchParams.get('url');
   const lessonTitle = searchParams.get('title') || 'Ders Kaydı';
-  const [isBuffering, setIsBuffering] = React.useState(false);
+  const [isBuffering, setIsBuffering] = React.useState(true);
   const [videoError, setVideoError] = React.useState(false);
+  const [loadProgress, setLoadProgress] = React.useState(0);
 
   const getBackPath = () => {
     if (user?.role === 'PARENT') return '/veli';
@@ -279,14 +280,26 @@ const WatchRecording = () => {
             onCanPlay={() => setIsBuffering(false)}
             onSeeked={() => setIsBuffering(false)}
             onError={() => { setIsBuffering(false); setVideoError(true); }}
+            onProgress={(e) => {
+              const v = e.target;
+              if (v.duration && v.buffered.length > 0) {
+                const bufferedEnd = v.buffered.end(v.buffered.length - 1);
+                setLoadProgress(Math.min(100, Math.round((bufferedEnd / v.duration) * 100)));
+              }
+            }}
             className="w-full h-full max-h-screen object-contain z-10"
           />
         )}
 
-        {isBuffering && !videoError && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-4 transition-all">
+        {player.type === 'native' && isBuffering && !videoError && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-4 transition-all px-6 text-center">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-semibold text-slate-200 tracking-wider">Video Yükleniyor...</p>
+            <p className="text-sm font-semibold text-slate-200 tracking-wider">
+              Video Yükleniyor{loadProgress > 0 ? ` — %${loadProgress}` : '...'}
+            </p>
+            <p className="text-xs text-slate-400 max-w-xs">
+              Uzun ders kayıtlarının açılması biraz zaman alabilir, lütfen sayfayı kapatmadan bekleyin.
+            </p>
           </div>
         )}
 
