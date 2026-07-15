@@ -810,20 +810,18 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   const fileId = fileData.id;
   console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
   
-  // Dosya herkese açık yapılmıyor — video izlenirken /api/drive/stream/:fileId
-  // kısa ömürlü bir erişim jetonuyla Google'ın medya uç noktasına yönlendirir.
+  // Dosyayı herkese açık YAPMA — URL sadece API üzerinden token ile verilecek
+  // Bu sayede öğrenci URL'yi paylaşsa bile başkası erişemez
 
   return `drive:${fileId}`;
 }
 
 // 🔒 Güvenli Drive Video Endpoint'i
 // JWT token zorunlu — token'ı olmayan biri bu endpoint'i tetikleyemez.
-// Dosya public yapılmıyor; öğrenci, Google'ın alt=media uç noktasına kısa ömürlü
-// (yaklaşık 1 saat geçerli) bir erişim jetonuyla yönlendirilir. Böylece video verisi
-// Vercel fonksiyonu üzerinden değil doğrudan Google'dan akar (uzun ders kayıtları
-// Vercel'in fonksiyon süre sınırını aşıp izlenemiyordu) ve indirme yerine oynatma
-// davranışı korunur (drive.usercontent.google.com'daki indirme linki tarayıcıda
-// Content-Disposition: attachment yüzünden <video> içinde oynamıyordu).
+// Google'ın dokümante edilmemiş yönlendirme linkleri (indirme linki, access_token
+// query param) güvenilmez çıktı; video verisini kendi sunucumuzdan, doğru
+// Content-Type/Range başlıklarıyla akıtıyoruz. Uzun kayıtlarda Vercel'in fonksiyon
+// süre sınırına takılmaması için vercel.json'da maxDuration yükseltilmiştir.
 app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   const { fileId } = req.params;
 
@@ -838,10 +836,41 @@ app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
       return res.status(503).json({ error: 'Drive erişimi yapılandırılmamış.' });
     }
 
-    res.redirect(
-      302,
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&access_token=${encodeURIComponent(accessToken)}`
+    // Range header'ı destekle (video seeking için şart)
+    const rangeHeader = req.headers['range'];
+    const driveRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...(rangeHeader ? { Range: rangeHeader } : {}),
+        },
+      }
     );
+
+    if (!driveRes.ok) {
+      const err = await driveRes.text();
+      console.error(`Drive stream hatası (${fileId}):`, err);
+      return res.status(driveRes.status).json({ error: 'Dosyaya erişilemedi.' });
+    }
+
+    // Drive'dan gelen header'ları öğrenciye ilet
+    const contentType = driveRes.headers.get('content-type') || 'video/mp4';
+    const contentLength = driveRes.headers.get('content-length');
+    const contentRange = driveRes.headers.get('content-range');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, no-store'); // Önbelleğe alınmasın
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+    if (contentRange) res.setHeader('Content-Range', contentRange);
+
+    res.status(rangeHeader ? 206 : 200);
+
+    // Stream et — tüm videoyu belleğe alma
+    const { Readable } = require('stream');
+    Readable.fromWeb(driveRes.body).pipe(res);
+
   } catch (err) {
     console.error('Drive stream hatası:', err);
     if (!res.headersSent) {

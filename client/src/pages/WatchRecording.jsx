@@ -229,28 +229,22 @@ const WatchRecording = () => {
             <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
             <div>
               <h2 className="text-xl font-black text-white mb-2">Video Oynatılamıyor</h2>
-              {isSafari ? (
-                <p className="text-slate-400 text-sm max-w-md">
-                  Safari, WebM formatını desteklemiyor. Kaydı Google Drive'da açarak izleyebilir veya indirebilirsiniz.
-                </p>
-              ) : (
-                <p className="text-slate-400 text-sm max-w-md">
-                  Ders kaydı bu cihazda oynatılamıyor. Kaydı doğrudan açmayı veya indirmeyi deneyebilirsiniz.
-                </p>
-              )}
+              <p className="text-slate-400 text-sm max-w-md">
+                Ders kaydı bu cihazda oynatılamıyor. Kaydı yeni sekmede açmayı veya indirmeyi deneyebilirsiniz.
+              </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <a
-                href={decodeURIComponent(videoUrl)}
+                href={player.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all"
               >
                 <span className="material-symbols-outlined text-sm">open_in_new</span>
-                {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da Aç" : "Yeni Sekmede Aç"}
+                {player.type === 'iframe' ? "Google Drive'da Aç" : "Yeni Sekmede Aç"}
               </a>
               <a
-                href={decodeURIComponent(videoUrl)}
+                href={player.url}
                 download
                 className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black transition-all"
               >
