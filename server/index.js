@@ -2409,9 +2409,10 @@ DİĞER KURALLAR:
       sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Senden verilen konuda son derece detaylı, kapsamlı ve öğretici bir ders notu / fasikül hazırlamanı istiyorum.
 
 KURALLAR:
-- Konuyu sıfırdan açıkla: tanım, özellikler, formüller, ispatlar (gerekirse).
+- Konuyu MUTLAKA şu pedagojik sırayla işle, sıralamayı bozma ve konular arasında atlama yapma: 1) Tanım ve temel kavramlar, 2) Özellikler ve kurallar, 3) Formüller, 4) İspatlar (gerekiyorsa), 5) Çözümlü örnekler (kolaydan zora doğru), 6) Alıştırma soruları.
+- Bir alt konuyu tamamlamadan bir sonrakine geçme; her başlık kendi içinde tam ve bitmiş olmalı.
 - Her önemli noktayı ayrı başlık altında ver.
-- En az 3-5 çözümlü örnek ekle (ornek + cozum blokları).
+- En az 3-5 çözümlü örnek ekle; HER "ornek" bloğundan hemen sonra o örneğe ait TAM ve eksiksiz bir "cozum" bloğu gelmeli — asla çözümsüz veya yarım bırakılmış bir örnek olmasın.
 - En az 5 alıştırma sorusu ekle (soru tipi).
 - Matematiksel ifadeleri $..$ içinde LaTeX ile yaz.
 - İçeriği asla kısaltma; ne kadar uzun ve detaylı olursa o kadar iyi.
@@ -2428,54 +2429,105 @@ KURALLAR:
       kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\n\nBu konu için son derece detaylı, kapsamlı bir ders notu / fasikül hazırla. Hiçbir şeyi kısaltma, tüm alt konuları, formülleri, örnekleri ve alıştırmaları ekle.`;
     }
 
-    const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-oss-120b',
-        messages: [
-          { role: 'system', content: sistemTalimati },
-          { role: 'user',   content: kullaniciMesaji }
-        ],
-        temperature: 0.7,
-        max_tokens: 16000,
-        response_format: { type: 'json_object' }
-      })
-    });
+    const cerebrasCagir = async (mesajlar) => {
+      const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-oss-120b',
+          messages: mesajlar,
+          temperature: 0.7,
+          max_tokens: 16000,
+          response_format: { type: 'json_object' }
+        })
+      });
 
-    if (!yanit.ok) {
-      const errText = await yanit.text();
-      console.error('Cerebras gpt-uret error:', errText);
-      let errorMsg = 'Cerebras servisi yanıt vermedi.';
-      try {
-        const parsed = JSON.parse(errText);
-        if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
-      } catch(e) {}
-      return res.status(yanit.status).json({ error: errorMsg });
-    }
+      if (!yanit.ok) {
+        const errText = await yanit.text();
+        console.error('Cerebras gpt-uret error:', errText);
+        let errorMsg = 'Cerebras servisi yanıt vermedi.';
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
+        } catch(e) {}
+        const hata = new Error(errorMsg);
+        hata.status = yanit.status;
+        throw hata;
+      }
 
-    const data = await yanit.json();
-    const rawContent = data.choices?.[0]?.message?.content || '{}';
+      const data = await yanit.json();
+      const choice = data.choices?.[0];
+      return { rawContent: choice?.message?.content || '{}', finishReason: choice?.finish_reason };
+    };
 
     let ayristirilmis;
-    try {
-      ayristirilmis = JSON.parse(rawContent);
-    } catch(e) {
-      console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
-      return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
-    }
 
     if (tip === 'test') {
+      const { rawContent } = await cerebrasCagir([
+        { role: 'system', content: sistemTalimati },
+        { role: 'user',   content: kullaniciMesaji }
+      ]);
+
+      try {
+        ayristirilmis = JSON.parse(rawContent);
+      } catch(e) {
+        console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
+        return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
+      }
+
       if (!Array.isArray(ayristirilmis.sorular)) {
         return res.status(502).json({ error: 'Model beklenen soru formatında yanıt vermedi.' });
       }
     } else {
-      if (!Array.isArray(ayristirilmis.bloklar)) {
+      // Ders notu tek seferde token limitine takılıp yarıda kalabiliyor.
+      // finish_reason 'length' geldiğinde kalan içeriği otomatik olarak devam ettirip birleştiriyoruz.
+      const MAX_DEVAM = 2;
+      const mesajlar = [
+        { role: 'system', content: sistemTalimati },
+        { role: 'user',   content: kullaniciMesaji }
+      ];
+      const tumBloklar = [];
+
+      for (let devamSayaci = 0; devamSayaci <= MAX_DEVAM; devamSayaci++) {
+        const { rawContent, finishReason } = await cerebrasCagir(mesajlar);
+
+        let parcaBloklar = [];
+        try {
+          const parcaJson = JSON.parse(rawContent);
+          if (Array.isArray(parcaJson.bloklar)) parcaBloklar = parcaJson.bloklar;
+        } catch(e) {
+          console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
+          if (tumBloklar.length === 0) {
+            return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
+          }
+          break;
+        }
+
+        if (finishReason === 'length' && parcaBloklar.length > 0) {
+          // Token limitine takılan son blok muhtemelen yarım kalmıştır, devam isteğinde yeniden ürettirilecek.
+          parcaBloklar = parcaBloklar.slice(0, -1);
+        }
+
+        tumBloklar.push(...parcaBloklar);
+
+        if (finishReason !== 'length' || devamSayaci === MAX_DEVAM) break;
+
+        console.warn(`gpt-uret ders notu: finish_reason=length, devam isteği gönderiliyor (${devamSayaci + 1}/${MAX_DEVAM})`);
+        mesajlar.push({ role: 'assistant', content: rawContent });
+        mesajlar.push({
+          role: 'user',
+          content: 'Yanıtın token limiti nedeniyle yarıda kesildi. Önceki blokları TEKRARLAMADAN, konu anlatımının/örneklerin/alıştırmaların KALAN kısmıyla devam et. Aynı JSON şemasını kullanarak sadece yeni blokları {"bloklar":[...]} formatında döndür.'
+        });
+      }
+
+      if (tumBloklar.length === 0) {
         return res.status(502).json({ error: 'Model beklenen blok formatında yanıt vermedi.' });
       }
+
+      ayristirilmis = { bloklar: tumBloklar };
     }
 
     res.json(ayristirilmis);
