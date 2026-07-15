@@ -2067,7 +2067,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             ) : (
               // B. LAYOUT: NORMAL GRID OF WEBCAMS
               <div className="w-full h-full flex items-center justify-center p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[92rem] w-full">
                   {cameraTracks.map((trackRef) => {
                     const isTeacher = checkIsTeacher(trackRef.participant);
                     const isLocal = trackRef.participant.isLocal;
