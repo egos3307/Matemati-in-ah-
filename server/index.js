@@ -138,32 +138,33 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Kişi bazlı yanlış giriş kilidi: aynı hesap 3 kez yanlış girilirse 10 dakika kilitlenir.
-// failedLoginAttempts/loginLockedUntil User tablosunda tutulur (serverless ortamda
-// istekler farklı instance'lara düşebildiğinden bellek içi sayaç güvenilir değildir).
+// Hesap + cihaz (IP) bazlı yanlış giriş kilidi: aynı hesaba aynı cihazdan 3 kez yanlış
+// girilirse sadece o cihaz 10 dakika kilitlenir, diğer cihazlardan girişe dokunulmaz.
+// Kayıtlar LoginAttempt tablosunda tutulur (serverless ortamda istekler farklı
+// instance'lara düşebildiğinden bellek içi sayaç güvenilir değildir).
 const MAX_FAILED_LOGIN_ATTEMPTS = 3;
 const LOGIN_LOCK_DURATION_MS = 10 * 60 * 1000;
 
-const getLoginLockRemainingMinutes = (user) => {
-  if (!user.loginLockedUntil) return 0;
-  const remainingMs = new Date(user.loginLockedUntil).getTime() - Date.now();
+const getLoginAttemptKey = (userId, ip) => `${userId}:${ip}`;
+
+const getLoginLockRemainingMinutes = async (key) => {
+  const record = await prisma.loginAttempt.findUnique({ where: { key } });
+  if (!record || !record.lockedUntil) return 0;
+  const remainingMs = new Date(record.lockedUntil).getTime() - Date.now();
   return remainingMs > 0 ? Math.ceil(remainingMs / 60000) : 0;
 };
 
-const registerFailedLoginAttempt = async (user) => {
-  const nextAttempts = user.failedLoginAttempts + 1;
+const registerFailedLoginAttempt = async (key) => {
+  const record = await prisma.loginAttempt.findUnique({ where: { key } });
+  const nextAttempts = (record?.failedAttempts || 0) + 1;
   const data = nextAttempts >= MAX_FAILED_LOGIN_ATTEMPTS
-    ? { failedLoginAttempts: 0, loginLockedUntil: new Date(Date.now() + LOGIN_LOCK_DURATION_MS) }
-    : { failedLoginAttempts: nextAttempts };
-  await prisma.user.update({ where: { id: user.id }, data });
+    ? { failedAttempts: 0, lockedUntil: new Date(Date.now() + LOGIN_LOCK_DURATION_MS) }
+    : { failedAttempts: nextAttempts, lockedUntil: null };
+  await prisma.loginAttempt.upsert({ where: { key }, update: data, create: { key, ...data } });
 };
 
-const clearLoginAttempts = async (user) => {
-  if (user.failedLoginAttempts === 0 && !user.loginLockedUntil) return;
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedLoginAttempts: 0, loginLockedUntil: null }
-  });
+const clearLoginAttempts = async (key) => {
+  await prisma.loginAttempt.deleteMany({ where: { key } });
 };
 
 // Serve static recorded lessons
@@ -191,7 +192,8 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
           console.log('Parent user not found');
           return res.status(400).json({ message: 'Geçersiz bilgiler' });
         }
-        const lockedMinutes = getLoginLockRemainingMinutes(user);
+        const attemptKey = getLoginAttemptKey(user.id, req.ip);
+        const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
         if (lockedMinutes > 0) {
           return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
         }
@@ -204,7 +206,8 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
           console.log('Student user not found');
           return res.status(400).json({ message: 'Geçersiz bilgiler' });
         }
-        const lockedMinutes = getLoginLockRemainingMinutes(user);
+        const attemptKey = getLoginAttemptKey(user.id, req.ip);
+        const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
         if (lockedMinutes > 0) {
           return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
         }
@@ -215,14 +218,15 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         console.log('User not found');
         return res.status(400).json({ message: 'Geçersiz bilgiler' });
       }
-      const lockedMinutes = getLoginLockRemainingMinutes(user);
+      const attemptKey = getLoginAttemptKey(user.id, req.ip);
+      const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
       if (lockedMinutes > 0) {
         return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
       }
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         console.log('Password mismatch');
-        await registerFailedLoginAttempt(user);
+        await registerFailedLoginAttempt(attemptKey);
         return res.status(400).json({ message: 'Geçersiz bilgiler' });
       }
 
@@ -244,7 +248,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    await clearLoginAttempts(user);
+    await clearLoginAttempts(getLoginAttemptKey(user.id, req.ip));
     console.log('Login successful for:', user.email || user.studentCode || user.parentCode);
     res.json({
       token, 
