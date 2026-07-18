@@ -328,7 +328,7 @@ const Home = () => {
               Matematik yolculuğunda sana yardımcı olacak en iyi kaynakları keşfet.
             </p>
           </div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4 lg:gap-8">
             {[
               { id: 1, name: 'DGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
               { id: 2, name: 'YKS / AYT MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
@@ -339,12 +339,12 @@ const Home = () => {
                 <div className="aspect-[3/4] overflow-hidden">
                   <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 </div>
-                <div className="flex flex-col gap-2 p-6">
-                  <h3 className="font-bold text-slate-900">{product.name}</h3>
+                <div className="flex flex-col gap-2 p-3 sm:p-6">
+                  <h3 className="text-sm font-bold text-slate-900 sm:text-base">{product.name}</h3>
                   <p className="text-primary font-black">{product.price}</p>
-                  <a 
-                    href="https://www.shopier.com/fullematematigi" 
-                    target="_blank" 
+                  <a
+                    href="https://www.shopier.com/fullematematigi"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 flex h-10 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white transition-colors hover:bg-slate-800"
                   >
