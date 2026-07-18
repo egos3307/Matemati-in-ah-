@@ -167,6 +167,67 @@ const suppressSecondaryPeople = (md, w, h, parent) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Morfolojik açma (erode + dilate): seçilen kişi maskesindeki ince/gürültülü
+// çıkıntıları temizler. Bunlar genelde arka plandaki bir nesnenin kişi
+// silüetine "yapışık" görünen tek-iki piksellik uzantılarıdır ve kenarların
+// pikselli/dişli görünmesinin ana kaynağıdır. Erode ana gövdeyi 1px küçültür,
+// dilate onu geri büyütür — sadece erode ile tamamen silinen (yani 1px'ten
+// ince) çıkıntılar geri gelmez, ana gövde boyutu değişmez.
+// ---------------------------------------------------------------------------
+let _openBin = null;
+let _openEroded = null;
+let _openSize = 0;
+
+const openMask = (md, w, h) => {
+  const n = w * h;
+  if (_openSize !== n) {
+    _openBin = new Uint8Array(n);
+    _openEroded = new Uint8Array(n);
+    _openSize = n;
+  }
+  const bin = _openBin;
+  const eroded = _openEroded;
+  const threshold = 140;
+
+  for (let i = 0; i < n; i++) bin[i] = md[i * 4] >= threshold ? 1 : 0;
+
+  // Erode: kare çerçevenin dışını hep "dolu" say (görüntü kenarındaki kişiyi
+  // yanlışlıkla erozyona uğratmamak için)
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      const idx = row + x;
+      if (!bin[idx]) { eroded[idx] = 0; continue; }
+      const l = x === 0 || bin[idx - 1];
+      const r = x === w - 1 || bin[idx + 1];
+      const u = y === 0 || bin[idx - w];
+      const d = y === h - 1 || bin[idx + w];
+      eroded[idx] = (l && r && u && d) ? 1 : 0;
+    }
+  }
+
+  // Dilate: sadece erode sonrası hayatta kalan pikseller geri büyütülür
+  for (let i = 0; i < n; i++) {
+    if (!bin[i] || eroded[i]) continue; // arka plan ya da zaten ana gövdenin parçası
+
+    const x = i % w;
+    const y = (i / w) | 0;
+    const l = x > 0 && eroded[i - 1];
+    const r = x < w - 1 && eroded[i + 1];
+    const u = y > 0 && eroded[i - w];
+    const d = y < h - 1 && eroded[i + w];
+
+    if (!(l || r || u || d)) {
+      // İnce çıkıntı / arka plan gürültüsü — sil
+      const p = i * 4;
+      md[p] = 0;
+      md[p + 1] = 0;
+      md[p + 2] = 0;
+    }
+  }
+};
+
 // WHITEBOARD COMPONENT
 const Whiteboard = ({ role, whiteboardCanvasRef }) => {
   const isTeacher = role === 'TEACHER';
@@ -742,11 +803,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           suppressSecondaryPeople(rawMaskData.data, w, h, virtualCCParentRef.current);
         }
 
+        // ── ADIM 2b: Morfolojik açma — arka plandan kalan ince/gürültülü
+        // çıkıntıları temizle (arka planın kişi silüetine "yapışık" görünmesini
+        // engeller, kenarları pürüzsüzleştirir)
+        openMask(rawMaskData.data, w, h);
+
         // ── ADIM 3: Temizlenmiş ham maskeyi geri yaz, sonra blur uygula ──
         // Böylece blur sadece seçilen kişinin kenarlarını yumuşatır;
         // silinmiş bileşenler blura dahil olmaz.
         maskCtx.putImageData(rawMaskData, 0, 0);
-        maskCtx.filter = 'blur(4px)'; // daha az blur → daha sıkı kenar
+        maskCtx.filter = 'blur(6px)'; // yumuşak, doğal kenar geçişi
         maskCtx.drawImage(maskCanvas, 0, 0);
         maskCtx.filter = 'none';
         const maskData = maskCtx.getImageData(0, 0, w, h);
@@ -755,8 +821,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         const md = maskData.data;
 
         // ── ADIM 4: Piksel harmanlama ──
-        // Eşikler daraltıldı: < 0.25 tam arka plan, > 0.75 tam kişi
-        // Aradaki dar bant (~50px genişlik) yumuşak kenar geçişi için
+        // < 0.25 tam arka plan, > 0.75 tam kişi. Aradaki bant smoothstep
+        // eğrisiyle harmanlanır (doğrusal yerine) — kenar daha yumuşak ve
+        // daha az "pikselli/dişli" görünür.
         for (let i = 0; i < fd.length; i += 4) {
           const confidence = md[i] / 255;
 
@@ -767,8 +834,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             fd[i + 2] = bgB;
             fd[i + 3] = 255;
           } else if (confidence < 0.75) {
-            // Dar kenar geçiş bandı → lineer harman
-            const t = (confidence - 0.25) / 0.50;
+            // Kenar geçiş bandı → smoothstep harman
+            const raw = (confidence - 0.25) / 0.50;
+            const t = raw * raw * (3 - 2 * raw);
             fd[i]     = Math.round(fd[i]     * t + bgR * (1 - t));
             fd[i + 1] = Math.round(fd[i + 1] * t + bgG * (1 - t));
             fd[i + 2] = Math.round(fd[i + 2] * t + bgB * (1 - t));
