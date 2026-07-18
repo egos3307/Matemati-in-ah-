@@ -33,6 +33,8 @@ model User {
   paymentNote     String?  // Ödeme notları
   paymentType     String?  @default("MONTHLY") // MONTHLY, LESSON
   totalLessons    Int?     @default(0) // Toplam ders sayısı (derslik ödeme tipi için)
+  failedLoginAttempts Int      @default(0) // Art arda yanlış giriş sayısı
+  loginLockedUntil   DateTime? // Doluysa ve gelecekteyse hesap girişe kapalı
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
