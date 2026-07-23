@@ -2271,9 +2271,24 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
     }
   }
 
-  // 3. Cerebras AI (yalnızca metin için)
-  if (cerebrasKey && !base64Image) {
+  // 3. Cerebras AI (gemma-4-31b for vision, gpt-oss-120b for text)
+  if (cerebrasKey) {
     try {
+      const model = base64Image ? 'gemma-4-31b' : 'gpt-oss-120b';
+      const messages = [{ role: 'system', content: systemPrompt }];
+
+      if (base64Image) {
+        messages.push({
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: base64Image } },
+            { type: 'text', text: userText || 'İçeriği çözümle.' }
+          ]
+        });
+      } else {
+        messages.push({ role: 'user', content: userText });
+      }
+
       const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -2281,11 +2296,8 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'llama3.3-70b',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userText }
-          ],
+          model,
+          messages,
           temperature: 0.15,
           ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
         })
@@ -2297,7 +2309,8 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
         if (text) return text;
       } else {
         const errText = await res.text();
-        errorLogs.push(`Cerebras (${res.status}): ${errText.substring(0, 120)}`);
+        console.warn(`Cerebras ${model} error:`, errText.substring(0, 150));
+        errorLogs.push(`Cerebras ${model} (${res.status})`);
       }
     } catch (e) {
       console.warn('Cerebras catch:', e.message);
