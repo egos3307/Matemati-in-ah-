@@ -53,7 +53,7 @@ const Navbar = () => {
                 href="https://www.youtube.com/@FULLEMATEM%C4%B0T%C4%B0G%C4%B0"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-full text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                className="hidden md:flex items-center justify-center w-8 h-8 rounded-full text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all"
                 aria-label="YouTube"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
@@ -65,7 +65,7 @@ const Navbar = () => {
                 href="https://www.instagram.com/fullematematigi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-full text-slate-500 hover:text-pink-600 hover:bg-pink-50 transition-all"
+                className="hidden md:flex items-center justify-center w-8 h-8 rounded-full text-slate-500 hover:text-pink-600 hover:bg-pink-50 transition-all"
                 aria-label="Instagram"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
