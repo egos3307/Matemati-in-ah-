@@ -2157,17 +2157,20 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
     throw new Error('OPENROUTER_API_KEY Vercel ortam değişkenlerinde bulunamadı. Lütfen Vercel -> Settings -> Environment Variables bölümünden OPENROUTER_API_KEY ekleyip projenizi "Redeploy" yapın.');
   }
 
-  // OpenRouter üzerindeki en kaliteli %100 ücretsiz modeller
+  // OpenRouter üzerindeki en aktif ve kaliteli modeller
   const openrouterModels = base64Image
     ? [
-        'google/gemini-2.0-flash-exp:free',
-        'google/gemini-2.0-flash-lite-preview-02-05:free',
-        'meta-llama/llama-3.2-11b-vision-instruct:free'
+        'google/gemini-2.0-flash-001',
+        'google/gemini-flash-1.5',
+        'google/gemini-pro-1.5',
+        'meta-llama/llama-3.2-11b-vision-instruct'
       ]
     : [
-        'google/gemini-2.0-flash-exp:free',
         'meta-llama/llama-3.3-70b-instruct:free',
-        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'meta-llama/llama-3.3-70b-instruct',
+        'google/gemini-2.0-flash-001',
+        'google/gemini-flash-1.5',
+        'deepseek/deepseek-chat',
         'deepseek/deepseek-r1:free',
         'qwen/qwen-2.5-coder-32b-instruct:free'
       ];
