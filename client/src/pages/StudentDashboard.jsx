@@ -71,6 +71,12 @@ const StudentDashboard = () => {
   const [topicProgress, setTopicProgress] = useState({});
   const [dailyLog, setDailyLog] = useState({ questions: 0, minutes: 0, notes: '' });
   const [dailyLogInput, setDailyLogInput] = useState({ questions: '', minutes: '', notes: '' });
+
+  // Hata Defteri states
+  const [hataDefteri, setHataDefteri] = useState([]);
+  const [hataNote, setHataNote] = useState('');
+  const [hataUploading, setHataUploading] = useState(false);
+  const [hataLightbox, setHataLightbox] = useState(null);
   
   // Study Timer (Sayaç) States & Effects
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -155,11 +161,49 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchHataDefteri = async () => {
+    try {
+      const res = await axios.get('/api/student/hata-defteri');
+      setHataDefteri(res.data);
+    } catch (err) {
+      console.error('Hata defteri yüklenemedi:', err);
+    }
+  };
+
+  const handleHataUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setHataUploading(true);
+    compressImage(file, async (base64) => {
+      try {
+        await axios.post('/api/student/hata-defteri', { imageData: base64, note: hataNote || null });
+        setHataNote('');
+        await fetchHataDefteri();
+      } catch (err) {
+        alert(err.response?.data?.error || 'Fotoğraf yüklenirken hata oluştu.');
+      } finally {
+        setHataUploading(false);
+        e.target.value = '';
+      }
+    });
+  };
+
+  const handleHataDelete = async (id) => {
+    if (!window.confirm('Bu fotoğrafı silmek istediğine emin misin?')) return;
+    try {
+      await axios.delete(`/api/student/hata-defteri/${id}`);
+      setHataDefteri(prev => prev.filter(h => h.id !== id));
+    } catch (err) {
+      alert('Silinemedi.');
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     loadSubjects();
     loadStudyHistory();
     fetchLessons();
+    fetchHataDefteri();
     fetchHomeworks();
     fetchTrials();
 
@@ -626,26 +670,30 @@ const StudentDashboard = () => {
 
   const topicsByGrade = {
     "5": [
-      "Doğal Sayılar ve Doğal Sayılarla İşlemler",
-      "Kesirler ve Kesirlerle İşlemler",
-      "Ondalık Gösterim ve Yüzdeler",
-      "Temel Geometrik Kavramlar ve Çizimler",
-      "Üçgenler ve Dörtgenler",
-      "Uzunluk ve Zaman Ölçme",
+      "Doğal Sayılar",
+      "Doğal Sayılarla İşlemler",
+      "Kesirler",
+      "Ondalık Gösterimler",
+      "Yüzdeler",
+      "Temel Geometrik Kavramlar",
+      "Geometrik Şekiller",
+      "Uzunluk ve Çevre Ölçme",
       "Alan Ölçme",
-      "Veri İşleme",
-      "Geometrik Cisimler (Prizmalar)"
+      "Veri Toplama ve Veri Analizi"
     ],
     "6": [
-      "Doğal Sayılarla İşlemler (Çarpanlar ve Katlar)",
+      "Doğal Sayılarla İşlemler",
+      "Çarpanlar ve Katlar",
       "Kümeler",
-      "Tam Sayılar ve Kesirler",
-      "Ondalık Gösterim ve Oran",
-      "Cebirsel İfadeler ve Veri Analizi",
-      "Açılar ve Alan Ölçme",
-      "Çember",
-      "Geometrik Cisimler ve Hacim Ölçme",
-      "Sıvı Ölçme"
+      "Tam Sayılar",
+      "Kesirlerle İşlemler",
+      "Ondalık Gösterimler",
+      "Oran",
+      "Cebirsel İfadeler",
+      "Veri Analizi",
+      "Açılar",
+      "Alan Ölçme",
+      "Çember"
     ],
     "7": [
       "Tam Sayılarla İşlemler",
@@ -669,30 +717,28 @@ const StudentDashboard = () => {
       "Cebirsel İfadeler ve Özdeşlikler",
       "Doğrusal Denklemler",
       "Eşitsizlikler",
-      "Üçgenler ve Üçgende Yardımcı Elemanlar",
+      "Üçgenler",
       "Eşlik ve Benzerlik",
       "Dönüşüm Geometrisi",
-      "Geometrik Cisimler (Prizma, Silindir, Piramit, Koni)"
+      "Geometrik Cisimler"
     ],
     "9": [
-      "Mantık",
-      "Kümeler (Alt Küme, Kümelerde İşlemler)",
-      "Sayı Kümeleri, Bölünebilme Kuralları",
-      "EBOB-EKOK",
-      "Birinci Dereceden Denklemler ve Eşitsizlikler",
-      "Üslü ve Köklü İfadeler",
-      "Oran-Orantı ve Problemler",
-      "Üçgenler (Açı, Benzerlik, Alan ve Trigonometri)",
-      "Veri Analizi"
+      "Sayılar",
+      "Nicelikler ve Değişimler",
+      "Algoritma ve Bilişim",
+      "Geometrik Şekiller",
+      "Analitik İnceleme",
+      "İstatistiksel Araştırma Süreci",
+      "Veriden Olasılığa"
     ],
     "10": [
-      "Sayma ve Olasılık (Permütasyon, Kombinasyon, Binom, Olasılık)",
-      "Fonksiyonlar (Tanım, Grafikler, Bileşke ve Ters Fonksiyon)",
-      "Polinomlar ve Polinomlarda İşlemler",
-      "Çarpanlara Ayırma",
-      "İkinci Dereceden Denklemler ve Karmaşık Sayılar",
-      "Çokgenler ve Dörtgenler (Özel Dörtgenler)",
-      "Uzay Geometri (Prizma ve Piramitlerin Hacimleri)"
+      "Sayılar",
+      "Nicelikler ve Değişimler",
+      "Sayma, Algoritma ve Bilişim",
+      "Geometrik Şekiller",
+      "Analitik İnceleme",
+      "İstatistiksel Araştırma Süreci",
+      "Veriden Olasılığa"
     ],
     "11": [
       "Trigonometri (Yönlü Açılar, Fonksiyonlar, Grafikler, Teoremler)",
@@ -704,43 +750,207 @@ const StudentDashboard = () => {
       "Koşullu Olasılık ve Deneysel/Teorik Olasılık"
     ],
     "12": [
-      "Üstel ve Logaritmik Fonksiyonlar",
-      "Diziler (Aritmetik ve Geometrik Diziler)",
-      "Trigonometri (Toplam-Fark, Yarım Açı, Trigonometrik Denklemler)",
-      "Limit ve Süreklilik",
-      "Türev ve Uygulamaları (Maksimum-Minimum Problemleri)",
-      "İntegral ve Uygulamaları (Belirli İntegral ile Alan Hesabı)",
-      "Çemberin Analitik İncelenmesi"
+      "— TYT Matematik —",
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Basit Eşitsizlikler",
+      "Mutlak Değer",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Oran – Orantı",
+      "Denklemler",
+      "Sayı Problemleri",
+      "Kesir Problemleri",
+      "Yaş Problemleri",
+      "Hareket Problemleri",
+      "İşçi-Havuz Problemleri",
+      "Karışım Problemleri",
+      "Kâr-Zarar Problemleri",
+      "Kümeler ve Kartezyen Çarpım",
+      "Mantık",
+      "Fonksiyonlar (TYT)",
+      "Permütasyon",
+      "Kombinasyon",
+      "Binom",
+      "Olasılık",
+      "Veri – İstatistik",
+      "Temel Geometri",
+      "Doğruda Açılar",
+      "Üçgenler",
+      "Çokgenler",
+      "Dörtgenler",
+      "Çember ve Daire",
+      "Analitik Geometri (TYT)",
+      "Katı Cisimler",
+      "— AYT Matematik —",
+      "Fonksiyonlar (AYT)",
+      "Polinomlar",
+      "İkinci Dereceden Denklemler ve Parabol",
+      "Karmaşık Sayılar",
+      "Eşitsizlikler",
+      "Trigonometri",
+      "Logaritma",
+      "Diziler",
+      "Limit",
+      "Süreklilik",
+      "Türev",
+      "Türevin Uygulamaları",
+      "İntegral",
+      "İntegralin Uygulamaları",
+      "Analitik Geometri (AYT)",
+      "Doğrunun Analitiği",
+      "Çemberin Analitiği",
+      "Dönüşüm Geometrisi",
+      "Permütasyon (AYT)",
+      "Kombinasyon (AYT)",
+      "Binom (AYT)",
+      "Olasılık (AYT)"
     ],
     "Mezun": [
-      "Temel Kavramlar ve Sayı Kümeleri",
-      "Bölme, Bölünebilme ve EBOB-EKOK",
-      "Rasyonel Sayılar ve Birinci Dereceden Denklemler",
-      "Basit Eşitsizlikler ve Mutlak Değer",
-      "Üslü ve Köklü Sayılar",
+      "— TYT Matematik —",
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Basit Eşitsizlikler",
+      "Mutlak Değer",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
       "Çarpanlara Ayırma",
-      "Oran-Orantı ve Problemler",
-      "Kümeler ve Fonksiyonlar",
-      "Polinomlar ve İkinci Dereceden Denklemler",
-      "Permütasyon, Kombinasyon, Binom ve Olasılık",
-      "Trigonometri (TYT-AYT)",
-      "Logaritma ve Diziler",
-      "Limit, Türev ve İntegral",
-      "Geometri (Üçgenler, Dörtgenler, Çember, Analitik Geometri)"
+      "Oran – Orantı",
+      "Denklemler",
+      "Sayı Problemleri",
+      "Kesir Problemleri",
+      "Yaş Problemleri",
+      "Hareket Problemleri",
+      "İşçi-Havuz Problemleri",
+      "Karışım Problemleri",
+      "Kâr-Zarar Problemleri",
+      "Kümeler ve Kartezyen Çarpım",
+      "Mantık",
+      "Fonksiyonlar (TYT)",
+      "Permütasyon",
+      "Kombinasyon",
+      "Binom",
+      "Olasılık",
+      "Veri – İstatistik",
+      "Temel Geometri",
+      "Doğruda Açılar",
+      "Üçgenler",
+      "Çokgenler",
+      "Dörtgenler",
+      "Çember ve Daire",
+      "Analitik Geometri (TYT)",
+      "Katı Cisimler",
+      "— AYT Matematik —",
+      "Fonksiyonlar (AYT)",
+      "Polinomlar",
+      "İkinci Dereceden Denklemler ve Parabol",
+      "Karmaşık Sayılar",
+      "Eşitsizlikler",
+      "Trigonometri",
+      "Logaritma",
+      "Diziler",
+      "Limit",
+      "Süreklilik",
+      "Türev",
+      "Türevin Uygulamaları",
+      "İntegral",
+      "İntegralin Uygulamaları",
+      "Analitik Geometri (AYT)",
+      "Doğrunun Analitiği",
+      "Çemberin Analitiği",
+      "Dönüşüm Geometrisi",
+      "Permütasyon (AYT)",
+      "Kombinasyon (AYT)",
+      "Binom (AYT)",
+      "Olasılık (AYT)"
     ],
     "KPSS": [
-      "Temel Kavramlar ve Sayı Kümeleri",
-      "Bölme, Bölünebilme ve EBOB-EKOK",
-      "Rasyonel Sayılar ve Basit Eşitsizlikler",
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Basit Eşitsizlikler",
       "Mutlak Değer",
-      "Üslü ve Köklü İfadeler",
-      "Çarpanlara Ayırma ve Denklem Çözme",
-      "Oran-Orantı ve Problemler",
-      "Kümeler ve Fonksiyonlar",
-      "Modüler Aritmetik ve İşlem",
-      "Permütasyon, Kombinasyon ve Olasılık",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Oran – Orantı",
+      "Denklemler",
+      "Problemler",
+      "Kümeler",
+      "Fonksiyonlar",
+      "İşlem",
+      "Modüler Aritmetik",
+      "Permütasyon – Kombinasyon – Olasılık",
+      "Grafik ve Tablo Yorumlama",
+      "Temel Geometri"
+    ],
+    "DGS": [
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Basit Eşitsizlikler",
+      "Mutlak Değer",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Oran – Orantı",
+      "Denklemler",
+      "Problemler",
+      "Kümeler",
+      "Fonksiyonlar",
+      "Permütasyon – Kombinasyon – Olasılık",
       "Sayısal Mantık",
-      "Geometri (Açılar, Üçgenler, Çokgenler, Çember ve Analitik Geometri)"
+      "Grafik ve Tablo Yorumlama",
+      "Temel Geometri"
+    ],
+    "ALES": [
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Mutlak Değer",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Denklemler",
+      "Problemler",
+      "Sayısal Mantık",
+      "Kümeler",
+      "Fonksiyonlar",
+      "Grafik ve Tablo Yorumlama",
+      "Temel Geometri"
+    ],
+    "AGS": [
+      "Temel Kavramlar",
+      "Sayı Basamakları",
+      "Bölme ve Bölünebilme",
+      "EBOB – EKOK",
+      "Rasyonel Sayılar",
+      "Basit Eşitsizlikler",
+      "Mutlak Değer",
+      "Üslü Sayılar",
+      "Köklü Sayılar",
+      "Çarpanlara Ayırma",
+      "Oran – Orantı",
+      "Denklemler",
+      "Problemler",
+      "Kümeler",
+      "Fonksiyonlar",
+      "Permütasyon – Kombinasyon – Olasılık",
+      "Grafik ve Tablo Yorumlama",
+      "Temel Geometri"
     ]
   };
 
@@ -980,7 +1190,135 @@ const StudentDashboard = () => {
                 )}
               </div>
             </div>
-            
+
+            {/* HATA DEFTERİ */}
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-red-50 to-orange-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center">
+                    <span className="text-xl">📒</span>
+                  </div>
+                  <div>
+                    <h4 className="font-black text-slate-900 text-sm">Fulle Matematiği Hata Defteri</h4>
+                    <p className="text-[10px] text-slate-400 font-bold">Hatalı soruların fotoğrafını ekle, takip et</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{hataDefteri.length} kayıt</span>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {/* Saydamlı Uyarı */}
+                <div className="flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/60 rounded-2xl px-4 py-3">
+                  <span className="material-symbols-outlined text-amber-500 text-base mt-0.5 flex-shrink-0">visibility</span>
+                  <p className="text-[11px] text-amber-700 font-semibold leading-relaxed">
+                    Yüklediğin sorular <strong>öğretmenin tarafından görülebilir.</strong> Anlamadığın soruları buraya ekle, öğretmenin seni takip etsin! 🎯
+                  </p>
+                </div>
+
+                {/* Upload Area */}
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Not ekle (isteğe bağlı) — örn: 9. soruda hatalı düşündüm"
+                    value={hataNote}
+                    onChange={(e) => setHataNote(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-medium text-slate-700 outline-none focus:border-primary/40 focus:bg-white transition-all"
+                  />
+                  <label className={`flex items-center justify-center gap-2 w-full border-2 border-dashed rounded-2xl py-4 cursor-pointer transition-all ${
+                    hataUploading
+                      ? 'border-primary/30 bg-primary/5 text-primary cursor-wait'
+                      : 'border-slate-200 hover:border-primary/40 hover:bg-primary/5 text-slate-400 hover:text-primary'
+                  }`}>
+                    {hataUploading ? (
+                      <>
+                        <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
+                        <span className="text-xs font-bold">Yükleniyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-xl">add_a_photo</span>
+                        <span className="text-xs font-bold">Fotoğraf Çek veya Galeriden Seç</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleHataUpload}
+                      disabled={hataUploading}
+                    />
+                  </label>
+                </div>
+
+                {/* Photo Grid */}
+                {hataDefteri.length === 0 ? (
+                  <div className="text-center py-8 text-slate-300">
+                    <span className="text-4xl">📒</span>
+                    <p className="text-xs font-bold mt-2 text-slate-400">Henüz hata fotoğrafı eklenmemiş</p>
+                    <p className="text-[10px] text-slate-300 mt-1">Hatalı soruların fotoğrafını ekleyerek takip edebilirsin</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {hataDefteri.map(entry => (
+                      <div key={entry.id} className="relative group rounded-xl overflow-hidden border border-slate-100 shadow-sm aspect-square bg-slate-50">
+                        <img
+                          src={entry.imageData}
+                          alt={entry.note || 'Hata fotoğrafı'}
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setHataLightbox(entry)}
+                        />
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleHataDelete(entry.id)}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-md"
+                        >
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                        {/* Note badge */}
+                        {entry.note && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                            <p className="text-[9px] text-white font-medium truncate">{entry.note}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Lightbox */}
+            {hataLightbox && (
+              <div
+                className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                onClick={() => setHataLightbox(null)}
+              >
+                <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                  <img
+                    src={hataLightbox.imageData}
+                    alt={hataLightbox.note || 'Hata fotoğrafı'}
+                    className="w-full rounded-2xl shadow-2xl"
+                  />
+                  {hataLightbox.note && (
+                    <div className="mt-3 bg-white/10 rounded-xl px-4 py-2.5">
+                      <p className="text-white text-sm font-medium">{hataLightbox.note}</p>
+                    </div>
+                  )}
+                  <p className="text-white/40 text-xs mt-2 text-center">
+                    {new Date(hataLightbox.createdAt).toLocaleString('tr-TR')}
+                  </p>
+                  <button
+                    onClick={() => setHataLightbox(null)}
+                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-slate-900 font-black flex items-center justify-center shadow-lg"
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-5 bg-primary/10 rounded-3xl border border-primary/5 shadow-sm">

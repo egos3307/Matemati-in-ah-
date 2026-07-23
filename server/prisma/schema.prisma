@@ -45,6 +45,7 @@ model User {
   homeworks StudentHomework[]
   trials    Trial[]
   blogPosts BlogPost[]
+  hataDefteri HataDefteri[]
 }
 
 // Hesap + cihaz (IP) bazlı yanlış giriş kilidi: sadece deneme yapan cihaz kilitlenir
@@ -162,5 +163,14 @@ model LessonChunk {
   lessonId  Int
   index     Int
   data      Bytes
+  createdAt DateTime @default(now())
+}
+
+model HataDefteri {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   User     @relation(fields: [studentId], references: [id])
+  imageData String   // base64 encoded image
+  note      String?  // optional note/description
   createdAt DateTime @default(now())
 }

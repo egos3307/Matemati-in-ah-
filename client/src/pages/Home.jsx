@@ -232,19 +232,18 @@ const Home = () => {
                 <span>İlk Dersin Bizden: Ücretsiz Tanışma Dersi</span>
               </div>
               <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-slate-900 lg:text-7xl">
-                Matematiği Full'e, <span className="text-primary">Hedeflerine Ulaş!</span>
+                Matematiği Full&apos;e, <span className="text-primary">Hedeflerine Ulaş!</span>
               </h1>
               <p className="text-lg leading-relaxed text-slate-600">
-                Uzman hocalar eşliğinde matematik korkunu yen, temelini sağlamlaştır ve sınavda hayalindeki başarıyı yakala. Sana özel çalışma planıyla her şey daha kolay.
+                Uzman eğitmen kadromuz, kişiye özel çalışma planı, düzenli takip sistemi ve soru çözüm desteğiyle matematiği kolaylaştırıyor, hedef puanına birlikte ulaşıyoruz.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
-                  Ücretsiz Deneme Dersi
+                  Ücretsiz İlk Dersine Katıl
                 </button>
-                <button className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-primary/20 px-8 text-lg font-bold text-primary hover:bg-primary/5">
-                  <span className="material-symbols-outlined">play_circle</span>
-                  Tanıtım Videosu
-                </button>
+                <Link to="/derslerimiz" className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-300 bg-white px-8 text-lg font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all">
+                  Eğitim Sistemimizi Keşfet
+                </Link>
               </div>
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <span className="material-symbols-outlined text-primary mt-0.5">info</span>
@@ -265,27 +264,36 @@ const Home = () => {
           </div>
         </section>
 
+
         {/* Stats Section */}
         <section className="bg-primary px-6 py-12 text-white">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-4">
             <div className="text-center">
-              <p className="text-4xl font-black">98%</p>
-              <p className="text-sm font-medium opacity-80">Başarı Oranı</p>
+              <p className="text-4xl font-black">🏆</p>
+              <p className="text-2xl font-black mt-1">10.000+</p>
+              <p className="text-sm font-medium opacity-80">Öğrenci</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">50k+</p>
-              <p className="text-sm font-medium opacity-80">Çözülen Soru</p>
+              <p className="text-4xl font-black">📚</p>
+              <p className="text-2xl font-black mt-1">5000+</p>
+              <p className="text-sm font-medium opacity-80">Saat Canlı Ders</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">1500+</p>
-              <p className="text-sm font-medium opacity-80">Mutlu Öğrenci</p>
+              <p className="text-4xl font-black">⭐</p>
+              <p className="text-2xl font-black mt-1">%95</p>
+              <p className="text-sm font-medium opacity-80">Öğrenci Memnuniyeti</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">7/24</p>
-              <p className="text-sm font-medium opacity-80">Canlı Destek</p>
+              <p className="text-4xl font-black">🎯</p>
+              <p className="text-2xl font-black mt-1">7</p>
+              <p className="text-sm font-medium opacity-80">Farklı Sınava Hazırlık</p>
             </div>
           </div>
+          <p className="text-center text-xs font-medium opacity-50 mt-8 tracking-widest uppercase">
+            TYT • AYT • KPSS • DGS • ALES • LGS
+          </p>
         </section>
+
 
         {/* Features Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="ozellikler">
@@ -323,9 +331,9 @@ const Home = () => {
         {/* Products Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="urunlerimiz">
           <div className="mb-16 flex flex-col items-center text-center">
-            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Popüler Ürünlerimiz</h2>
+            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Sınavlara Hazırlıkta en Çok Tercih Edilen Notlar</h2>
             <p className="max-w-2xl text-lg text-slate-600">
-              Matematik yolculuğunda sana yardımcı olacak en iyi kaynakları keşfet.
+              Konu özetleri, çözümlü örnekler, çıkmış sorular ve pratik yöntemlerle matematiği daha hızlı öğren.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4 lg:gap-8">

@@ -63,6 +63,8 @@ const TeacherDashboard = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentTrials, setStudentTrials] = useState([]);
   const [expandedTrialId, setExpandedTrialId] = useState(null);
+  const [studentHataDefteri, setStudentHataDefteri] = useState([]);
+  const [teacherHataLightbox, setTeacherHataLightbox] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [migrateResult, setMigrateResult] = useState(null);
@@ -323,8 +325,12 @@ const TeacherDashboard = () => {
 
   const fetchStudentTrials = async (student) => {
     try {
-      const res = await axios.get(`/api/teacher/student/${student.id}/trials`);
-      setStudentTrials(res.data);
+      const [trialsRes, hataRes] = await Promise.all([
+        axios.get(`/api/teacher/student/${student.id}/trials`),
+        axios.get(`/api/teacher/student/${student.id}/hata-defteri`)
+      ]);
+      setStudentTrials(trialsRes.data);
+      setStudentHataDefteri(hataRes.data);
       setSelectedStudent(student);
       setExpandedTrialId(null);
       setActiveTab('student-detail');
@@ -1545,6 +1551,85 @@ const TeacherDashboard = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* HATA DEFTERİ BÖLÜMÜ */}
+                <div className="mt-8 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-red-50 to-orange-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-red-100 flex items-center justify-center">
+                        <span className="text-lg">📒</span>
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 text-sm">Hata Defteri</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Öğrencinin yülklediği hatalı sorular</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">{studentHataDefteri.length} fotoğraf</span>
+                  </div>
+
+                  <div className="p-6">
+                    {studentHataDefteri.length === 0 ? (
+                      <div className="text-center py-10 text-slate-300">
+                        <span className="text-4xl">📒</span>
+                        <p className="text-xs font-bold mt-2 text-slate-400">Henüz hata fotoğrafı eklenmemiş</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {studentHataDefteri.map(entry => (
+                          <div
+                            key={entry.id}
+                            className="relative group rounded-xl overflow-hidden border border-slate-100 shadow-sm aspect-square bg-slate-50 cursor-pointer"
+                            onClick={() => setTeacherHataLightbox(entry)}
+                          >
+                            <img
+                              src={entry.imageData}
+                              alt={entry.note || 'Hata fotoğrafı'}
+                              className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                            />
+                            {entry.note && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                                <p className="text-[9px] text-white font-medium truncate">{entry.note}</p>
+                              </div>
+                            )}
+                            <div className="absolute top-1 left-1 bg-black/40 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                              {new Date(entry.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Teacher Hata Defteri Lightbox */}
+                {teacherHataLightbox && (
+                  <div
+                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setTeacherHataLightbox(null)}
+                  >
+                    <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                      <img
+                        src={teacherHataLightbox.imageData}
+                        alt={teacherHataLightbox.note || 'Hata fotoğrafı'}
+                        className="w-full rounded-2xl shadow-2xl"
+                      />
+                      {teacherHataLightbox.note && (
+                        <div className="mt-3 bg-white/10 rounded-xl px-4 py-2.5">
+                          <p className="text-white text-sm font-medium">{teacherHataLightbox.note}</p>
+                        </div>
+                      )}
+                      <p className="text-white/40 text-xs mt-2 text-center">
+                        {new Date(teacherHataLightbox.createdAt).toLocaleString('tr-TR')}
+                      </p>
+                      <button
+                        onClick={() => setTeacherHataLightbox(null)}
+                        className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-slate-900 font-black flex items-center justify-center shadow-lg"
+                      >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
              </div>
           )}
 

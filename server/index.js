@@ -2881,4 +2881,71 @@ app.get('/api/social/youtube-feed', async (req, res) => {
   }
 });
 
+
+// ─── HATA DEFTERİ ROUTES ───────────────────────────────────────────────────
+
+// Öğrenci: fotoğraf yükle
+app.post('/api/student/hata-defteri', auth, checkRole('STUDENT'), async (req, res) => {
+  const { imageData, note } = req.body;
+  if (!imageData) return res.status(400).json({ error: 'Fotoğraf verisi eksik.' });
+  // Boyut kontrolü: max ~4MB base64
+  if (imageData.length > 5 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Fotoğraf boyutu çok büyük. Lütfen daha küçük bir fotoğraf seçin.' });
+  }
+  try {
+    const entry = await prisma.hataDefteri.create({
+      data: { studentId: req.user.id, imageData, note: note || null }
+    });
+    res.json(entry);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Öğrenci: kendi kayıtlarını getir
+app.get('/api/student/hata-defteri', auth, checkRole('STUDENT'), async (req, res) => {
+  try {
+    const entries = await prisma.hataDefteri.findMany({
+      where: { studentId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, imageData: true, note: true, createdAt: true }
+    });
+    res.json(entries);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Öğrenci: kendi kaydını sil
+app.delete('/api/student/hata-defteri/:id', auth, checkRole('STUDENT'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const entry = await prisma.hataDefteri.findUnique({ where: { id: parseInt(id) } });
+    if (!entry || entry.studentId !== req.user.id) {
+      return res.status(403).json({ error: 'Bu kaydı silme yetkiniz yok.' });
+    }
+    await prisma.hataDefteri.delete({ where: { id: parseInt(id) } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Öğretmen: öğrencinin hata defterini görüntüle
+app.get('/api/teacher/student/:id/hata-defteri', auth, checkRole('TEACHER'), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const entries = await prisma.hataDefteri.findMany({
+      where: { studentId: parseInt(id) },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, imageData: true, note: true, createdAt: true }
+    });
+    res.json(entries);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── END HATA DEFTERİ ROUTES ───────────────────────────────────────────────
+
 module.exports = app;
