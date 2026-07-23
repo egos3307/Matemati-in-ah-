@@ -111,6 +111,15 @@ const TeacherDashboard = () => {
   const [classStudentIdsInput, setClassStudentIdsInput] = useState([]);
   const [classStudentSearch, setClassStudentSearch] = useState('');
   const [recurringStartDate, setRecurringStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Homework & Question Assignment states
+  const [studentHomeworks, setStudentHomeworks] = useState([]);
+  const [assignType, setAssignType] = useState('HOMEWORK'); // 'HOMEWORK' | 'QUESTION'
+  const [assignText, setAssignText] = useState('');
+  const [assignImage, setAssignImage] = useState('');
+  const [assignDeadline, setAssignDeadline] = useState('');
+  const [assignSending, setAssignSending] = useState(false);
+  const [assignLightbox, setAssignLightbox] = useState(null);
   const [messagedStudentIds, setMessagedStudentIds] = useState(() => {
     try {
       const saved = localStorage.getItem('fulle_messaged_students');
@@ -394,17 +403,58 @@ const TeacherDashboard = () => {
 
   const fetchStudentTrials = async (student) => {
     try {
-      const [trialsRes, hataRes] = await Promise.all([
+      const [trialsRes, hataRes, hwRes] = await Promise.all([
         axios.get(`/api/teacher/student/${student.id}/trials`),
-        axios.get(`/api/teacher/student/${student.id}/hata-defteri`)
+        axios.get(`/api/teacher/student/${student.id}/hata-defteri`),
+        axios.get(`/api/teacher/student/${student.id}/homeworks`)
       ]);
       setStudentTrials(trialsRes.data);
       setStudentHataDefteri(hataRes.data);
+      setStudentHomeworks(hwRes.data);
       setSelectedStudent(student);
       setExpandedTrialId(null);
       setActiveTab('student-detail');
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSendAssignmentToStudent = async (e) => {
+    e.preventDefault();
+    if (!assignText.trim() && !assignImage) {
+      alert('Lütfen bir mesaj yazın veya fotoğraf ekleyin.');
+      return;
+    }
+    setAssignSending(true);
+    try {
+      await axios.post('/api/teacher/assign-homework', {
+        title: assignType === 'QUESTION' ? 'Öğretmen Sorusu' : 'Ödev',
+        description: assignText.trim(),
+        type: assignType,
+        imageUrl: assignImage || null,
+        studentIds: [selectedStudent.id],
+        deadline: assignDeadline || null
+      });
+      alert(assignType === 'QUESTION' ? 'Soru öğrenciye başarıyla gönderildi!' : 'Ödev öğrenciye başarıyla gönderildi!');
+      setAssignText('');
+      setAssignImage('');
+      setAssignDeadline('');
+      const hwRes = await axios.get(`/api/teacher/student/${selectedStudent.id}/homeworks`);
+      setStudentHomeworks(hwRes.data);
+    } catch (err) {
+      alert('Gönderilirken hata oluştu: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setAssignSending(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (homeworkId) => {
+    if (!window.confirm('Bu ödevi/soruyu silmek istediğinizden emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/homework/${homeworkId}`);
+      setStudentHomeworks(prev => prev.filter(item => item.homeworkId !== homeworkId && item.homework?.id !== homeworkId));
+    } catch (err) {
+      alert('Silinirken hata oluştu.');
     }
   };
 
@@ -1934,6 +1984,200 @@ const TeacherDashboard = () => {
                         onClick={() => setTeacherHataLightbox(null)}
                         className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-slate-900 font-black flex items-center justify-center shadow-lg"
                       >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* ÖDEV VE SORU GÖNDER BÖLÜMÜ */}
+                <div className="mt-8 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden space-y-6 p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                        <span className="material-symbols-outlined">send</span>
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 text-sm">Öğrenciye Özel Ödev / Soru Gönder</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Öğrenciye özel mesaj, ödev veya soru iletin</p>
+                      </div>
+                    </div>
+                    {/* Type Toggle */}
+                    <div className="flex bg-slate-100 p-1 rounded-2xl self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setAssignType('HOMEWORK')}
+                        className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          assignType === 'HOMEWORK'
+                            ? 'bg-primary text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        📝 Ödev
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAssignType('QUESTION')}
+                        className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          assignType === 'QUESTION'
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        ❓ Soru
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Message Box Form */}
+                  <form onSubmit={handleSendAssignmentToStudent} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        {assignType === 'QUESTION' ? 'Soru Mesajı / Notu' : 'Ödev Açıklaması / Talimatlar'}
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder={assignType === 'QUESTION' ? 'Örn: Bu soruya özellikle bakmanı istiyorum, dikkat et...' : 'Örn: Sayfa 42-45 arası testler çözülecek...'}
+                        value={assignText}
+                        onChange={(e) => setAssignText(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs font-medium text-slate-800 outline-none focus:border-primary/40 focus:bg-white transition-all resize-none"
+                      />
+                    </div>
+
+                    {assignType === 'HOMEWORK' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Son Teslim Tarihi (İsteğe Bağlı)</label>
+                        <input
+                          type="date"
+                          value={assignDeadline}
+                          onChange={(e) => setAssignDeadline(e.target.value)}
+                          className="w-full sm:w-auto rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-primary/40"
+                        />
+                      </div>
+                    )}
+
+                    {/* Image Attachment */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fotoğraf Ekle (Soru görseli veya ödev ek görseli)</label>
+                      {assignImage ? (
+                        <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-slate-200 shadow-sm group">
+                          <img src={assignImage} alt="Fotoğraf" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setAssignImage('')}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-xs">close</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-2 border border-dashed border-slate-300 hover:border-primary/40 bg-slate-50 hover:bg-primary/5 px-4 py-3 rounded-2xl cursor-pointer text-xs font-bold text-slate-500 hover:text-primary transition-all w-fit">
+                          <span className="material-symbols-outlined text-base">add_a_photo</span>
+                          Fotoğraf Seç / Çek
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                compressImage(file, (base64) => setAssignImage(base64));
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={assignSending}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black text-white shadow-lg transition-all cursor-pointer ${
+                          assignType === 'QUESTION' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/20' : 'bg-primary hover:bg-primary/95 shadow-primary/20'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-sm">send</span>
+                        {assignSending ? 'Gönderiliyor...' : assignType === 'QUESTION' ? 'Soruyu Öğrenciye Gönder' : 'Ödevi Öğrenciye Gönder'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Sent Items List */}
+                  <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <h5 className="font-black text-slate-900 text-xs uppercase tracking-wider">
+                      Gönderilen Ödevler ve Sorular ({studentHomeworks.length})
+                    </h5>
+                    {studentHomeworks.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">Bu öğrenciye henüz ödev veya soru gönderilmedi.</p>
+                    ) : (
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {studentHomeworks.map(sh => {
+                          const hw = sh.homework || {};
+                          const isQuestion = hw.type === 'QUESTION';
+                          const isCompleted = sh.status === 'COMPLETED';
+                          return (
+                            <div key={sh.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                    isQuestion ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700'
+                                  }`}>
+                                    {isQuestion ? '❓ Soru' : '📝 Ödev'}
+                                  </span>
+                                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                    isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {isCompleted ? 'Tamamlandı' : 'Bekliyor'}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteAssignment(hw.id)}
+                                  className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                                  title="Sil"
+                                >
+                                  <span className="material-symbols-outlined text-sm">delete</span>
+                                </button>
+                              </div>
+
+                              <p className="text-xs font-bold text-slate-800 leading-relaxed">
+                                {hw.description || hw.title}
+                              </p>
+
+                              {hw.imageUrl && (
+                                <div className="w-24 h-24 rounded-xl overflow-hidden border border-slate-200 cursor-pointer" onClick={() => setAssignLightbox(hw.imageUrl)}>
+                                  <img src={hw.imageUrl} alt="Görsel" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+
+                              {isCompleted && (
+                                <div className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-xl space-y-2">
+                                  <p className="text-[10px] font-black text-emerald-800 uppercase tracking-wider">
+                                    Öğrencinin Çözümü ({new Date(sh.submittedAt).toLocaleDateString('tr-TR')})
+                                  </p>
+                                  {sh.submissionImage && (
+                                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-emerald-200 cursor-pointer" onClick={() => setAssignLightbox(sh.submissionImage)}>
+                                      <img src={sh.submissionImage} alt="Çözüm Görseli" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  {sh.submissionNote && (
+                                    <p className="text-xs text-emerald-900 font-medium italic">{sh.submissionNote}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Assignment Lightbox */}
+                {assignLightbox && (
+                  <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setAssignLightbox(null)}>
+                    <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                      <img src={assignLightbox} alt="Görsel" className="w-full rounded-2xl shadow-2xl" />
+                      <button onClick={() => setAssignLightbox(null)} className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-slate-900 font-black flex items-center justify-center shadow-lg">
                         <span className="material-symbols-outlined text-sm">close</span>
                       </button>
                     </div>

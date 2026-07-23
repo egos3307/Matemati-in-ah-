@@ -92,6 +92,9 @@ model Homework {
   id          Int      @id @default(autoincrement())
   title       String
   description String
+  type        String   @default("HOMEWORK") // "HOMEWORK" or "QUESTION"
+  imageUrl    String?  // base64 photo attached by teacher
+  teacherId   Int?
   deadline    DateTime?
   lessonId    Int?
   lesson      Lesson?  @relation(fields: [lessonId], references: [id])
@@ -100,13 +103,15 @@ model Homework {
 }
 
 model StudentHomework {
-  id         Int      @id @default(autoincrement())
-  studentId  Int
-  student    User     @relation(fields: [studentId], references: [id])
-  homeworkId Int
-  homework   Homework @relation(fields: [homeworkId], references: [id])
-  status     String   @default("PENDING") // PENDING, COMPLETED
-  submittedAt DateTime?
+  id              Int      @id @default(autoincrement())
+  studentId       Int
+  student         User     @relation(fields: [studentId], references: [id])
+  homeworkId      Int
+  homework        Homework @relation(fields: [homeworkId], references: [id])
+  status          String   @default("PENDING") // PENDING, COMPLETED
+  submissionImage String?  // base64 photo uploaded by student
+  submissionNote  String?  // optional note by student
+  submittedAt     DateTime?
 }
 
 model BlogPost {

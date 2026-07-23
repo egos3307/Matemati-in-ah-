@@ -1447,19 +1447,52 @@ app.post('/api/teacher/students/:id/assign-teacher', auth, checkRole('TEACHER'),
 });
 
 app.post('/api/teacher/assign-homework', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, description, studentIds, deadline } = req.body;
+  const { title, description, type, imageUrl, studentIds, deadline } = req.body;
   try {
+    const targetIds = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    if (targetIds.length === 0) {
+      return res.status(400).json({ error: 'En az bir öğrenci seçmelisiniz.' });
+    }
     const homework = await prisma.homework.create({
       data: {
-        title,
-        description,
+        title: title || (type === 'QUESTION' ? 'Soru' : 'Ödev'),
+        description: description || '',
+        type: type || 'HOMEWORK',
+        imageUrl: imageUrl || null,
+        teacherId: req.user.id,
         deadline: deadline ? new Date(deadline) : null,
         students: {
-          create: studentIds.map(id => ({ studentId: id }))
+          create: targetIds.map(id => ({ studentId: id }))
         }
-      }
+      },
+      include: { students: true }
     });
     res.json(homework);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/teacher/student/:id/homeworks', auth, checkRole('TEACHER'), async (req, res) => {
+  const studentId = parseInt(req.params.id);
+  try {
+    const items = await prisma.studentHomework.findMany({
+      where: { studentId },
+      include: { homework: true },
+      orderBy: { id: 'desc' }
+    });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/homework/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.studentHomework.deleteMany({ where: { homeworkId: id } });
+    await prisma.homework.delete({ where: { id } });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1549,7 +1582,8 @@ app.get('/api/student/homeworks', auth, checkRole('STUDENT'), async (req, res) =
   try {
     const homeworks = await prisma.studentHomework.findMany({
       where: { studentId: req.user.id },
-      include: { homework: true }
+      include: { homework: true },
+      orderBy: { id: 'desc' }
     });
     res.json(homeworks);
   } catch (err) {
@@ -1559,6 +1593,7 @@ app.get('/api/student/homeworks', auth, checkRole('STUDENT'), async (req, res) =
 
 app.post('/api/student/homework/:id/complete', auth, checkRole('STUDENT'), async (req, res) => {
   const homeworkId = parseInt(req.params.id);
+  const { submissionImage, submissionNote } = req.body;
   try {
     const updated = await prisma.studentHomework.updateMany({
       where: {
@@ -1567,6 +1602,8 @@ app.post('/api/student/homework/:id/complete', auth, checkRole('STUDENT'), async
       },
       data: {
         status: 'COMPLETED',
+        submissionImage: submissionImage || null,
+        submissionNote: submissionNote || null,
         submittedAt: new Date()
       }
     });

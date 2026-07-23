@@ -77,6 +77,10 @@ const StudentDashboard = () => {
   const [hataNote, setHataNote] = useState('');
   const [hataUploading, setHataUploading] = useState(false);
   const [hataLightbox, setHataLightbox] = useState(null);
+
+  // Solution submission state for homework
+  const [submissionImage, setSubmissionImage] = useState('');
+  const [activeHomeworkSubmittingId, setActiveHomeworkSubmittingId] = useState(null);
   
   // Study Timer (Sayaç) States & Effects
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -150,6 +154,14 @@ const StudentDashboard = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const getPendingQuestions = () => {
+    return homeworks.filter(item => item.status === 'PENDING' && item.homework?.type === 'QUESTION');
+  };
+
+  const getPendingHomeworks = () => {
+    return homeworks.filter(item => item.status === 'PENDING' && item.homework?.type !== 'QUESTION');
   };
 
   const fetchTrials = async () => {
@@ -361,13 +373,18 @@ const StudentDashboard = () => {
     alert(`Çalışma süreniz (${elapsedMinutes || 1} dk) başarıyla günlüğe eklendi!`);
   };
 
-  const handleCompleteHomework = async (homeworkId) => {
+  const handleCompleteHomework = async (homeworkId, img = null, note = null) => {
     try {
-      await axios.post(`/api/student/homework/${homeworkId}/complete`);
-      alert('Ödev tamamlandı olarak işaretlendi!');
+      await axios.post(`/api/student/homework/${homeworkId}/complete`, {
+        submissionImage: img || submissionImage || null,
+        submissionNote: note || null
+      });
+      alert('Tamamlandı olarak işaretlendi!');
+      setActiveHomeworkSubmittingId(null);
+      setSubmissionImage('');
       fetchHomeworks();
     } catch (err) {
-      alert('Ödev tamamlanırken hata oluştu.');
+      alert('Tamamlanırken hata oluştu.');
     }
   };
 
@@ -987,6 +1004,70 @@ const StudentDashboard = () => {
         {activeTab === 'panel' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
+            {/* TEACHER QUESTION ALERT WIDGET */}
+            {getPendingQuestions().length > 0 && (
+              <div className="p-6 bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 rounded-3xl border border-purple-500/30 shadow-xl text-white space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-purple-500/20 rounded-2xl flex items-center justify-center border border-purple-400/20 text-2xl">
+                    ❓
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm tracking-wide text-purple-200">Öğretmenin Sana Bir Soru Gönderdi!</h4>
+                    <p className="text-xs text-white/80 font-semibold mt-0.5">
+                      Öğretmenin bu soruya bakmanı ve yanıtlamanı bekliyor.
+                    </p>
+                  </div>
+                </div>
+
+                {getPendingQuestions().map(item => (
+                  <div key={item.id} className="p-4 bg-white/10 rounded-2xl border border-white/10 space-y-3 backdrop-blur-sm">
+                    <p className="text-xs font-bold text-white leading-relaxed">
+                      "{item.homework?.description || item.homework?.title}"
+                    </p>
+                    {item.homework?.imageUrl && (
+                      <div
+                        className="max-w-md rounded-xl overflow-hidden border border-white/20 cursor-pointer group relative"
+                        onClick={() => setHataLightbox({ imageData: item.homework.imageUrl, note: item.homework.description })}
+                      >
+                        <img src={item.homework.imageUrl} alt="Soru Görseli" className="w-full h-auto max-h-72 object-contain bg-black/40" />
+                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-2 py-1 rounded-lg">Büyütmek için tıkla</span>
+                      </div>
+                    )}
+                    <div className="flex justify-end pt-1">
+                      <button
+                        onClick={() => handleCompleteHomework(item.homeworkId)}
+                        className="bg-purple-500 hover:bg-purple-600 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                      >
+                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                        Baktım / Anladım
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* PENDING HOMEWORK ALERT WIDGET */}
+            {getPendingHomeworks().length > 0 && (
+              <div className="p-5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-3xl shadow-lg text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-black">
+                    📝
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm tracking-wide">Yapman Gereken {getPendingHomeworks().length} Ödevin Var!</h4>
+                    <p className="text-xs text-white/90 font-semibold mt-0.5">Takip sayfasından ödev detaylarını ve öğretmen talimatlarını inceleyebilirsin.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setActiveTab('tracking'); setActiveSubTab('homeworks'); }}
+                  className="bg-white hover:bg-slate-50 text-slate-900 px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto uppercase tracking-wider"
+                >
+                  Ödevlere Git
+                </button>
+              </div>
+            )}
+
             {/* TODAY'S LESSON ALERT WIDGET */}
             {getTodayLessons().length > 0 && (
               <div className="p-6 bg-gradient-to-r from-primary to-indigo-950 rounded-3xl border border-primary/20 shadow-lg text-white flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -1580,50 +1661,144 @@ const StudentDashboard = () => {
             {activeSubTab === 'homeworks' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-black text-slate-900 mb-4">Yapılacak Ödevler</h3>
+                  <h3 className="text-lg font-black text-slate-900 mb-4">Yapılacak Ödevler & Sorular</h3>
                   {homeworks.filter(h => h.status === 'PENDING').length === 0 ? (
                     <div className="text-center py-10 bg-slate-50 rounded-3xl border border-slate-100">
                       <span className="material-symbols-outlined text-green-500 text-4xl mb-2 animate-bounce">celebration</span>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Bekleyen ödevin yok. Tebrikler! 🎉</p>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Bekleyen ödevin veya sorun yok. Tebrikler! 🎉</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {homeworks.filter(h => h.status === 'PENDING').map(h => (
-                        <div key={h.id} className="p-6 bg-white rounded-3xl border border-primary/10 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                            <h4 className="font-black text-slate-900 text-base">{h.homework.title}</h4>
-                            <p className="text-sm text-slate-500 mt-1">{h.homework.description}</p>
-                            {h.homework.deadline && (
-                              <span className="text-[10px] font-black text-red-500 bg-red-50 px-2.5 py-1 rounded-md mt-3 inline-block uppercase tracking-wider">
-                                Son Teslim: {new Date(h.homework.deadline).toLocaleDateString('tr-TR')}
-                              </span>
+                      {homeworks.filter(h => h.status === 'PENDING').map(h => {
+                        const isQuestion = h.homework?.type === 'QUESTION';
+                        const isSubmitting = activeHomeworkSubmittingId === h.id;
+                        return (
+                          <div key={h.id} className="p-6 bg-white rounded-3xl border border-primary/10 shadow-sm space-y-4">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full inline-block ${
+                                  isQuestion ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700'
+                                }`}>
+                                  {isQuestion ? '❓ Soru' : '📝 Ödev'}
+                                </span>
+                                <h4 className="font-black text-slate-900 text-base">{h.homework.title}</h4>
+                              </div>
+                              {h.homework.deadline && (
+                                <span className="text-[10px] font-black text-red-500 bg-red-50 px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                  Son Teslim: {new Date(h.homework.deadline).toLocaleDateString('tr-TR')}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-xs font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              {h.homework.description}
+                            </p>
+
+                            {h.homework.imageUrl && (
+                              <div
+                                className="w-32 h-32 rounded-2xl overflow-hidden border border-slate-200 cursor-pointer relative group"
+                                onClick={() => setHataLightbox({ imageData: h.homework.imageUrl, note: h.homework.description })}
+                              >
+                                <img src={h.homework.imageUrl} alt="Öğretmen Görseli" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                                  Büyüt
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Photo submission area */}
+                            {isSubmitting ? (
+                              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                                <p className="text-xs font-black text-slate-800">Çözüm Fotoğrafı Ekle (İsteğe Bağlı):</p>
+                                {submissionImage ? (
+                                  <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-slate-200">
+                                    <img src={submissionImage} alt="Çözüm Fotoğrafı" className="w-full h-full object-cover" />
+                                    <button
+                                      onClick={() => setSubmissionImage('')}
+                                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">close</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="flex items-center gap-2 border border-dashed border-slate-300 bg-white hover:bg-primary/5 px-4 py-2.5 rounded-xl cursor-pointer text-xs font-bold text-slate-600 hover:text-primary transition-all w-fit">
+                                    <span className="material-symbols-outlined text-base">add_a_photo</span>
+                                    Fotoğraf Seç / Çek
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) compressImage(file, (base64) => setSubmissionImage(base64));
+                                      }}
+                                    />
+                                  </label>
+                                )}
+
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    onClick={() => { setActiveHomeworkSubmittingId(null); setSubmissionImage(''); }}
+                                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-200 rounded-xl"
+                                  >
+                                    İptal
+                                  </button>
+                                  <button
+                                    onClick={() => handleCompleteHomework(h.homeworkId, submissionImage)}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-black shadow-md cursor-pointer"
+                                  >
+                                    Gönder & Tamamla
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2 pt-2">
+                                <button
+                                  onClick={() => setActiveHomeworkSubmittingId(h.id)}
+                                  className="text-xs font-bold text-slate-500 hover:text-primary px-3 py-2 rounded-xl hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-sm">add_a_photo</span>
+                                  Çözüm Fotoğrafı Ekle
+                                </button>
+                                <button 
+                                  onClick={() => handleCompleteHomework(h.homeworkId)}
+                                  className="bg-primary hover:bg-primary/95 text-white px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg shadow-primary/20 transition-all cursor-pointer whitespace-nowrap"
+                                >
+                                  Tamamlandı Olarak İşaretle
+                                </button>
+                              </div>
                             )}
                           </div>
-                          <button 
-                            onClick={() => handleCompleteHomework(h.homeworkId)}
-                            className="bg-primary hover:bg-primary/95 text-white px-6 py-3.5 rounded-2xl text-xs font-black shadow-lg shadow-primary/20 transition-all cursor-pointer whitespace-nowrap self-end md:self-center"
-                          >
-                            Tamamlandı Olarak İşaretle
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
-                  <h3 className="text-lg font-black text-slate-900 mb-4">Tamamlanan Ödevler</h3>
+                  <h3 className="text-lg font-black text-slate-900 mb-4">Tamamlanan Ödevler & Sorular</h3>
                   {homeworks.filter(h => h.status === 'COMPLETED').length === 0 ? (
-                    <p className="text-xs font-black text-slate-400 py-6 uppercase tracking-widest text-center">Henüz tamamlanan ödev bulunmuyor.</p>
+                    <p className="text-xs font-black text-slate-400 py-6 uppercase tracking-widest text-center">Henüz tamamlanan ödev veya soru bulunmuyor.</p>
                   ) : (
                     <div className="space-y-4">
                       {homeworks.filter(h => h.status === 'COMPLETED').map(h => (
-                        <div key={h.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 opacity-85">
+                        <div key={h.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-slate-700 line-through text-base">{h.homework.title}</h4>
-                            <span className="text-[10px] font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-md uppercase tracking-wider">✓ Tamamlandı</span>
+                            <h4 className="font-bold text-slate-700 text-base">{h.homework.title}</h4>
+                            <span className="text-[10px] font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-md uppercase tracking-wider">✓ Tamamlandı ({h.submittedAt ? new Date(h.submittedAt).toLocaleDateString('tr-TR') : ''})</span>
                           </div>
-                          <p className="text-sm text-slate-400 mt-1">{h.homework.description}</p>
+                          <p className="text-xs text-slate-600">{h.homework.description}</p>
+                          {h.submissionImage && (
+                            <div className="pt-2">
+                              <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Çözüm Görselin:</span>
+                              <div
+                                className="w-24 h-24 rounded-xl overflow-hidden border border-emerald-200 cursor-pointer"
+                                onClick={() => setHataLightbox({ imageData: h.submissionImage, note: 'Gönderdiğin Çözüm' })}
+                              >
+                                <img src={h.submissionImage} alt="Çözüm" className="w-full h-full object-cover" />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

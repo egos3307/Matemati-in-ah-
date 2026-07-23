@@ -405,6 +405,74 @@ const ParentDashboard = () => {
                 )}
               </div>
             </div>
+
+            {/* VERİLEN ÖDEVLER VE SORULAR */}
+            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b pb-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-950">Verilen Ödevler ve Sorular</h3>
+                  <p className="text-xs text-slate-400 font-semibold">Öğretmen tarafından öğrenciye tanımlanan tüm görevler</p>
+                </div>
+                <span className="text-xs font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                  {homeworks.length} Görev
+                </span>
+              </div>
+
+              {homeworks.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 font-bold text-xs">
+                  Henüz tanımlanmış bir ödev veya soru bulunmamaktadır.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {homeworks.map(sh => {
+                    const hw = sh.homework || {};
+                    const isQuestion = hw.type === 'QUESTION';
+                    const isCompleted = sh.status === 'COMPLETED';
+                    return (
+                      <div key={sh.id} className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                            isQuestion ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700'
+                          }`}>
+                            {isQuestion ? '❓ Soru' : '📝 Ödev'}
+                          </span>
+                          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                            isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {isCompleted ? 'Tamamlandı' : 'Bekliyor'}
+                          </span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 text-sm">{hw.title}</h4>
+                        <p className="text-xs text-slate-600 leading-relaxed">{hw.description}</p>
+
+                        {hw.imageUrl && (
+                          <div className="w-24 h-24 rounded-xl overflow-hidden border border-slate-200">
+                            <img src={hw.imageUrl} alt="Öğretmen Görseli" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+
+                        {isCompleted && (
+                          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl space-y-1.5">
+                            <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">
+                              ✓ Tamamlanma Tarihi: {sh.submittedAt ? new Date(sh.submittedAt).toLocaleDateString('tr-TR') : '-'}
+                            </span>
+                            {sh.submissionImage && (
+                              <div>
+                                <span className="text-[9px] font-bold text-slate-400 block mb-1">Öğrencinin Çözüm Görseli:</span>
+                                <div className="w-20 h-20 rounded-lg overflow-hidden border border-emerald-200">
+                                  <img src={sh.submissionImage} alt="Çözüm" className="w-full h-full object-cover" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
