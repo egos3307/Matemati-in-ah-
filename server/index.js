@@ -414,7 +414,7 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
 
 // Her hafta aynı gün/saatte tekrar eden ders serisi oluşturur (ör. 10 hafta boyunca her Pazartesi 18:00)
 app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, description, dayOfWeek, time, weeks, studentIds, zoomJoinUrl } = req.body;
+  const { title, description, dayOfWeek, time, weeks, studentIds, zoomJoinUrl, startDate } = req.body;
   try {
     const weekCount = parseInt(weeks);
     const targetDay = parseInt(dayOfWeek);
@@ -422,9 +422,6 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
 
     if (isNaN(weekCount) || weekCount < 1 || weekCount > 52) {
       return res.status(400).json({ error: 'Hafta sayısı 1 ile 52 arasında olmalıdır.' });
-    }
-    if (isNaN(targetDay) || targetDay < 0 || targetDay > 6) {
-      return res.status(400).json({ error: 'Geçersiz gün seçimi.' });
     }
 
     let targetIds = [];
@@ -444,15 +441,24 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
       finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
     }
 
-    // İlk dersin tarihini bul: bugünden itibaren seçilen haftanın gününe denk gelen ilk tarih
-    const firstDate = new Date();
-    firstDate.setHours(hours, minutes, 0, 0);
-    const currentDay = new Date().getDay();
-    let dayDiff = (targetDay - currentDay + 7) % 7;
-    if (dayDiff === 0 && firstDate.getTime() <= Date.now()) {
-      dayDiff = 7; // Bugünün saati zaten geçtiyse bir sonraki haftaya kaydır
+    // İlk dersin tarihini bul: seçilen başlangıç tarihi varsa ondan başlar, yoksa gün farkı ile hesaplar
+    let firstDate;
+    if (startDate) {
+      firstDate = new Date(startDate);
+      firstDate.setHours(hours, minutes, 0, 0);
+    } else {
+      if (isNaN(targetDay) || targetDay < 0 || targetDay > 6) {
+        return res.status(400).json({ error: 'Geçersiz gün seçimi.' });
+      }
+      firstDate = new Date();
+      firstDate.setHours(hours, minutes, 0, 0);
+      const currentDay = new Date().getDay();
+      let dayDiff = (targetDay - currentDay + 7) % 7;
+      if (dayDiff === 0 && firstDate.getTime() <= Date.now()) {
+        dayDiff = 7; // Bugünün saati zaten geçtiyse bir sonraki haftaya kaydır
+      }
+      firstDate.setDate(firstDate.getDate() + dayDiff);
     }
-    firstDate.setDate(firstDate.getDate() + dayDiff);
 
     const seriesId = crypto.randomUUID();
     const lessons = [];
@@ -479,6 +485,74 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── CLASSROOM (SINIFLAR) ROUTES ──────────────────────────────────────────
+
+app.get('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const where = req.user.role === 'HEAD_TEACHER' ? {} : { teacherId: req.user.id };
+    const classrooms = await prisma.classroom.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+    const parsed = classrooms.map(c => ({
+      ...c,
+      studentIds: JSON.parse(c.studentIds || '[]')
+    }));
+    res.json(parsed);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res) => {
+  const { name, studentIds } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Sınıf adı zorunludur.' });
+  }
+  try {
+    const ids = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    const classroom = await prisma.classroom.create({
+      data: {
+        name: name.trim(),
+        teacherId: req.user.id,
+        studentIds: JSON.stringify(ids)
+      }
+    });
+    res.json({ ...classroom, studentIds: ids });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/teacher/classrooms/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, studentIds } = req.body;
+  try {
+    const ids = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    const classroom = await prisma.classroom.update({
+      where: { id },
+      data: {
+        name: name ? name.trim() : undefined,
+        studentIds: JSON.stringify(ids)
+      }
+    });
+    res.json({ ...classroom, studentIds: ids });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/classrooms/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.classroom.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, res) => {

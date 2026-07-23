@@ -101,6 +101,16 @@ const TeacherDashboard = () => {
   const [showEditTeacherModal, setShowEditTeacherModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState({ id: null, name: '', email: '', studentTel: '', password: '' });
   const [assigningStudentId, setAssigningStudentId] = useState(null);
+
+  // Classroom (Sınıflar) states
+  const [classrooms, setClassrooms] = useState([]);
+  const [studentSubTab, setStudentSubTab] = useState('students'); // 'students' | 'classes'
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [editingClassroom, setEditingClassroom] = useState(null);
+  const [classNameInput, setClassNameInput] = useState('');
+  const [classStudentIdsInput, setClassStudentIdsInput] = useState([]);
+  const [classStudentSearch, setClassStudentSearch] = useState('');
+  const [recurringStartDate, setRecurringStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [messagedStudentIds, setMessagedStudentIds] = useState(() => {
     try {
       const saved = localStorage.getItem('fulle_messaged_students');
@@ -216,6 +226,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     fetchStudents();
     fetchLessons();
+    fetchClassrooms();
     fetchTrialRequests();
     fetchContactMessages();
     fetchCamps();
@@ -223,6 +234,64 @@ const TeacherDashboard = () => {
       fetchTeachers();
     }
   }, [user]);
+
+  const fetchClassrooms = async () => {
+    try {
+      const res = await axios.get('/api/teacher/classrooms');
+      setClassrooms(res.data);
+    } catch (err) {
+      console.error('Error fetching classrooms:', err);
+    }
+  };
+
+  const handleSaveClassroom = async (e) => {
+    e.preventDefault();
+    if (!classNameInput.trim()) {
+      alert('Lütfen sınıf adını girin.');
+      return;
+    }
+    try {
+      if (editingClassroom) {
+        await axios.put(`/api/teacher/classrooms/${editingClassroom.id}`, {
+          name: classNameInput.trim(),
+          studentIds: classStudentIdsInput
+        });
+        alert('Sınıf başarıyla güncellendi!');
+      } else {
+        await axios.post('/api/teacher/classrooms', {
+          name: classNameInput.trim(),
+          studentIds: classStudentIdsInput
+        });
+        alert('Yeni sınıf başarıyla oluşturuldu!');
+      }
+      setShowClassModal(false);
+      setEditingClassroom(null);
+      setClassNameInput('');
+      setClassStudentIdsInput([]);
+      fetchClassrooms();
+    } catch (err) {
+      alert('Sınıf kaydedilirken hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteClassroom = async (classroomId, className) => {
+    if (!window.confirm(`"${className}" sınıfını silmek istediğinize emin misiniz?`)) return;
+    try {
+      await axios.delete(`/api/teacher/classrooms/${classroomId}`);
+      fetchClassrooms();
+    } catch (err) {
+      alert('Sınıf silinirken hata oluştu.');
+    }
+  };
+
+  const toggleClassroomStudents = (classroomStudentIds, currentSelectedIds, setSelectedFn) => {
+    const allSelected = classroomStudentIds.length > 0 && classroomStudentIds.every(id => currentSelectedIds.includes(id));
+    if (allSelected) {
+      setSelectedFn(prev => prev.filter(id => !classroomStudentIds.includes(id)));
+    } else {
+      setSelectedFn(prev => Array.from(new Set([...prev, ...classroomStudentIds])));
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -476,6 +545,7 @@ const TeacherDashboard = () => {
         dayOfWeek: recurringDayOfWeek,
         time: recurringTime,
         weeks: recurringWeeks,
+        startDate: recurringStartDate,
         studentIds: recurringStudentIds,
         zoomJoinUrl: recurringZoomUrl
       });
@@ -1287,56 +1357,295 @@ const TeacherDashboard = () => {
 
           {activeTab === 'students' && (
              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {students.map(student => (
-                    <div key={student.id} onClick={() => fetchStudentTrials(student)} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer group">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-black">{student.name.charAt(0)}</div>
-                        <div className="flex gap-1.5 items-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditStudentClick(student);
-                            }}
-                            className="text-slate-300 hover:text-primary transition-colors p-1"
-                            title="Düzenle"
-                          >
-                            <span className="material-symbols-outlined text-base">edit</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteStudent(student.id, student.name);
-                            }}
-                            className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                            title="Sil"
-                          >
-                            <span className="material-symbols-outlined text-base">delete</span>
-                          </button>
-                          <div className="flex flex-col items-end gap-1">
-                            <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">Ö: {student.studentCode}</code>
-                            <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">V: {student.parentCode || 'Yok'}</code>
+                {/* Sub-tab switcher: Tüm Öğrenciler vs Sınıflar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setStudentSubTab('students')}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                        studentSubTab === 'students'
+                          ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">group</span>
+                      Tüm Öğrenciler ({students.length})
+                    </button>
+                    <button
+                      onClick={() => setStudentSubTab('classes')}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                        studentSubTab === 'classes'
+                          ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">school</span>
+                      Sınıflar / Gruplar ({classrooms.length})
+                    </button>
+                  </div>
+                  {studentSubTab === 'classes' && (
+                    <button
+                      onClick={() => {
+                        setEditingClassroom(null);
+                        setClassNameInput('');
+                        setClassStudentIdsInput([]);
+                        setShowClassModal(true);
+                      }}
+                      className="flex items-center gap-2 bg-primary hover:bg-primary/95 text-white px-5 py-2.5 rounded-2xl text-xs font-black shadow-md transition-all cursor-pointer self-start sm:self-auto"
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      Yeni Sınıf Oluştur
+                    </button>
+                  )}
+                </div>
+
+                {/* Tab Content 1: Tüm Öğrenciler */}
+                {studentSubTab === 'students' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {students.map(student => (
+                      <div key={student.id} onClick={() => fetchStudentTrials(student)} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-black">{student.name.charAt(0)}</div>
+                          <div className="flex gap-1.5 items-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditStudentClick(student);
+                              }}
+                              className="text-slate-300 hover:text-primary transition-colors p-1"
+                              title="Düzenle"
+                            >
+                              <span className="material-symbols-outlined text-base">edit</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStudent(student.id, student.name);
+                              }}
+                              className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                              title="Sil"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                            </button>
+                            <div className="flex flex-col items-end gap-1">
+                              <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">Ö: {student.studentCode}</code>
+                              <code className="text-[9px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400">V: {student.parentCode || 'Yok'}</code>
+                            </div>
                           </div>
                         </div>
+                        <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
+                        <p className="text-sm text-slate-400 font-bold mb-4">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
+                          <span className="material-symbols-outlined text-sm">call</span>
+                          {student.studentTel || student.parentTel || 'Telefon yok'}
+                        </div>
+                        {!messagedStudentIds.includes(student.id) && (student.studentTel || student.parentTel) && (
+                          <button
+                            onClick={(e) => handleFirstMessage(e, student)}
+                            className="mt-3 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">send</span>
+                            İlk Mesajı Gönder
+                          </button>
+                        )}
                       </div>
-                      <h4 className="font-black text-slate-900 text-lg group-hover:text-primary transition-colors">{student.name}</h4>
-                      <p className="text-sm text-slate-400 font-bold mb-4">{(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}</p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
-                        <span className="material-symbols-outlined text-sm">call</span>
-                        {student.studentTel || student.parentTel || 'Telefon yok'}
-                      </div>
-                      {!messagedStudentIds.includes(student.id) && (student.studentTel || student.parentTel) && (
+                    ))}
+                  </div>
+                )}
+
+                {/* Tab Content 2: Sınıflar / Gruplar */}
+                {studentSubTab === 'classes' && (
+                  <div>
+                    {classrooms.length === 0 ? (
+                      <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-3">
+                        <span className="material-symbols-outlined text-slate-300 text-5xl">school</span>
+                        <h4 className="text-base font-black text-slate-800">Henüz Sınıf Oluşturulmamış</h4>
+                        <p className="text-xs text-slate-400 font-bold max-w-sm mx-auto">
+                          Öğrencilerinizi gruplandırmak ve toplu ders ataması yapmak için yeni bir sınıf oluşturabilirsiniz.
+                        </p>
                         <button
-                          onClick={(e) => handleFirstMessage(e, student)}
-                          className="mt-3 w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
+                          onClick={() => {
+                            setEditingClassroom(null);
+                            setClassNameInput('');
+                            setClassStudentIdsInput([]);
+                            setShowClassModal(true);
+                          }}
+                          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-white px-5 py-2.5 rounded-2xl text-xs font-black shadow-md transition-all cursor-pointer mt-2"
                         >
-                          <span className="material-symbols-outlined text-sm">send</span>
-                          İlk Mesajı Gönder
+                          <span className="material-symbols-outlined text-sm">add</span>
+                          Sınıf Oluştur
                         </button>
-                      )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {classrooms.map(cls => {
+                          const classStudentNames = (cls.studentIds || [])
+                            .map(id => students.find(s => s.id === id)?.name)
+                            .filter(Boolean);
+                          return (
+                            <div key={cls.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-black">
+                                    🏫
+                                  </div>
+                                  <div>
+                                    <h4 className="font-black text-slate-900 text-base">{cls.name}</h4>
+                                    <span className="text-xs font-bold text-slate-400">{cls.studentIds?.length || 0} Öğrenci</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setEditingClassroom(cls);
+                                      setClassNameInput(cls.name);
+                                      setClassStudentIdsInput(cls.studentIds || []);
+                                      setShowClassModal(true);
+                                    }}
+                                    className="text-slate-300 hover:text-primary transition-colors p-1"
+                                    title="Düzenle"
+                                  >
+                                    <span className="material-symbols-outlined text-base">edit</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClassroom(cls.id, cls.name)}
+                                    className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                                    title="Sil"
+                                  >
+                                    <span className="material-symbols-outlined text-base">delete</span>
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="border-t border-slate-100 pt-3">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Sınıftaki Öğrenciler</p>
+                                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                                  {classStudentNames.length === 0 ? (
+                                    <span className="text-xs text-slate-400 italic">Öğrenci eklenmemiş</span>
+                                  ) : (
+                                    classStudentNames.map((name, i) => (
+                                      <span key={i} className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl">
+                                        {name}
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sınıf Oluştur / Düzenle Modal */}
+                {showClassModal && (
+                  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black">
+                            🏫
+                          </div>
+                          <div>
+                            <h3 className="font-black text-slate-900 text-lg">
+                              {editingClassroom ? 'Sınıfı Düzenle' : 'Yeni Sınıf Oluştur'}
+                            </h3>
+                            <p className="text-xs text-slate-400 font-semibold">Sınıf adı verip öğrencileri ekleyin</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowClassModal(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1 rounded-xl hover:bg-slate-100"
+                        >
+                          <span className="material-symbols-outlined">close</span>
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveClassroom} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sınıf Adı</label>
+                          <input
+                            type="text"
+                            placeholder="Örn: 12-A Sayısal, 8-B LGS Derece..."
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-slate-900 font-bold outline-none focus:border-primary/40 focus:bg-white transition-all text-sm"
+                            value={classNameInput}
+                            onChange={(e) => setClassNameInput(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between ml-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sınıfa Eklenecek Öğrenciler ({classStudentIdsInput.length})</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (classStudentIdsInput.length === students.length) {
+                                  setClassStudentIdsInput([]);
+                                } else {
+                                  setClassStudentIdsInput(students.map(s => s.id));
+                                }
+                              }}
+                              className="text-[10px] font-black text-primary hover:underline cursor-pointer"
+                            >
+                              {classStudentIdsInput.length === students.length ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Öğrenci ara..."
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-slate-900 font-semibold outline-none focus:border-primary/40 text-xs mb-2"
+                            value={classStudentSearch}
+                            onChange={(e) => setClassStudentSearch(e.target.value)}
+                          />
+                          <div className="max-h-56 overflow-y-auto border border-slate-100 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
+                            {students.filter(student =>
+                              student.name.toLowerCase().includes(classStudentSearch.toLowerCase())
+                            ).map(student => {
+                              const isChecked = classStudentIdsInput.includes(student.id);
+                              return (
+                                <label key={student.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      setClassStudentIdsInput(prev =>
+                                        prev.includes(student.id)
+                                          ? prev.filter(id => id !== student.id)
+                                          : [...prev, student.id]
+                                      );
+                                    }}
+                                    className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5 cursor-pointer accent-primary"
+                                  />
+                                  <span className="text-sm font-bold text-slate-800">
+                                    {student.name} <span className="text-xs text-slate-400">({(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`})</span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowClassModal(false)}
+                            className="px-5 py-3 rounded-2xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all cursor-pointer"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-6 py-3 rounded-2xl text-xs font-black bg-primary text-white shadow-lg shadow-primary/20 hover:scale-105 transition-all cursor-pointer"
+                          >
+                            {editingClassroom ? 'Güncelle' : 'Sınıfı Kaydet'}
+                          </button>
+                        </div>
+                      </form>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
              </div>
           )}
 
@@ -1867,10 +2176,42 @@ const TeacherDashboard = () => {
                   </h4>
                   <form onSubmit={handleCreateLesson} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi (Birden fazla seçebilirsiniz)</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci / Sınıf Seçimi</label>
+                      
+                      {classrooms.length > 0 && (
+                        <div className="mb-2 p-2.5 bg-amber-50/60 border border-amber-100 rounded-2xl space-y-1.5">
+                          <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                            <span>🏫</span> Sınıfa Göre Hızlı Seç
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {classrooms.map(cls => {
+                              const clsStudentIds = cls.studentIds || [];
+                              const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => selectedStudentIds.includes(id));
+                              return (
+                                <button
+                                  key={cls.id}
+                                  type="button"
+                                  onClick={() => toggleClassroomStudents(clsStudentIds, selectedStudentIds, setSelectedStudentIds)}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                    isAllSelected
+                                      ? 'bg-primary text-white border-primary shadow-sm'
+                                      : 'bg-white text-slate-700 border-amber-200/80 hover:bg-amber-100/50'
+                                  }`}
+                                >
+                                  <span>{cls.name}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-black ${isAllSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                    {clsStudentIds.length}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <input 
                         type="text"
-                        placeholder="Öğrenci adı ile ara..."
+                        placeholder="Bireysel öğrenci adı ile ara..."
                         className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-2.5 text-slate-900 font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-xs mb-2"
                         value={studentSearchQuery}
                         onChange={(e) => setStudentSearchQuery(e.target.value)}
@@ -1981,6 +2322,17 @@ const TeacherDashboard = () => {
                 </div>
 
                 <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Başlangıç Tarihi</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                    value={recurringStartDate}
+                    onChange={(e) => setRecurringStartDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Saat</label>
                   <input
                     type="time"
@@ -2005,10 +2357,42 @@ const TeacherDashboard = () => {
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci Seçimi (Birden fazla seçebilirsiniz)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Öğrenci / Sınıf Seçimi</label>
+                  
+                  {classrooms.length > 0 && (
+                    <div className="mb-2 p-2.5 bg-amber-50/60 border border-amber-100 rounded-2xl space-y-1.5">
+                      <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                        <span>🏫</span> Sınıfa Göre Hızlı Seç
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {classrooms.map(cls => {
+                          const clsStudentIds = cls.studentIds || [];
+                          const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => recurringStudentIds.includes(id));
+                          return (
+                            <button
+                              key={cls.id}
+                              type="button"
+                              onClick={() => toggleClassroomStudents(clsStudentIds, recurringStudentIds, setRecurringStudentIds)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                isAllSelected
+                                  ? 'bg-primary text-white border-primary shadow-sm'
+                                  : 'bg-white text-slate-700 border-amber-200/80 hover:bg-amber-100/50'
+                              }`}
+                            >
+                              <span>{cls.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-black ${isAllSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                {clsStudentIds.length}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <input
                     type="text"
-                    placeholder="Öğrenci adı ile ara..."
+                    placeholder="Bireysel öğrenci adı ile ara..."
                     className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-2.5 text-slate-900 font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-xs mb-2"
                     value={recurringStudentSearch}
                     onChange={(e) => setRecurringStudentSearch(e.target.value)}
