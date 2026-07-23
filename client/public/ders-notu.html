@@ -1545,14 +1545,14 @@ function bloklarHTML(bloklar) {
 /* ═══════════════════════════════════════════════════════════
    PDF → GÖRSEL — Sayfa canvas olarak render edilir, base64 döner
 ═══════════════════════════════════════════════════════════ */
-async function pdfSayfasiniGorselYap(pdfDoc, sayfaNo, olcek = 2) {
+async function pdfSayfasiniGorselYap(pdfDoc, sayfaNo, olcek = 1.6) {
   const sayfa = await pdfDoc.getPage(sayfaNo);
   const goruntuleme = sayfa.getViewport({ scale: olcek });
   const canvas = document.createElement('canvas');
   canvas.width  = goruntuleme.width;
   canvas.height = goruntuleme.height;
   await sayfa.render({ canvasContext: canvas.getContext('2d'), viewport: goruntuleme }).promise;
-  return canvas.toDataURL('image/jpeg', 0.82);
+  return canvas.toDataURL('image/jpeg', 0.75);
 }
 
 async function pdfGorselIleAiTara(dosya) {
@@ -1575,6 +1575,7 @@ async function pdfGorselIleAiTara(dosya) {
   let tumBloklar = [];
 
   for (let s = 1; s <= toplamSayfa; s++) {
+    if (s > 1) await new Promise(r => setTimeout(r, 1200));
     aiDurumYaz(`⚡ Yapay Zeka PDF'i Doğrudan Okuyor: Sayfa ${s}/${toplamSayfa}…`, 20 + Math.round((s / toplamSayfa) * 65));
     document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Gemini Vision AI doğrudan tarıyor`;
 

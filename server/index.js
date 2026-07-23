@@ -2137,14 +2137,41 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
 // ═══════════════════════════════════════════════════════════
 // MULTI-PROVIDER AI ENGINE (Gemini -> Groq -> Cerebras)
 // ═══════════════════════════════════════════════════════════
-async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = false }) {
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_KEY;
-  const groqKey = process.env.GROQ_API_KEY;
-  const cerebrasKey = process.env.CEREBRAS_API_KEY;
 
-  // 1. Google Gemini (2.0 Flash)
+function parseAIJSON(raw) {
+  if (!raw) throw new Error('Yapay zeka boş yanıt döndürdü.');
+  let str = String(raw).trim();
+  // Markdown ```json ... ``` etiketlerini temizle
+  str = str.replace(/^```(?:json)?\s*/gi, '').replace(/\s*```$/gi, '').trim();
+  return JSON.parse(str);
+}
+
+async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = false }) {
+  const geminiKey = (
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_GEMINI_KEY ||
+    process.env.GEMINI_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    ''
+  ).replace(/['"\s]/g, '').trim();
+
+  const groqKey = (
+    process.env.GROQ_API_KEY ||
+    process.env.GROQ_KEY ||
+    ''
+  ).replace(/['"\s]/g, '').trim();
+
+  const cerebrasKey = (
+    process.env.CEREBRAS_API_KEY ||
+    process.env.CEREBRAS_KEY ||
+    ''
+  ).replace(/['"\s]/g, '').trim();
+
+  const errorLogs = [];
+
+  // 1. Google Gemini (2.0 Flash -> 2.0 Flash Lite -> 1.5 Flash Latest -> 1.5 Pro)
   if (geminiKey) {
-    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
     const parts = [];
 
     if (base64Image) {
@@ -2175,55 +2202,72 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text) return text;
         } else {
-          console.warn(`Gemini ${model} hatası (${res.status}):`, (await res.text()).substring(0, 150));
+          const errText = await res.text();
+          console.warn(`Gemini ${model} hatası (${res.status}):`, errText.substring(0, 150));
+          if (res.status === 429) {
+            errorLogs.push(`Gemini ${model} (429 Kota/Hız Limiti Aşıldı)`);
+            // Rate limit durumunda modeller arası 1 saniye bekle
+            await new Promise(r => setTimeout(r, 1000));
+          } else {
+            errorLogs.push(`Gemini ${model} (${res.status})`);
+          }
         }
       } catch (e) {
         console.warn(`Gemini ${model} catch:`, e.message);
+        errorLogs.push(`Gemini ${model}: ${e.message}`);
       }
     }
   }
 
   // 2. Groq AI
   if (groqKey) {
-    try {
-      const model = base64Image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
-      const messages = [{ role: 'system', content: systemPrompt }];
+    const groqModels = base64Image
+      ? ['llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-preview']
+      : ['llama-3.3-70b-versatile', 'llama3-70b-8192'];
 
-      if (base64Image) {
-        messages.push({
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: base64Image } },
-            { type: 'text', text: userText || 'İçeriği çözümle.' }
-          ]
+    for (const model of groqModels) {
+      try {
+        const messages = [{ role: 'system', content: systemPrompt }];
+
+        if (base64Image) {
+          messages.push({
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: base64Image } },
+              { type: 'text', text: userText || 'İçeriği çözümle.' }
+            ]
+          });
+        } else {
+          messages.push({ role: 'user', content: userText });
+        }
+
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.15,
+            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+          })
         });
-      } else {
-        messages.push({ role: 'user', content: userText });
-      }
 
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${groqKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.15,
-          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content;
-        if (text) return text;
-      } else {
-        console.warn('Groq error:', await res.text());
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`Groq ${model} error:`, errText.substring(0, 150));
+          errorLogs.push(`Groq ${model} (${res.status})`);
+        }
+      } catch (e) {
+        console.warn(`Groq catch:`, e.message);
+        errorLogs.push(`Groq: ${e.message}`);
       }
-    } catch (e) {
-      console.warn('Groq catch:', e.message);
     }
   }
 
@@ -2251,13 +2295,21 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content;
         if (text) return text;
+      } else {
+        const errText = await res.text();
+        errorLogs.push(`Cerebras (${res.status}): ${errText.substring(0, 120)}`);
       }
     } catch (e) {
       console.warn('Cerebras catch:', e.message);
+      errorLogs.push(`Cerebras: ${e.message}`);
     }
   }
 
-  throw new Error('Yapay zeka servisi bağlantısı kurulamadı. Lütfen Vercel panelinden GEMINI_API_KEY veya GROQ_API_KEY eklediğinizden emin olun.');
+  if (!geminiKey && !groqKey && !cerebrasKey) {
+    throw new Error('Vercel ortam değişkenlerinde (Environment Variables) GEMINI_API_KEY veya GROQ_API_KEY bulunamadı. Lütfen Vercel panelinden anahtarı ekleyip projenizi "Redeploy" yapın.');
+  }
+
+  throw new Error(`Yapay zeka servisinden yanıt alınamadı. Hata detayı: ${errorLogs.join(' | ')}`);
 }
 
 // Google Gemini / Multimodal AI endpoint
@@ -2289,7 +2341,7 @@ app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) 
       base64Image: gorsel,
       jsonFormat: true
     });
-    const ayristirilmis = JSON.parse(rawContent);
+    const ayristirilmis = parseAIJSON(rawContent);
     if (!Array.isArray(ayristirilmis.sorular)) {
       return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
@@ -2314,7 +2366,7 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
       userText: 'Aşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n' + metin,
       jsonFormat: true
     });
-    const ayristirilmis = JSON.parse(rawContent);
+    const ayristirilmis = parseAIJSON(rawContent);
     if (!Array.isArray(ayristirilmis.bloklar)) {
       return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
@@ -2340,7 +2392,7 @@ app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req
       base64Image: gorsel,
       jsonFormat: true
     });
-    const ayristirilmis = JSON.parse(rawContent);
+    const ayristirilmis = parseAIJSON(rawContent);
     if (!Array.isArray(ayristirilmis.bloklar)) {
       return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
@@ -2351,8 +2403,7 @@ app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req
   }
 });
 
-// GPT İçerik Üretici — Cerebras API (gpt-oss-120b) ile detaylı konu anlatımı veya test oluşturur
-// CEREBRAS_API_KEY ortam değişkenine eklenmeli
+// GPT İçerik Üretici — Cerebras API (gpt-oss-120b) veya Gemini/Groq ile detaylı konu anlatımı veya test oluşturur
 app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) => {
   const { konu, sinif, zorluk, tip, soruSayisi } = req.body;
   if (!konu || !konu.trim()) {
@@ -2360,10 +2411,7 @@ app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) =
   }
 
   try {
-    const apiKey = process.env.CEREBRAS_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'CEREBRAS_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
-    }
+    const cerebrasKey = (process.env.CEREBRAS_API_KEY || '').replace(/['"\s]/g, '').trim();
 
     const sinifStr  = sinif  ? ` (${sinif})` : '';
     const zorlukStr = zorluk === 'karma'  ? 'Karma (başlangıç seviyesinden YKS/LGS zorluğuna kadar)'
@@ -2423,105 +2471,114 @@ KURALLAR:
       kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\n\nBu konu için son derece detaylı, kapsamlı bir ders notu / fasikül hazırla. Hiçbir şeyi kısaltma, tüm alt konuları, formülleri, örnekleri ve alıştırmaları ekle.`;
     }
 
-    const cerebrasCagir = async (mesajlar) => {
-      const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-oss-120b',
-          messages: mesajlar,
-          temperature: 0.7,
-          max_tokens: 16000,
-          response_format: { type: 'json_object' }
-        })
-      });
-
-      if (!yanit.ok) {
-        const errText = await yanit.text();
-        console.error('Cerebras gpt-uret error:', errText);
-        let errorMsg = 'Cerebras servisi yanıt vermedi.';
-        try {
-          const parsed = JSON.parse(errText);
-          if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
-        } catch(e) {}
-        const hata = new Error(errorMsg);
-        hata.status = yanit.status;
-        throw hata;
-      }
-
-      const data = await yanit.json();
-      const choice = data.choices?.[0];
-      return { rawContent: choice?.message?.content || '{}', finishReason: choice?.finish_reason };
-    };
-
     let ayristirilmis;
 
-    if (tip === 'test') {
-      const { rawContent } = await cerebrasCagir([
-        { role: 'system', content: sistemTalimati },
-        { role: 'user',   content: kullaniciMesaji }
-      ]);
-
-      try {
-        ayristirilmis = JSON.parse(rawContent);
-      } catch(e) {
-        console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
-        return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
-      }
-
-      if (!Array.isArray(ayristirilmis.sorular)) {
-        return res.status(502).json({ error: 'Model beklenen soru formatında yanıt vermedi.' });
-      }
-    } else {
-      // Ders notu tek seferde token limitine takılıp yarıda kalabiliyor.
-      // finish_reason 'length' geldiğinde kalan içeriği otomatik olarak devam ettirip birleştiriyoruz.
-      const MAX_DEVAM = 2;
-      const mesajlar = [
-        { role: 'system', content: sistemTalimati },
-        { role: 'user',   content: kullaniciMesaji }
-      ];
-      const tumBloklar = [];
-
-      for (let devamSayaci = 0; devamSayaci <= MAX_DEVAM; devamSayaci++) {
-        const { rawContent, finishReason } = await cerebrasCagir(mesajlar);
-
-        let parcaBloklar = [];
-        try {
-          const parcaJson = JSON.parse(rawContent);
-          if (Array.isArray(parcaJson.bloklar)) parcaBloklar = parcaJson.bloklar;
-        } catch(e) {
-          console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
-          if (tumBloklar.length === 0) {
-            return res.status(502).json({ error: 'Model geçerli JSON döndürmedi, tekrar deneyin.' });
-          }
-          break;
-        }
-
-        if (finishReason === 'length' && parcaBloklar.length > 0) {
-          // Token limitine takılan son blok muhtemelen yarım kalmıştır, devam isteğinde yeniden ürettirilecek.
-          parcaBloklar = parcaBloklar.slice(0, -1);
-        }
-
-        tumBloklar.push(...parcaBloklar);
-
-        if (finishReason !== 'length' || devamSayaci === MAX_DEVAM) break;
-
-        console.warn(`gpt-uret ders notu: finish_reason=length, devam isteği gönderiliyor (${devamSayaci + 1}/${MAX_DEVAM})`);
-        mesajlar.push({ role: 'assistant', content: rawContent });
-        mesajlar.push({
-          role: 'user',
-          content: 'Yanıtın token limiti nedeniyle yarıda kesildi. Önceki blokları TEKRARLAMADAN, konu anlatımının/örneklerin/alıştırmaların KALAN kısmıyla devam et. Aynı JSON şemasını kullanarak sadece yeni blokları {"bloklar":[...]} formatında döndür.'
+    // 1. Eğer Cerebras API Key varsa Cerebras dene
+    if (cerebrasKey) {
+      const cerebrasCagir = async (mesajlar) => {
+        const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cerebrasKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-oss-120b',
+            messages: mesajlar,
+            temperature: 0.7,
+            max_tokens: 16000,
+            response_format: { type: 'json_object' }
+          })
         });
-      }
 
-      if (tumBloklar.length === 0) {
-        return res.status(502).json({ error: 'Model beklenen blok formatında yanıt vermedi.' });
-      }
+        if (!yanit.ok) {
+          const errText = await yanit.text();
+          console.error('Cerebras gpt-uret error:', errText);
+          let errorMsg = 'Cerebras servisi yanıt vermedi.';
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
+          } catch(e) {}
+          const hata = new Error(errorMsg);
+          hata.status = yanit.status;
+          throw hata;
+        }
 
-      ayristirilmis = { bloklar: tumBloklar };
+        const data = await yanit.json();
+        const choice = data.choices?.[0];
+        return { rawContent: choice?.message?.content || '{}', finishReason: choice?.finish_reason };
+      };
+
+      if (tip === 'test') {
+        try {
+          const { rawContent } = await cerebrasCagir([
+            { role: 'system', content: sistemTalimati },
+            { role: 'user',   content: kullaniciMesaji }
+          ]);
+          ayristirilmis = parseAIJSON(rawContent);
+          if (!Array.isArray(ayristirilmis.sorular)) ayristirilmis = null;
+        } catch(e) {
+          console.warn('Cerebras test-uret denemesi başarısız, genel AI motoruna geçiliyor:', e.message);
+        }
+      } else {
+        const MAX_DEVAM = 2;
+        const mesajlar = [
+          { role: 'system', content: sistemTalimati },
+          { role: 'user',   content: kullaniciMesaji }
+        ];
+        const tumBloklar = [];
+
+        for (let devamSayaci = 0; devamSayaci <= MAX_DEVAM; devamSayaci++) {
+          try {
+            const { rawContent, finishReason } = await cerebrasCagir(mesajlar);
+            let parcaBloklar = [];
+            try {
+              const parcaJson = parseAIJSON(rawContent);
+              if (Array.isArray(parcaJson.bloklar)) parcaBloklar = parcaJson.bloklar;
+            } catch(e) {
+              console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
+              if (tumBloklar.length === 0) break;
+              break;
+            }
+
+            if (finishReason === 'length' && parcaBloklar.length > 0) {
+              parcaBloklar = parcaBloklar.slice(0, -1);
+            }
+
+            tumBloklar.push(...parcaBloklar);
+            if (finishReason !== 'length' || devamSayaci === MAX_DEVAM) break;
+
+            mesajlar.push({ role: 'assistant', content: rawContent });
+            mesajlar.push({
+              role: 'user',
+              content: 'Yanıtın token limiti nedeniyle yarıda kesildi. Önceki blokları TEKRARLAMADAN, konu anlatımının/örneklerin/alıştırmaların KALAN kısmıyla devam et. Aynı JSON şemasını kullanarak sadece yeni blokları {"bloklar":[...]} formatında döndür.'
+            });
+          } catch(e) {
+            console.warn('Cerebras adımında hata, döngü sonlandırıldı:', e.message);
+            break;
+          }
+        }
+
+        if (tumBloklar.length > 0) {
+          ayristirilmis = { bloklar: tumBloklar };
+        }
+      }
+    }
+
+    // 2. Cerebras kullanılmadıysa veya başarısız olduysa -> Multi-provider executeAI (Gemini / Groq) kullan
+    if (!ayristirilmis) {
+      const rawContent = await executeAI({
+        systemPrompt: sistemTalimati,
+        userText: kullaniciMesaji,
+        jsonFormat: true
+      });
+      ayristirilmis = parseAIJSON(rawContent);
+      if (tip === 'test' && !Array.isArray(ayristirilmis.sorular)) {
+        return res.status(502).json({ error: 'Yapay zeka beklenen soru formatında yanıt vermedi.' });
+      }
+      if (tip !== 'test' && !Array.isArray(ayristirilmis.bloklar)) {
+        return res.status(502).json({ error: 'Yapay zeka beklenen blok formatında yanıt vermedi.' });
+      }
     }
 
     res.json(ayristirilmis);
