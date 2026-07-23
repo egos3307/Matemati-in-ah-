@@ -2135,7 +2135,7 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
 });
 
 // ═══════════════════════════════════════════════════════════
-// MULTI-PROVIDER AI ENGINE (Gemini -> Groq -> Cerebras)
+// OPENROUTER AI ENGINE (Tek ve Özel Yapay Zeka Motoru)
 // ═══════════════════════════════════════════════════════════
 
 function parseAIJSON(raw) {
@@ -2147,92 +2147,35 @@ function parseAIJSON(raw) {
 }
 
 async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = false }) {
-  const geminiKey = (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_GEMINI_KEY ||
-    process.env.GEMINI_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    ''
-  ).replace(/['"\s]/g, '').trim();
-
-  const groqKey = (
-    process.env.GROQ_API_KEY ||
-    process.env.GROQ_KEY ||
-    ''
-  ).replace(/['"\s]/g, '').trim();
-
-  const cerebrasKey = (
-    process.env.CEREBRAS_API_KEY ||
-    process.env.CEREBRAS_KEY ||
-    ''
-  ).replace(/['"\s]/g, '').trim();
-
   const openrouterKey = (
     process.env.OPENROUTER_API_KEY ||
     process.env.OPENROUTER_KEY ||
     ''
   ).replace(/['"\s]/g, '').trim();
 
-  const errorLogs = [];
-
-  // 1. OpenRouter AI (Ücretsiz Modeller: Gemini 2.0 Flash Free / Llama 3.3 70B Free)
-  if (openrouterKey) {
-    const openrouterModels = base64Image
-      ? ['google/gemini-2.0-flash-exp:free', 'meta-llama/llama-3.2-11b-vision-instruct:free']
-      : ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'deepseek/deepseek-r1:free'];
-
-    for (const model of openrouterModels) {
-      try {
-        const messages = [{ role: 'system', content: systemPrompt }];
-
-        if (base64Image) {
-          messages.push({
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: base64Image } },
-              { type: 'text', text: userText || 'İçeriği çözümle.' }
-            ]
-          });
-        } else {
-          messages.push({ role: 'user', content: userText });
-        }
-
-        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openrouterKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://fullematematik.com',
-            'X-Title': 'Fullematematik AI'
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature: 0.15,
-            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.choices?.[0]?.message?.content;
-          if (text) return text;
-        } else {
-          const errText = await res.text();
-          console.warn(`OpenRouter ${model} error:`, errText.substring(0, 150));
-          errorLogs.push(`OpenRouter ${model} (${res.status})`);
-        }
-      } catch (e) {
-        console.warn(`OpenRouter catch:`, e.message);
-        errorLogs.push(`OpenRouter: ${e.message}`);
-      }
-    }
+  if (!openrouterKey) {
+    throw new Error('OPENROUTER_API_KEY Vercel ortam değişkenlerinde bulunamadı. Lütfen Vercel -> Settings -> Environment Variables bölümünden OPENROUTER_API_KEY ekleyip projenizi "Redeploy" yapın.');
   }
 
-  // 2. Cerebras AI (Öncelikli — Çok Hızlı ve Yüksek Limitli)
-  if (cerebrasKey) {
+  // OpenRouter üzerindeki en kaliteli %100 ücretsiz modeller
+  const openrouterModels = base64Image
+    ? [
+        'google/gemini-2.0-flash-exp:free',
+        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'meta-llama/llama-3.2-11b-vision-instruct:free'
+      ]
+    : [
+        'google/gemini-2.0-flash-exp:free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'deepseek/deepseek-r1:free',
+        'qwen/qwen-2.5-coder-32b-instruct:free'
+      ];
+
+  const errorLogs = [];
+
+  for (const model of openrouterModels) {
     try {
-      const model = base64Image ? 'gemma-4-31b' : 'gpt-oss-120b';
       const messages = [{ role: 'system', content: systemPrompt }];
 
       if (base64Image) {
@@ -2247,11 +2190,13 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
         messages.push({ role: 'user', content: userText });
       }
 
-      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${cerebrasKey}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://fullematematik.com',
+          'X-Title': 'Fullematematik AI'
         },
         body: JSON.stringify({
           model,
@@ -2267,112 +2212,19 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
         if (text) return text;
       } else {
         const errText = await res.text();
-        console.warn(`Cerebras ${model} error:`, errText.substring(0, 150));
-        errorLogs.push(`Cerebras ${model} (${res.status})`);
+        console.warn(`OpenRouter ${model} error (${res.status}):`, errText.substring(0, 150));
+        errorLogs.push(`${model} (${res.status})`);
       }
     } catch (e) {
-      console.warn('Cerebras catch:', e.message);
-      errorLogs.push(`Cerebras: ${e.message}`);
+      console.warn(`OpenRouter ${model} catch:`, e.message);
+      errorLogs.push(`${model}: ${e.message}`);
     }
   }
 
-  // 2. Groq AI (Yüksek Limitli)
-  if (groqKey) {
-    const groqModels = base64Image
-      ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
-      : ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
-
-    for (const model of groqModels) {
-      try {
-        const messages = [{ role: 'system', content: systemPrompt }];
-        messages.push({ role: 'user', content: userText || 'İçeriği ders notu ve soru formatında çözümle.' });
-
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${groqKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature: 0.15,
-            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.choices?.[0]?.message?.content;
-          if (text) return text;
-        } else {
-          const errText = await res.text();
-          console.warn(`Groq ${model} error:`, errText.substring(0, 150));
-          errorLogs.push(`Groq ${model} (${res.status})`);
-        }
-      } catch (e) {
-        console.warn(`Groq catch:`, e.message);
-        errorLogs.push(`Groq: ${e.message}`);
-      }
-    }
-  }
-
-  // 3. Google Gemini (2.0 Flash -> 2.0 Flash Lite -> 1.5 Flash -> 1.5 Pro)
-  if (geminiKey) {
-    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-    const parts = [];
-
-    if (base64Image) {
-      const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
-      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-      const data = base64Image.replace(/^data:[^;]+;base64,/, '');
-      parts.push({ inline_data: { mime_type: mimeType, data } });
-    }
-
-    parts.push({ text: `${systemPrompt}\n\n${userText || ''}` });
-
-    for (const model of models) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: {
-              temperature: 0.15,
-              ...(jsonFormat ? { response_mime_type: 'application/json' } : {})
-            }
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text;
-        } else {
-          const errText = await res.text();
-          console.warn(`Gemini ${model} hatası (${res.status}):`, errText.substring(0, 150));
-          if (res.status === 429) {
-            errorLogs.push(`Gemini ${model} (429 Kota Aşıldı)`);
-          } else {
-            errorLogs.push(`Gemini ${model} (${res.status})`);
-          }
-        }
-      } catch (e) {
-        console.warn(`Gemini ${model} catch:`, e.message);
-        errorLogs.push(`Gemini ${model}: ${e.message}`);
-      }
-    }
-  }
-
-  if (!geminiKey && !groqKey && !cerebrasKey) {
-    throw new Error('Vercel ortam değişkenlerinde (Environment Variables) CEREBRAS_API_KEY, GROQ_API_KEY veya GEMINI_API_KEY bulunamadı. Lütfen anahtarı ekleyip projenizi "Redeploy" yapın.');
-  }
-
-  throw new Error(`Yapay zeka servisinden yanıt alınamadı. Hata detayı: ${errorLogs.join(' | ')}`);
+  throw new Error(`OpenRouter yapay zeka servisi yanıt vermedi. Hata detayı: ${errorLogs.join(' | ')}`);
 }
 
-// Google Gemini / Multimodal AI endpoint
+// OpenRouter AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
   try {
@@ -2386,7 +2238,7 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
-// TEST TARA — Fotoğraftaki soruları AI ile JSON'a çıkarır
+// TEST TARA — Fotoğraftaki soruları OpenRouter AI ile JSON'a çıkarır
 app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
@@ -2412,7 +2264,7 @@ app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) 
   }
 });
 
-// Ders Notu Oluşturucu — AI ile ham metni fasiküle dönüştürür
+// Ders Notu Oluşturucu — OpenRouter AI ile ham metni fasiküle dönüştürür
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
   if (!metin || !metin.trim()) return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
@@ -2437,7 +2289,7 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   }
 });
 
-// Ders Notu Görsel Okuyucu — PDF sayfasının görselini AI ile okur
+// Ders Notu Görsel Okuyucu — PDF sayfasının görselini OpenRouter AI ile okur
 app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
@@ -2463,7 +2315,7 @@ app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req
   }
 });
 
-// GPT İçerik Üretici — Cerebras API (gpt-oss-120b) veya Gemini/Groq ile detaylı konu anlatımı veya test oluşturur
+// GPT İçerik Üretici — OpenRouter AI ile detaylı konu anlatımı veya test oluşturur
 app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) => {
   const { konu, sinif, zorluk, tip, soruSayisi } = req.body;
   if (!konu || !konu.trim()) {
@@ -2471,8 +2323,6 @@ app.post('/api/teacher/gpt-uret', auth, checkRole('TEACHER'), async (req, res) =
   }
 
   try {
-    const cerebrasKey = (process.env.CEREBRAS_API_KEY || '').replace(/['"\s]/g, '').trim();
-
     const sinifStr  = sinif  ? ` (${sinif})` : '';
     const zorlukStr = zorluk === 'karma'  ? 'Karma (başlangıç seviyesinden YKS/LGS zorluğuna kadar)'
                     : zorluk === 'kolay'  ? 'Kolay / Temel seviye'
@@ -2531,120 +2381,22 @@ KURALLAR:
       kullaniciMesaji = `Konu: ${konu}${sinifStr}\nZorluk: ${zorlukStr}\n\nBu konu için son derece detaylı, kapsamlı bir ders notu / fasikül hazırla. Hiçbir şeyi kısaltma, tüm alt konuları, formülleri, örnekleri ve alıştırmaları ekle.`;
     }
 
-    let ayristirilmis;
+    const rawContent = await executeAI({
+      systemPrompt: sistemTalimati,
+      userText: kullaniciMesaji,
+      jsonFormat: true
+    });
+    const ayristirilmis = parseAIJSON(rawContent);
 
-    // 1. Eğer Cerebras API Key varsa Cerebras dene
-    if (cerebrasKey) {
-      const cerebrasCagir = async (mesajlar) => {
-        const yanit = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${cerebrasKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-oss-120b',
-            messages: mesajlar,
-            temperature: 0.7,
-            max_tokens: 16000,
-            response_format: { type: 'json_object' }
-          })
-        });
-
-        if (!yanit.ok) {
-          const errText = await yanit.text();
-          console.error('Cerebras gpt-uret error:', errText);
-          let errorMsg = 'Cerebras servisi yanıt vermedi.';
-          try {
-            const parsed = JSON.parse(errText);
-            if (parsed.error?.message) errorMsg = `Cerebras: ${parsed.error.message}`;
-          } catch(e) {}
-          const hata = new Error(errorMsg);
-          hata.status = yanit.status;
-          throw hata;
-        }
-
-        const data = await yanit.json();
-        const choice = data.choices?.[0];
-        return { rawContent: choice?.message?.content || '{}', finishReason: choice?.finish_reason };
-      };
-
-      if (tip === 'test') {
-        try {
-          const { rawContent } = await cerebrasCagir([
-            { role: 'system', content: sistemTalimati },
-            { role: 'user',   content: kullaniciMesaji }
-          ]);
-          ayristirilmis = parseAIJSON(rawContent);
-          if (!Array.isArray(ayristirilmis.sorular)) ayristirilmis = null;
-        } catch(e) {
-          console.warn('Cerebras test-uret denemesi başarısız, genel AI motoruna geçiliyor:', e.message);
-        }
-      } else {
-        const MAX_DEVAM = 2;
-        const mesajlar = [
-          { role: 'system', content: sistemTalimati },
-          { role: 'user',   content: kullaniciMesaji }
-        ];
-        const tumBloklar = [];
-
-        for (let devamSayaci = 0; devamSayaci <= MAX_DEVAM; devamSayaci++) {
-          try {
-            const { rawContent, finishReason } = await cerebrasCagir(mesajlar);
-            let parcaBloklar = [];
-            try {
-              const parcaJson = parseAIJSON(rawContent);
-              if (Array.isArray(parcaJson.bloklar)) parcaBloklar = parcaJson.bloklar;
-            } catch(e) {
-              console.error('Cerebras JSON parse error:', rawContent.substring(0, 500));
-              if (tumBloklar.length === 0) break;
-              break;
-            }
-
-            if (finishReason === 'length' && parcaBloklar.length > 0) {
-              parcaBloklar = parcaBloklar.slice(0, -1);
-            }
-
-            tumBloklar.push(...parcaBloklar);
-            if (finishReason !== 'length' || devamSayaci === MAX_DEVAM) break;
-
-            mesajlar.push({ role: 'assistant', content: rawContent });
-            mesajlar.push({
-              role: 'user',
-              content: 'Yanıtın token limiti nedeniyle yarıda kesildi. Önceki blokları TEKRARLAMADAN, konu anlatımının/örneklerin/alıştırmaların KALAN kısmıyla devam et. Aynı JSON şemasını kullanarak sadece yeni blokları {"bloklar":[...]} formatında döndür.'
-            });
-          } catch(e) {
-            console.warn('Cerebras adımında hata, döngü sonlandırıldı:', e.message);
-            break;
-          }
-        }
-
-        if (tumBloklar.length > 0) {
-          ayristirilmis = { bloklar: tumBloklar };
-        }
-      }
+    if (tip === 'test' && !Array.isArray(ayristirilmis.sorular)) {
+      return res.status(502).json({ error: 'Yapay zeka beklenen soru formatında yanıt vermedi.' });
     }
-
-    // 2. Cerebras kullanılmadıysa veya başarısız olduysa -> Multi-provider executeAI (Gemini / Groq) kullan
-    if (!ayristirilmis) {
-      const rawContent = await executeAI({
-        systemPrompt: sistemTalimati,
-        userText: kullaniciMesaji,
-        jsonFormat: true
-      });
-      ayristirilmis = parseAIJSON(rawContent);
-      if (tip === 'test' && !Array.isArray(ayristirilmis.sorular)) {
-        return res.status(502).json({ error: 'Yapay zeka beklenen soru formatında yanıt vermedi.' });
-      }
-      if (tip !== 'test' && !Array.isArray(ayristirilmis.bloklar)) {
-        return res.status(502).json({ error: 'Yapay zeka beklenen blok formatında yanıt vermedi.' });
-      }
+    if (tip !== 'test' && !Array.isArray(ayristirilmis.bloklar)) {
+      return res.status(502).json({ error: 'Yapay zeka beklenen blok formatında yanıt vermedi.' });
     }
 
     res.json(ayristirilmis);
   } catch (err) {
-    console.error('gpt-uret error:', err);
-    res.status(500).json({ error: err.message });
   }
 });
 
