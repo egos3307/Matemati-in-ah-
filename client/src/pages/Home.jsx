@@ -290,9 +290,9 @@ const Home = () => {
           </p>
         </section>
 
-        {/* Features Section with Warm Orange Video Background & Frosted Glass Cards */}
-        <section className="relative overflow-hidden bg-slate-950 py-20 lg:py-28 my-8 border-y border-orange-500/20" id="ozellikler">
-          {/* Background Video with Low-Opacity Orange Overlay */}
+        {/* Features Section with Clean Video Background & Smooth White Edge Fades */}
+        <section className="relative overflow-hidden bg-white py-20 lg:py-28 my-8" id="ozellikler">
+          {/* Native Video Background (No Color Overlay) */}
           <div className="absolute inset-0 z-0">
             <video
               autoPlay
@@ -300,59 +300,63 @@ const Home = () => {
               muted
               playsInline
               preload="auto"
-              className="h-full w-full object-cover opacity-75"
+              className="h-full w-full object-cover"
             >
               <source src="/math-bg.mp4" type="video/mp4" />
               <source src="/math-background.mp4" type="video/mp4" />
               <source src="/math-background.mov" type="video/quicktime" />
             </video>
-            {/* Low-Opacity Orange/Amber Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-orange-950/70 via-amber-900/40 to-slate-950/80 backdrop-blur-[0.5px]" />
+
+            {/* Smooth White Gradient Fade - Top */}
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none" />
+
+            {/* Smooth White Gradient Fade - Bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
             <div className="mb-16 flex flex-col items-center text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 border border-orange-400/30 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-orange-300 backdrop-blur-md mb-4 shadow-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-primary mb-4 backdrop-blur-md shadow-sm">
                 ✨ Fullematematiği Farkı
               </span>
-              <h2 className="mb-4 text-3xl font-black tracking-tight text-white md:text-5xl drop-shadow-lg">
+              <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-5xl drop-shadow-sm">
                 Neden Fullematematiği?
               </h2>
-              <p className="max-w-2xl text-base md:text-lg text-amber-100/90 font-medium leading-relaxed drop-shadow">
+              <p className="max-w-2xl text-base md:text-lg text-slate-700 font-semibold leading-relaxed drop-shadow-sm">
                 Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
               </p>
             </div>
 
             <div className="grid gap-8 md:grid-cols-3">
               {/* Card 1 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">video_camera_front</span>
                 </div>
-                <h3 className="text-xl font-black text-white">Canlı Dersler</h3>
-                <p className="text-white/90 text-sm leading-relaxed font-medium">
+                <h3 className="text-xl font-black text-slate-900">Canlı Dersler</h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.
                 </p>
               </div>
 
               {/* Card 2 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">person_search</span>
                 </div>
-                <h3 className="text-xl font-black text-white">Birebir Takip</h3>
-                <p className="text-white/90 text-sm leading-relaxed font-medium">
+                <h3 className="text-xl font-black text-slate-900">Birebir Takip</h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.
                 </p>
               </div>
 
               {/* Card 3 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
                 </div>
-                <h3 className="text-xl font-black text-white">Soru Çözüm Videoları</h3>
-                <p className="text-white/90 text-sm leading-relaxed font-medium">
+                <h3 className="text-xl font-black text-slate-900">Soru Çözüm Videoları</h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.
                 </p>
               </div>
