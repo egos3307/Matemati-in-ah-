@@ -327,7 +327,7 @@ const Home = () => {
         {/* Products Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="urunlerimiz">
           <div className="mb-16 flex flex-col items-center text-center">
-            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Sınavlara Hazırlıkta en Çok Tercih Edilen Notlar</h2>
+            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Sınavlara Hazırlıkta En Çok Tercih Edilen Notlar</h2>
             <p className="max-w-2xl text-lg text-slate-600">
               Konu özetleri, çözümlü örnekler, çıkmış sorular ve pratik yöntemlerle matematiği daha hızlı öğren.
             </p>

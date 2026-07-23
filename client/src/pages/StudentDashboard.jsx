@@ -1272,9 +1272,9 @@ const StudentDashboard = () => {
                         {/* Delete button */}
                         <button
                           onClick={() => handleHataDelete(entry.id)}
-                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-md"
+                          className="absolute top-1 right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 active:scale-95 transition-all"
                         >
-                          <span className="material-symbols-outlined text-xs">close</span>
+                          <span className="material-symbols-outlined text-sm">delete</span>
                         </button>
                         {/* Note badge */}
                         {entry.note && (
