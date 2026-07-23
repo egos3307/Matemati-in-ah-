@@ -2350,11 +2350,6 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   }
 
   try {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Yapay zeka anahtarı (GROQ_API_KEY) tanımlanmamış. Lütfen ekleyin.' });
-    }
-
     const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini, sanki kendi elinle temize çekmiş gibi düzenli bir fasiküle dönüştürüyorsun.
 
 KURALLAR:
@@ -2373,6 +2368,44 @@ KURALLAR:
   {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A"},
   {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
 ]}`;
+
+    // 1. Önce Gemini 1.5 Flash dene (varsa)
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: sistemTalimati + "\n\nAşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n" + metin }]
+            }],
+            generationConfig: {
+              temperature: 0.15,
+              response_mime_type: "application/json"
+            }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          const ayristirilmis = JSON.parse(rawContent);
+          if (Array.isArray(ayristirilmis.bloklar)) {
+            console.log('Gemini 1.5 Flash ile metin başarıyla fasiküle dönüştürüldü.');
+            return res.json(ayristirilmis);
+          }
+        }
+      } catch (e) {
+        console.warn('Gemini ders-notu-ai hatası, Groq deneniyor:', e.message);
+      }
+    }
+
+    // 2. Groq AI
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY veya GROQ_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen birini ekleyin.' });
+    }
 
     // Büyük metinleri parçalara böl (her parça ~6000 karakter, satır sınırında kes)
     const MAX_PARCA = 6000;
