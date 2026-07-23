@@ -269,23 +269,19 @@ const Home = () => {
         <section className="bg-primary px-6 py-12 text-white">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-4">
             <div className="text-center">
-              <p className="text-4xl font-black">🏆</p>
-              <p className="text-2xl font-black mt-1">10.000+</p>
+              <p className="text-4xl font-black">10.000+</p>
               <p className="text-sm font-medium opacity-80">Öğrenci</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">📚</p>
-              <p className="text-2xl font-black mt-1">5000+</p>
+              <p className="text-4xl font-black">5000+</p>
               <p className="text-sm font-medium opacity-80">Saat Canlı Ders</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">⭐</p>
-              <p className="text-2xl font-black mt-1">%95</p>
+              <p className="text-4xl font-black">%95</p>
               <p className="text-sm font-medium opacity-80">Öğrenci Memnuniyeti</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">🎯</p>
-              <p className="text-2xl font-black mt-1">7</p>
+              <p className="text-4xl font-black">7</p>
               <p className="text-sm font-medium opacity-80">Farklı Sınava Hazırlık</p>
             </div>
           </div>
