@@ -1608,22 +1608,10 @@ window.fasikuluBaslat = async function() {
     let bloklar;
 
     if (secilenPdfDosyasi) {
-      aiDurumYaz('📄 PDF metin içeriği taranıyor…', 15);
-      try {
-        const hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
-        if (hamMetin && hamMetin.trim().length > 30) {
-          aiDurumYaz('⚡ Metin başarıyla çıkarıldı, Yapay Zeka ile işleniyor…', 35);
-          document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter yapay zeka ile işleniyor`;
-          bloklar = await groqIleEtiketle(hamMetin);
-        } else {
-          throw new Error('Metin bulunamadı, taranmış görsel PDF olabilir.');
-        }
-      } catch(e) {
-        console.warn('PDF metin çıkarma taranmış görsel nedeniyle görsele devrediliyor:', e.message);
-        toast('⚡ PDF taranmış görsel olarak Yapay Zeka Vision AI ile okunuyor…', 'inf');
-        aiDurumYaz('⚡ Yapay Zeka (Vision AI) PDF sayfalarını doğrudan okuyor…', 20);
-        bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
-      }
+      // PDF doğrudan Yapay Zeka (AI Engine) tarafından taranıp okunur
+      toast('⚡ PDF sayfaları doğrudan Yapay Zeka (AI Vision) ile taranıyor…', 'inf');
+      aiDurumYaz('⚡ Yapay Zeka PDF sayfalarını doğrudan okuyor…', 15);
+      bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
     } else {
       const inputEl = document.getElementById('hoca-metin-girdisi');
       const hamMetin = inputEl ? inputEl.value.trim() : '';
