@@ -1557,11 +1557,15 @@ async function pdfSayfasiniGorselYap(pdfDoc, sayfaNo, olcek = 2) {
 
 async function pdfGorselIleAiTara(dosya) {
   let pdfjsLib;
-  try {
-    pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
-  } catch(e) {
-    throw new Error('pdf.js yüklenemedi: ' + e.message);
+  if (window.pdfjsLib) {
+    pdfjsLib = window.pdfjsLib;
+  } else {
+    try {
+      pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+    } catch(e) {
+      throw new Error('PDF okuyucu yüklenemedi: ' + e.message);
+    }
   }
 
   const buffer = await dosya.arrayBuffer();
@@ -1571,8 +1575,8 @@ async function pdfGorselIleAiTara(dosya) {
   let tumBloklar = [];
 
   for (let s = 1; s <= toplamSayfa; s++) {
-    aiDurumYaz(`Görsel AI: Sayfa ${s}/${toplamSayfa} taranıyor…`, 20 + Math.round((s / toplamSayfa) * 60));
-    document.getElementById('ai-parca-info').textContent = `PDF sayfa ${s}/${toplamSayfa} — Vision AI ile okunuyor`;
+    aiDurumYaz(`⚡ Yapay Zeka PDF'i Doğrudan Okuyor: Sayfa ${s}/${toplamSayfa}…`, 20 + Math.round((s / toplamSayfa) * 65));
+    document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Gemini Vision AI doğrudan tarıyor`;
 
     const gorsel = await pdfSayfasiniGorselYap(pdfDoc, s);
 
@@ -1582,7 +1586,7 @@ async function pdfGorselIleAiTara(dosya) {
       body: JSON.stringify({ gorsel })
     });
     const veri = await yanit.json();
-    if (!yanit.ok) throw new Error(veri.error || 'Vision AI servisi hata döndürdü.');
+    if (!yanit.ok) throw new Error(veri.error || 'Yapay Zeka servisi hata döndürdü.');
     if (Array.isArray(veri.bloklar)) tumBloklar.push(...veri.bloklar);
   }
 
@@ -1603,29 +1607,13 @@ window.fasikuluBaslat = async function() {
     let bloklar;
 
     if (secilenPdfDosyasi) {
-      // Önce metni çıkar
-      const hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
-      toast(`PDF okundu: ${hamMetin.length} karakter`, hamMetin.length >= 200 ? 'ok' : 'inf');
-
-      if (hamMetin.length < 200) {
-        // Metin 200 karakterden az (taranmış PDF / az metin) → Gemini / Vision AI doğrudan devreye girer
-        toast('⚡ Metin < 200 karakter, Gemini Vision AI doğrudan tarıyor…', 'inf');
-        aiDurumYaz('Gemini Vision AI ile PDF sayfaları taranıyor…', 15);
-        bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
-      } else {
-        // Normal metin yolu
-        aiDurumYaz('Yapay Zeka (Gemini/Groq) ile fasikül hazırlanıyor…', 30);
-        const parcaSayisi = Math.ceil(hamMetin.length / 6000);
-        if (parcaSayisi > 1) {
-          document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter — ${parcaSayisi} parçaya bölünüyor`;
-          toast(`📄 Büyük PDF: ${parcaSayisi} parça halinde işleniyor…`, 'inf');
-        } else {
-          document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
-        }
-        bloklar = await groqIleEtiketle(hamMetin);
-      }
+      // PDF doğrudan Yapay Zeka (Gemini Vision AI) tarafından taranıp okunur
+      toast('⚡ PDF sayfaları doğrudan Yapay Zeka (Vision AI) ile taranıyor…', 'inf');
+      aiDurumYaz('⚡ Yapay Zeka (Gemini Vision AI) PDF sayfalarını doğrudan okuyor…', 15);
+      bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
     } else {
-      const hamMetin = document.getElementById('hoca-metin-girdisi').value.trim();
+      const inputEl = document.getElementById('hoca-metin-girdisi');
+      const hamMetin = inputEl ? inputEl.value.trim() : '';
       if (!hamMetin) {
         toast('Lütfen bir PDF yükleyin veya metin yapıştırın!', 'err');
         btnBaslat.disabled = false;
@@ -1633,9 +1621,9 @@ window.fasikuluBaslat = async function() {
         return;
       }
       aiDurumYaz('Metin alındı…', 10);
-      aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
+      aiDurumYaz('Yapay Zeka (Gemini AI) ile fasikül hazırlanıyor…', 30);
       document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
-      bloklar = await groqIleEtiketle(hamMetin);
+      bloklar = await geminiIleEtiketle(hamMetin);
     }
 
     nihaiEtiketliMetin = JSON.stringify(bloklar);
