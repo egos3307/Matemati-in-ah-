@@ -2142,9 +2142,9 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
   const groqKey = process.env.GROQ_API_KEY;
   const cerebrasKey = process.env.CEREBRAS_API_KEY;
 
-  // 1. Google Gemini (1.5 / 2.0 Flash)
+  // 1. Google Gemini (2.0 Flash)
   if (geminiKey) {
-    const models = ['gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
     const parts = [];
 
     if (base64Image) {
