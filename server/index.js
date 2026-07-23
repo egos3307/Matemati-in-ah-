@@ -2134,72 +2134,139 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
   }
 });
 
-// Gemini API Çağrı Yardımcısı (Otomatik Model Fallback ile)
-async function callGeminiAPI(parts, generationConfig = {}, apiKey) {
-  const models = [
-    'gemini-1.5-flash-latest',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-001',
-    'gemini-1.5-flash-002',
-    'gemini-2.5-flash',
-    'gemini-1.5-pro'
-  ];
+// ═══════════════════════════════════════════════════════════
+// MULTI-PROVIDER AI ENGINE (Gemini -> Groq -> Cerebras)
+// ═══════════════════════════════════════════════════════════
+async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = false }) {
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_KEY;
+  const groqKey = process.env.GROQ_API_KEY;
+  const cerebrasKey = process.env.CEREBRAS_API_KEY;
 
-  let lastErrorText = '';
+  // 1. Google Gemini (1.5 / 2.0 Flash)
+  if (geminiKey) {
+    const models = ['gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const parts = [];
 
-  for (const model of models) {
+    if (base64Image) {
+      const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const data = base64Image.replace(/^data:[^;]+;base64,/, '');
+      parts.push({ inline_data: { mime_type: mimeType, data } });
+    }
+
+    parts.push({ text: `${systemPrompt}\n\n${userText || ''}` });
+
+    for (const model of models) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: 0.15,
+              ...(jsonFormat ? { response_mime_type: 'application/json' } : {})
+            }
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+        } else {
+          console.warn(`Gemini ${model} hatası (${res.status}):`, (await res.text()).substring(0, 150));
+        }
+      } catch (e) {
+        console.warn(`Gemini ${model} catch:`, e.message);
+      }
+    }
+  }
+
+  // 2. Groq AI
+  if (groqKey) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
+      const model = base64Image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+      const messages = [{ role: 'system', content: systemPrompt }];
+
+      if (base64Image) {
+        messages.push({
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: base64Image } },
+            { type: 'text', text: userText || 'İçeriği çözümle.' }
+          ]
+        });
+      } else {
+        messages.push({ role: 'user', content: userText });
+      }
+
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig
+          model,
+          messages,
+          temperature: 0.15,
+          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        const text = data.choices?.[0]?.message?.content;
         if (text) return text;
       } else {
-        lastErrorText = await res.text();
-        console.warn(`Gemini model '${model}' hatası (${res.status}):`, lastErrorText.substring(0, 150));
+        console.warn('Groq error:', await res.text());
       }
     } catch (e) {
-      lastErrorText = e.message;
-      console.warn(`Gemini model '${model}' istek hatası:`, e.message);
+      console.warn('Groq catch:', e.message);
     }
   }
 
-  throw new Error(`Gemini AI servisi yanıt vermedi: ${lastErrorText || 'Tüm model denemeleri başarısız oldu'}`);
+  // 3. Cerebras AI (yalnızca metin için)
+  if (cerebrasKey && !base64Image) {
+    try {
+      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cerebrasKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama3.3-70b',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userText }
+          ],
+          temperature: 0.15,
+          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return text;
+      }
+    } catch (e) {
+      console.warn('Cerebras catch:', e.message);
+    }
+  }
+
+  throw new Error('Yapay zeka servisi bağlantısı kurulamadı. Lütfen Vercel panelinden GEMINI_API_KEY veya GROQ_API_KEY eklediğinizden emin olun.');
 }
 
-// Google Gemini Multimodal AI endpoint
+// Google Gemini / Multimodal AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
-  
   try {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen Vercel panelinden ekleyin.' });
-    }
-
     const systemPrompt = "Sen Fullematematiği Asistanı adında uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver.";
-
-    const parts = [];
-    if (image) {
-      const mimeMatch = image.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
-      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-      const base64Data = image.replace(/^data:[^;]+;base64,/, '');
-      parts.push({ inline_data: { mime_type: mimeType, data: base64Data } });
-    }
-
-    const textPrompt = question && question.trim() ? question : "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?";
-    parts.push({ text: systemPrompt + "\n\nSoru: " + textPrompt });
-
-    const answer = await callGeminiAPI(parts, { temperature: 0.2 }, geminiKey);
+    const userText = question && question.trim() ? question : "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?";
+    const answer = await executeAI({ systemPrompt, userText, base64Image: image, jsonFormat: false });
     res.json({ answer });
   } catch (err) {
     console.error('AI ask error:', err);
@@ -2207,57 +2274,25 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
-// TEST TARA — Fotoğraftaki soruları Gemini Vision ile JSON'a çıkarır
+// TEST TARA — Fotoğraftaki soruları AI ile JSON'a çıkarır
 app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
-  if (!gorsel) {
-    return res.status(400).json({ error: 'Görsel gönderilmedi.' });
-  }
+  if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek.
-Bu fotoğraftaki TÜM soruları tek tek tespit et ve aşağıdaki JSON formatında döndür.
-
-KURALLAR:
-- Fotoğraftaki her soruyu eksiksiz, kelimesi kelimesine al.
-- Matematiksel ifadeleri $...$ arasında LaTeX olarak yaz.
-- Şıkları A) B) C) D) E) formatında ayrı dizi elemanı olarak yaz.
-- EĞER SORU AÇIK UÇLUYSA (şık yoksa, boşluk doldurma, yazılı cevap gerektiriyorsa) siklar alanını BOŞ DİZİ olarak bırak: "siklar": [].
-- Eğer doğru şık işaretliyse dogruSik alanını doldur (örn: "A"), değilse boş bırak "".
-- Görsel içeriyorsa gorselAciklama alanına görseli tam olarak betimle.
-- Sadece aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
-
-{"sorular":[
-  {
-    "no": 1,
-    "metin": "Soru metni buraya",
-    "siklar": ["A) ...", "B) ...", "C) ...", "D) ..."],
-    "dogruSik": "",
-    "gorselAciklama": ""
-  }
-]}`;
+  const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek. Fotoğraftaki TÜM soruları tek tek tespit et ve JSON döndür:
+{"sorular":[{"no":1,"metin":"...","siklar":["A) ..."],"dogruSik":"","gorselAciklama":""}]}`;
 
   try {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
-    }
-
-    const mimeMatch = gorsel.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
-
-    const parts = [
-      { inline_data: { mime_type: mimeType, data: base64Data } },
-      { text: sistemTalimati + "\n\nBu fotoğraftaki tüm soruları JSON formatında çıkar." }
-    ];
-
-    const rawContent = await callGeminiAPI(parts, { temperature: 0.1, response_mime_type: "application/json" }, geminiKey);
+    const rawContent = await executeAI({
+      systemPrompt: sistemTalimati,
+      userText: 'Bu fotoğraftaki tüm soruları JSON formatında çıkar.',
+      base64Image: gorsel,
+      jsonFormat: true
+    });
     const ayristirilmis = JSON.parse(rawContent);
-
     if (!Array.isArray(ayristirilmis.sorular)) {
-      return res.status(502).json({ error: 'Gemini AI beklenen formatta yanıt vermedi.' });
+      return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
-
     res.json(ayristirilmis);
   } catch (err) {
     console.error('test-tara error:', err);
@@ -2265,104 +2300,50 @@ KURALLAR:
   }
 });
 
-// Ders Notu Oluşturucu — Gemini ile ham metni fasiküle dönüştürür
+// Ders Notu Oluşturucu — AI ile ham metni fasiküle dönüştürür
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
-  if (!metin || !metin.trim()) {
-    return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
-  }
+  if (!metin || !metin.trim()) return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini, sanki kendi elinle temize çekmiş gibi düzenli bir fasiküle dönüştürüyorsun.
-
-KURALLAR:
-- İçeriği ASLA kısaltma, özetleme veya SİLME. Tüm konu anlatımı ve tüm sorular eksiksiz, kelimesi kelimesine korunmalı.
-- Matematiksel ifadeleri LaTeX ile $...$ arasında yaz (örn: $x^2+5x+6=0$).
-- Konu başlıklarını kısa, tek satır, açıklayıcı başlıklara dönüştür.
-- Çoktan seçmeli soruları tespit et; şıkları A) B) C) D) E) biçiminde ayrı ayrı yaz. Metinde doğru şıkkı işaretleyen bir ipucu varsa dogruSik alanına yansıt; yoksa dogruSik alanını boş bırak, şık uydurma.
-- Çözümlü örnekleri "ornek" ve "cozum" tipinde AYRI bloklar olarak yaz.
-- Yalnızca aşağıdaki JSON şemasında yanıt ver, başka hiçbir metin ekleme:
-
-{"bloklar":[
-  {"tip":"baslik","metin":"..."},
-  {"tip":"paragraf","metin":"..."},
-  {"tip":"ornek","metin":"Örnek problemin metni..."},
-  {"tip":"cozum","metin":"Örneğin çözüm adımları..."},
-  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A"},
-  {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
-]}`;
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini düzenli bir fasiküle dönüştürüyorsun. İçeriği ASLA kısaltma. Yalnızca JSON döndür:
+{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""}]}`;
 
   try {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
-    }
-
-    const parts = [{ text: sistemTalimati + "\n\nAşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n" + metin }];
-    const rawContent = await callGeminiAPI(parts, { temperature: 0.15, response_mime_type: "application/json" }, geminiKey);
+    const rawContent = await executeAI({
+      systemPrompt: sistemTalimati,
+      userText: 'Aşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n' + metin,
+      jsonFormat: true
+    });
     const ayristirilmis = JSON.parse(rawContent);
-
     if (!Array.isArray(ayristirilmis.bloklar)) {
-      return res.status(502).json({ error: 'Gemini AI beklenen formatta yanıt vermedi.' });
+      return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
-
     res.json(ayristirilmis);
   } catch (err) {
-    console.error('Ders notu AI error:', err);
+    console.error('ders-notu-ai error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Ders Notu Görsel Okuyucu — PDF sayfasının görselini Gemini Vision ile okur
+// Ders Notu Görsel Okuyucu — PDF sayfasının görselini AI ile okur
 app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
-  if (!gorsel) {
-    return res.status(400).json({ error: 'Görsel gönderilmedi.' });
-  }
+  if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana bir ders notu veya soru kağıdı fotoğrafı/görseli gönderiliyor.
-Görseldeki içeriği eksiksiz oku ve aşağıdaki JSON formatında fasikül bloklarına dönüştür.
-
-KURALLAR:
-- Tüm içeriği eksiksiz al; hiçbir şeyi kısaltma veya atlama.
-- Matematiksel ifadeleri $...$ arasında LaTeX olarak yaz (örn: $x^2+5x+6=0$).
-- Konu başlıklarını "baslik" tipine al.
-- Çoktan seçmeli soruları "soru" tipine al; şıkları A) B) C) D) formatında yaz.
-- Çözümlü örnekleri "ornek" + "cozum" tipine al.
-- Tabloları "tablo" tipine al.
-- Düz açıklama metinleri "paragraf" tipine al.
-- Yalnızca aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
-
-{"bloklar":[
-  {"tip":"baslik","metin":"..."},
-  {"tip":"paragraf","metin":"..."},
-  {"tip":"ornek","metin":"Örnek problemin metni..."},
-  {"tip":"cozum","metin":"Örneğin çözüm adımları..."},
-  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":""},
-  {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
-]}`;
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ders notu / soru kağıdı fotoğrafını fasikül bloklarına dönüştür. Yalnızca JSON döndür:
+{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""}]}`;
 
   try {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
-    }
-
-    const mimeMatch = gorsel.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
-    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
-
-    const parts = [
-      { inline_data: { mime_type: mimeType, data: base64Data } },
-      { text: sistemTalimati + "\n\nBu görseldeki ders notu / soru kağıdı içeriğini eksiksiz oku ve belirtilen JSON formatında yanıt ver." }
-    ];
-
-    const rawContent = await callGeminiAPI(parts, { temperature: 0.15, response_mime_type: "application/json" }, geminiKey);
+    const rawContent = await executeAI({
+      systemPrompt: sistemTalimati,
+      userText: 'Bu görseldeki içeriği okuyup JSON formatında çıkar.',
+      base64Image: gorsel,
+      jsonFormat: true
+    });
     const ayristirilmis = JSON.parse(rawContent);
-
     if (!Array.isArray(ayristirilmis.bloklar)) {
-      return res.status(502).json({ error: 'Gemini AI beklenen formatta yanıt vermedi.' });
+      return res.status(502).json({ error: 'Yapay zeka beklenen formatta yanıt vermedi.' });
     }
-
     res.json(ayristirilmis);
   } catch (err) {
     console.error('ders-notu-gorsel error:', err);
