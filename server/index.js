@@ -2167,9 +2167,69 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
     ''
   ).replace(/['"\s]/g, '').trim();
 
+  const openrouterKey = (
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPENROUTER_KEY ||
+    ''
+  ).replace(/['"\s]/g, '').trim();
+
   const errorLogs = [];
 
-  // 1. Cerebras AI (Öncelikli — Çok Hızlı ve Yüksek Limitli)
+  // 1. OpenRouter AI (Ücretsiz Modeller: Gemini 2.0 Flash Free / Llama 3.3 70B Free)
+  if (openrouterKey) {
+    const openrouterModels = base64Image
+      ? ['google/gemini-2.0-flash-exp:free', 'meta-llama/llama-3.2-11b-vision-instruct:free']
+      : ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'deepseek/deepseek-r1:free'];
+
+    for (const model of openrouterModels) {
+      try {
+        const messages = [{ role: 'system', content: systemPrompt }];
+
+        if (base64Image) {
+          messages.push({
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: base64Image } },
+              { type: 'text', text: userText || 'İçeriği çözümle.' }
+            ]
+          });
+        } else {
+          messages.push({ role: 'user', content: userText });
+        }
+
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openrouterKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://fullematematik.com',
+            'X-Title': 'Fullematematik AI'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.15,
+            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`OpenRouter ${model} error:`, errText.substring(0, 150));
+          errorLogs.push(`OpenRouter ${model} (${res.status})`);
+        }
+      } catch (e) {
+        console.warn(`OpenRouter catch:`, e.message);
+        errorLogs.push(`OpenRouter: ${e.message}`);
+      }
+    }
+  }
+
+  // 2. Cerebras AI (Öncelikli — Çok Hızlı ve Yüksek Limitli)
   if (cerebrasKey) {
     try {
       const model = base64Image ? 'gemma-4-31b' : 'gpt-oss-120b';
