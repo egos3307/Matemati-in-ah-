@@ -290,9 +290,9 @@ const Home = () => {
           </p>
         </section>
 
-        {/* Features Section with Distinct Video Background */}
-        <section className="relative overflow-hidden bg-slate-900 py-20 lg:py-28 my-8 border-y border-slate-800" id="ozellikler">
-          {/* Background Video */}
+        {/* Features Section with Warm Orange Video Background */}
+        <section className="relative overflow-hidden bg-slate-950 py-20 lg:py-28 my-8 border-y border-orange-500/20" id="ozellikler">
+          {/* Background Video with Low-Opacity Orange Overlay */}
           <div className="absolute inset-0 z-0">
             <video
               autoPlay
@@ -306,53 +306,53 @@ const Home = () => {
               <source src="/math-background.mp4" type="video/mp4" />
               <source src="/math-background.mov" type="video/quicktime" />
             </video>
-            {/* Gentle Overlay to boost contrast and make video clearly visible */}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-900/50 to-slate-950/70 backdrop-blur-[0.5px]" />
+            {/* Low-Opacity Orange/Amber Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-orange-950/75 via-amber-900/45 to-slate-950/80 backdrop-blur-[0.5px]" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
             <div className="mb-16 flex flex-col items-center text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 border border-primary/40 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-orange-400 backdrop-blur-md mb-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 border border-orange-400/30 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-orange-300 backdrop-blur-md mb-4 shadow-sm">
                 ✨ Fullematematiği Farkı
               </span>
               <h2 className="mb-4 text-3xl font-black tracking-tight text-white md:text-5xl drop-shadow-lg">
                 Neden Fullematematiği?
               </h2>
-              <p className="max-w-2xl text-base md:text-lg text-slate-200 font-medium leading-relaxed drop-shadow">
+              <p className="max-w-2xl text-base md:text-lg text-amber-100/90 font-medium leading-relaxed drop-shadow">
                 Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
               </p>
             </div>
 
             <div className="grid gap-8 md:grid-cols-3">
               {/* Card 1 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-700/60 bg-slate-900/85 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/95 hover:shadow-primary/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">video_camera_front</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Canlı Dersler</h3>
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
                   Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.
                 </p>
               </div>
 
               {/* Card 2 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-700/60 bg-slate-900/85 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/95 hover:shadow-primary/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">person_search</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Birebir Takip</h3>
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
                   Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.
                 </p>
               </div>
 
               {/* Card 3 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-700/60 bg-slate-900/85 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/95 hover:shadow-primary/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Soru Çözüm Videoları</h3>
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
                   Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.
                 </p>
               </div>
