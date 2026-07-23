@@ -1478,14 +1478,49 @@ async function pdfdenMetinAl(dosya) {
 ═══════════════════════════════════════════════════════════ */
 async function groqIleEtiketle(hamMetin) {
   const token = localStorage.getItem('token');
-  const yanit = await fetch('/api/teacher/ders-notu-ai', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ metin: hamMetin })
-  });
-  const veri = await yanit.json();
-  if (!yanit.ok) throw new Error(veri.error || 'Yapay zeka servisi hata döndürdü.');
-  return Array.isArray(veri.bloklar) ? veri.bloklar : [];
+  if (!hamMetin || !hamMetin.trim()) return [];
+
+  // Vercel 10s zamanaşımı ve AI token sınırlarına takılmamak için metni ~2000 karakterlik parçalara böl
+  const MAX_PARCA_BOYUTU = 2000;
+  let metinParcalari = [];
+
+  if (hamMetin.length <= MAX_PARCA_BOYUTU) {
+    metinParcalari.push(hamMetin);
+  } else {
+    const satirlar = hamMetin.split('\n');
+    let mevcutParca = '';
+    for (const satir of satirlar) {
+      if ((mevcutParca + '\n' + satir).length > MAX_PARCA_BOYUTU && mevcutParca.trim().length > 0) {
+        metinParcalari.push(mevcutParca);
+        mevcutParca = satir;
+      } else {
+        mevcutParca += (mevcutParca ? '\n' : '') + satir;
+      }
+    }
+    if (mevcutParca.trim().length > 0) metinParcalari.push(mevcutParca);
+  }
+
+  let tumBloklar = [];
+  const toplamParca = metinParcalari.length;
+
+  for (let i = 0; i < toplamParca; i++) {
+    const parcaMetin = metinParcalari[i];
+    if (toplamParca > 1) {
+      aiDurumYaz(`⚡ Yapay Zeka İşliyor: Bölüm ${i + 1}/${toplamParca}…`, 30 + Math.round(((i + 1) / toplamParca) * 55));
+      document.getElementById('ai-parca-info').textContent = `İşleniyor: Bölüm ${i + 1}/${toplamParca} (${parcaMetin.length} karakter)`;
+    }
+
+    const yanit = await fetch('/api/teacher/ders-notu-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ metin: parcaMetin })
+    });
+    const veri = await yanit.json();
+    if (!yanit.ok) throw new Error(veri.error || 'Yapay zeka servisi hata döndürdü.');
+    if (Array.isArray(veri.bloklar)) tumBloklar.push(...veri.bloklar);
+  }
+
+  return tumBloklar;
 }
 
 function bloklarHTML(bloklar) {
