@@ -2134,7 +2134,49 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
   }
 });
 
-// Google Gemini 1.5 Flash Multimodal AI endpoint
+// Gemini API Çağrı Yardımcısı (Otomatik Model Fallback ile)
+async function callGeminiAPI(parts, generationConfig = {}, apiKey) {
+  const models = [
+    'gemini-1.5-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-001',
+    'gemini-1.5-flash-002',
+    'gemini-2.5-flash',
+    'gemini-1.5-pro'
+  ];
+
+  let lastErrorText = '';
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      } else {
+        lastErrorText = await res.text();
+        console.warn(`Gemini model '${model}' hatası (${res.status}):`, lastErrorText.substring(0, 150));
+      }
+    } catch (e) {
+      lastErrorText = e.message;
+      console.warn(`Gemini model '${model}' istek hatası:`, e.message);
+    }
+  }
+
+  throw new Error(`Gemini AI servisi yanıt vermedi: ${lastErrorText || 'Tüm model denemeleri başarısız oldu'}`);
+}
+
+// Google Gemini Multimodal AI endpoint
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
   
@@ -2157,23 +2199,7 @@ app.post('/api/ai/ask', auth, async (req, res) => {
     const textPrompt = question && question.trim() ? question : "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?";
     parts.push({ text: systemPrompt + "\n\nSoru: " + textPrompt });
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { temperature: 0.2 }
-      })
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('Gemini ask error:', errText);
-      return res.status(500).json({ error: 'Gemini AI servisi yanıt vermedi: ' + errText });
-    }
-
-    const data = await geminiRes.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Cevap üretilemedi.';
+    const answer = await callGeminiAPI(parts, { temperature: 0.2 }, geminiKey);
     res.json({ answer });
   } catch (err) {
     console.error('AI ask error:', err);
@@ -2197,7 +2223,7 @@ KURALLAR:
 - Şıkları A) B) C) D) E) formatında ayrı dizi elemanı olarak yaz.
 - EĞER SORU AÇIK UÇLUYSA (şık yoksa, boşluk doldurma, yazılı cevap gerektiriyorsa) siklar alanını BOŞ DİZİ olarak bırak: "siklar": [].
 - Eğer doğru şık işaretliyse dogruSik alanını doldur (örn: "A"), değilse boş bırak "".
-- Görsel içeriyorsa (grafik, şekil, sayı doğrusu, koordinat ekseni, tablo vs.) gorselAciklama alanına görseli tam olarak betimle: eksenlerin aralığı, işaretli noktalar, değerler, şeklin özellikleri.
+- Görsel içeriyorsa gorselAciklama alanına görseli tam olarak betimle.
 - Sadece aşağıdaki JSON şemasında yanıt ver, başka hiçbir açıklama ekleme:
 
 {"sorular":[
@@ -2220,31 +2246,12 @@ KURALLAR:
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
     const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: mimeType, data: base64Data } },
-            { text: sistemTalimati + "\n\nBu fotoğraftaki tüm soruları JSON formatında çıkar." }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          response_mime_type: "application/json"
-        }
-      })
-    });
+    const parts = [
+      { inline_data: { mime_type: mimeType, data: base64Data } },
+      { text: sistemTalimati + "\n\nBu fotoğraftaki tüm soruları JSON formatında çıkar." }
+    ];
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('Gemini test-tara error:', errText);
-      return res.status(500).json({ error: 'Gemini AI servisi hatası: ' + errText });
-    }
-
-    const data = await geminiRes.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const rawContent = await callGeminiAPI(parts, { temperature: 0.1, response_mime_type: "application/json" }, geminiKey);
     const ayristirilmis = JSON.parse(rawContent);
 
     if (!Array.isArray(ayristirilmis.sorular)) {
@@ -2258,7 +2265,7 @@ KURALLAR:
   }
 });
 
-// Ders Notu Oluşturucu — Gemini 1.5 Flash ile ham metni fasiküle dönüştürür
+// Ders Notu Oluşturucu — Gemini ile ham metni fasiküle dönüştürür
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
   if (!metin || !metin.trim()) {
@@ -2290,28 +2297,8 @@ KURALLAR:
       return res.status(500).json({ error: 'GEMINI_API_KEY Vercel ortam değişkenlerine eklenmemiş. Lütfen ekleyin.' });
     }
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: sistemTalimati + "\n\nAşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n" + metin }]
-        }],
-        generationConfig: {
-          temperature: 0.15,
-          response_mime_type: "application/json"
-        }
-      })
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('Gemini ders-notu-ai error:', errText);
-      return res.status(500).json({ error: 'Gemini AI servisi hatası: ' + errText });
-    }
-
-    const data = await geminiRes.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const parts = [{ text: sistemTalimati + "\n\nAşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n" + metin }];
+    const rawContent = await callGeminiAPI(parts, { temperature: 0.15, response_mime_type: "application/json" }, geminiKey);
     const ayristirilmis = JSON.parse(rawContent);
 
     if (!Array.isArray(ayristirilmis.bloklar)) {
@@ -2325,7 +2312,7 @@ KURALLAR:
   }
 });
 
-// Ders Notu Görsel Okuyucu — PDF sayfasının görselini Gemini 1.5 Flash Vision ile okur
+// Ders Notu Görsel Okuyucu — PDF sayfasının görselini Gemini Vision ile okur
 app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
   if (!gorsel) {
@@ -2364,31 +2351,12 @@ KURALLAR:
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
     const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: mimeType, data: base64Data } },
-            { text: sistemTalimati + "\n\nBu görseldeki ders notu / soru kağıdı içeriğini eksiksiz oku ve belirtilen JSON formatında yanıt ver." }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.15,
-          response_mime_type: "application/json"
-        }
-      })
-    });
+    const parts = [
+      { inline_data: { mime_type: mimeType, data: base64Data } },
+      { text: sistemTalimati + "\n\nBu görseldeki ders notu / soru kağıdı içeriğini eksiksiz oku ve belirtilen JSON formatında yanıt ver." }
+    ];
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('Gemini ders-notu-gorsel error:', errText);
-      return res.status(500).json({ error: 'Gemini AI hatası: ' + errText });
-    }
-
-    const data = await geminiRes.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const rawContent = await callGeminiAPI(parts, { temperature: 0.15, response_mime_type: "application/json" }, geminiKey);
     const ayristirilmis = JSON.parse(rawContent);
 
     if (!Array.isArray(ayristirilmis.bloklar)) {
