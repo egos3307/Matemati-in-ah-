@@ -55,6 +55,8 @@ const handleImageUpload = (file, callback) => {
   reader.readAsDataURL(file);
 };
 
+const compressImage = handleImageUpload;
+
 const TeacherDashboard = () => {
   const [students, setStudents] = useState([]);
   const [newStudent, setNewStudent] = useState({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
@@ -2082,6 +2084,7 @@ const TeacherDashboard = () => {
                               if (file) {
                                 compressImage(file, (base64) => setAssignImage(base64));
                               }
+                              e.target.value = '';
                             }}
                           />
                         </label>
