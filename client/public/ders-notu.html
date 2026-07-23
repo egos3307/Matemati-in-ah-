@@ -666,7 +666,7 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
       </div>
 
       <div class="model-info">
-        ☁️ Model: <strong>Groq Llama 3.3 70B (Cloud)</strong>
+        ☁️ Model: <strong>Gemini 1.5 Flash Vision / Groq AI (Cloud)</strong>
       </div>
 
       <button class="btn btn-ai" id="btn-baslat" onclick="fasikuluBaslat()">
@@ -1599,16 +1599,16 @@ window.fasikuluBaslat = async function() {
     if (secilenPdfDosyasi) {
       // Önce metni çıkar
       const hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
-      toast(`PDF okundu: ${hamMetin.length} karakter`, hamMetin.length >= 150 ? 'ok' : 'inf');
+      toast(`PDF okundu: ${hamMetin.length} karakter`, hamMetin.length >= 200 ? 'ok' : 'inf');
 
-      if (hamMetin.length < 150) {
-        // Metin yetersiz → Vision AI ile tara
-        toast('⚡ Metin az çıktı, Vision AI devreye giriyor…', 'inf');
-        aiDurumYaz('Vision AI ile PDF sayfaları taranıyor…', 15);
+      if (hamMetin.length < 200) {
+        // Metin 200 karakterden az (taranmış PDF / az metin) → Gemini / Vision AI doğrudan devreye girer
+        toast('⚡ Metin < 200 karakter, Gemini Vision AI doğrudan tarıyor…', 'inf');
+        aiDurumYaz('Gemini Vision AI ile PDF sayfaları taranıyor…', 15);
         bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
       } else {
         // Normal metin yolu
-        aiDurumYaz('Groq AI ile fasikül hazırlanıyor…', 30);
+        aiDurumYaz('Yapay Zeka (Gemini/Groq) ile fasikül hazırlanıyor…', 30);
         const parcaSayisi = Math.ceil(hamMetin.length / 6000);
         if (parcaSayisi > 1) {
           document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter — ${parcaSayisi} parçaya bölünüyor`;

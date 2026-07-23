@@ -2430,13 +2430,7 @@ app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req
     return res.status(400).json({ error: 'Görsel gönderilmedi.' });
   }
 
-  try {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'GROQ_API_KEY tanımlanmamış.' });
-    }
-
-    const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana bir ders notu veya soru kağıdı fotoğrafı/görseli gönderiliyor.
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana bir ders notu veya soru kağıdı fotoğrafı/görseli gönderiliyor.
 Görseldeki içeriği eksiksiz oku ve aşağıdaki JSON formatında fasikül bloklarına dönüştür.
 
 KURALLAR:
@@ -2457,6 +2451,54 @@ KURALLAR:
   {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":""},
   {"tip":"tablo","basliklar":["Sütun1","Sütun2"],"satirlar":[["...","..."]]}
 ]}`;
+
+  try {
+    // 1. Önce Gemini 1.5 Flash Vision API ile tara (varsa)
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const mimeMatch = gorsel.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: mimeType, data: base64Data } },
+                { text: sistemTalimati + "\n\nBu görseldeki ders notu / soru kağıdı içeriğini eksiksiz oku ve belirtilen JSON formatında yanıt ver." }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.15,
+              response_mime_type: "application/json"
+            }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          const ayristirilmis = JSON.parse(rawContent);
+          if (Array.isArray(ayristirilmis.bloklar)) {
+            console.log('Gemini 1.5 Flash Vision AI ile görsel/PDF başarıyla taranarak ayrıştırıldı.');
+            return res.json(ayristirilmis);
+          }
+        } else {
+          console.warn('Gemini Flash API hatası, Groq ile devam ediliyor:', await geminiRes.text());
+        }
+      } catch (e) {
+        console.warn('Gemini Flash catch hatası, Groq ile devam ediliyor:', e.message);
+      }
+    }
+
+    // 2. Gemini yoksa veya hata verdiyse Groq Vision ile tara
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY veya GROQ_API_KEY tanımlanmamış.' });
+    }
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
