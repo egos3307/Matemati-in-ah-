@@ -290,7 +290,7 @@ const Home = () => {
           </p>
         </section>
 
-        {/* Features Section with Warm Orange Video Background */}
+        {/* Features Section with Warm Orange Video Background & Frosted Glass Cards */}
         <section className="relative overflow-hidden bg-slate-950 py-20 lg:py-28 my-8 border-y border-orange-500/20" id="ozellikler">
           {/* Background Video with Low-Opacity Orange Overlay */}
           <div className="absolute inset-0 z-0">
@@ -307,7 +307,7 @@ const Home = () => {
               <source src="/math-background.mov" type="video/quicktime" />
             </video>
             {/* Low-Opacity Orange/Amber Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-orange-950/75 via-amber-900/45 to-slate-950/80 backdrop-blur-[0.5px]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-orange-950/70 via-amber-900/40 to-slate-950/80 backdrop-blur-[0.5px]" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
@@ -325,34 +325,34 @@ const Home = () => {
 
             <div className="grid gap-8 md:grid-cols-3">
               {/* Card 1 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">video_camera_front</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Canlı Dersler</h3>
-                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
+                <p className="text-white/90 text-sm leading-relaxed font-medium">
                   Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.
                 </p>
               </div>
 
               {/* Card 2 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">person_search</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Birebir Takip</h3>
-                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
+                <p className="text-white/90 text-sm leading-relaxed font-medium">
                   Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.
                 </p>
               </div>
 
               {/* Card 3 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-orange-500/20 bg-slate-950/75 p-8 backdrop-blur-xl shadow-2xl shadow-orange-950/40 transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/60 hover:bg-slate-950/90 hover:shadow-orange-500/20">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:bg-white/20 hover:shadow-orange-500/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500/25 text-amber-300 border border-orange-400/30 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
                 </div>
                 <h3 className="text-xl font-black text-white">Soru Çözüm Videoları</h3>
-                <p className="text-amber-100/80 text-sm leading-relaxed font-medium">
+                <p className="text-white/90 text-sm leading-relaxed font-medium">
                   Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.
                 </p>
               </div>

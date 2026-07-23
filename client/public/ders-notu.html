@@ -631,42 +631,32 @@
     <!-- ════ DERS NOTU PANELI ════ -->
     <div class="panel-ders" id="panel-ders">
       <div class="input-section-title">
-        <span>Seçenek 1: PDF Dosyası Yükleyin</span>
-        <span class="badge">PDF</span>
+        <span>Girdi Notu / Metni Yapıştır</span>
+        <span class="badge-pdf">PDF OYUMU</span>
       </div>
 
       <div class="pdf-drop-zone" id="pdf-drop-zone"
            ondragover="event.preventDefault();this.classList.add('dragover')"
            ondragleave="this.classList.remove('dragover')"
-           ondrop="pdfDustu(event)">
-        <input type="file" id="pdf-yukle" accept=".pdf" onchange="pdfSecildi(event)" />
+           ondrop="pdfDustu(event)"
+           onclick="document.getElementById('pdf-file-input').click()">
+        <input type="file" id="pdf-file-input" accept="application/pdf" onchange="pdfSecildi(event)" />
         <div class="drop-icon">📄</div>
-        <div class="drop-text">PDF'i sürükle veya seç</div>
-        <div class="drop-sub">Formüller ve tablo korunur</div>
+        <div class="drop-text" id="pdf-drop-text">PDF Dosyası Sürükleyin veya Seçin</div>
+        <div class="drop-sub" id="pdf-drop-sub">PDF metinleri otomatik ayıklanır</div>
       </div>
       <div id="pdf-dosya-adi"></div>
 
-      <div class="divider"></div>
-
-      <div class="input-section-title">
-        <span>Seçenek 2: Düz Metin Yapıştırın</span>
-        <span class="badge" style="background:#3b82f6;">TXT</span>
-      </div>
-      <textarea id="hoca-metin-girdisi"
-        placeholder="Ders notlarınızı veya sorularınızı buraya yapıştırın...
-
-Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
-
-      <div class="divider"></div>
+      <textarea id="ham-input" placeholder="Ders notunu, soru metinlerini veya PDF'ten kopyaladığınız içeriği buraya yapıştırın..."></textarea>
 
       <div class="ai-panel" id="ai-panel">
-        <div id="ai-durum-yazisi">Başlatılıyor…</div>
-        <div class="progress-bar-wrap"><div id="ai-progress-bar"></div></div>
+        <div id="ai-durum">Hazırlanıyor…</div>
+        <div class="progress-bar-wrap"><div id="ai-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,#8b5cf6,#a78bfa);background-size:200% 100%;animation:shimmer 1.5s linear infinite;transition:width .4s ease;width:0%;"></div></div>
         <div class="ai-parca-info" id="ai-parca-info"></div>
       </div>
 
       <div class="model-info">
-        ☁️ Model: <strong>Gemini 1.5 Flash Vision / Groq AI (Cloud)</strong>
+        ⚡ Model: <strong>Google Gemini 1.5 Flash Vision AI</strong>
       </div>
 
       <button class="btn btn-ai" id="btn-baslat" onclick="fasikuluBaslat()">
@@ -724,7 +714,7 @@ Formüller $x^2 + 5x + 6 = 0$ şeklinde LaTeX desteklidir."></textarea>
       </div>
 
       <div class="model-info">
-        🔍 Motor: <strong>Groq Vision AI (Llama 4 Scout)</strong>
+        ⚡ Motor: <strong>Google Gemini 1.5 Flash Vision AI</strong>
       </div>
 
       <!-- Buton: Tara -->
