@@ -291,35 +291,72 @@ const Home = () => {
         </section>
 
 
-        {/* Features Section */}
-        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="ozellikler">
-          <div className="mb-16 flex flex-col items-center text-center">
-            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Neden Fullematematiği?</h2>
-            <p className="max-w-2xl text-lg text-slate-600">
-              Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
-            </p>
+        {/* Features Section with Video Background */}
+        <section className="relative overflow-hidden bg-white py-24 lg:py-32 my-12" id="ozellikler">
+          {/* Background Video with Fallback */}
+          <div className="absolute inset-0 z-0">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="h-full w-full object-cover opacity-85"
+            >
+              <source src="/math-bg.mp4" type="video/mp4" />
+              <source src="/math-background.mp4" type="video/mp4" />
+              <source src="/math-background.mov" type="video/quicktime" />
+            </video>
+            {/* Dark Overlay for Video Effect & High Readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/80 to-slate-950/90 backdrop-blur-[1px]" />
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="flex flex-col gap-4 rounded-xl border border-primary/10 bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl">
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                <span className="material-symbols-outlined text-3xl">video_camera_front</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Canlı Dersler</h3>
-              <p className="text-slate-600">Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.</p>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
+            <div className="mb-16 flex flex-col items-center text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 border border-primary/30 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-orange-400 backdrop-blur-md mb-4">
+                ✨ Fullematematiği Farkı
+              </span>
+              <h2 className="mb-4 text-3xl font-black tracking-tight text-white md:text-5xl drop-shadow-md">
+                Neden Fullematematiği?
+              </h2>
+              <p className="max-w-2xl text-base md:text-lg text-slate-300 font-medium leading-relaxed">
+                Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
+              </p>
             </div>
-            <div className="flex flex-col gap-4 rounded-xl border border-primary/10 bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl">
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                <span className="material-symbols-outlined text-3xl">person_search</span>
+
+            <div className="grid gap-8 md:grid-cols-3">
+              {/* Card 1 */}
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/10 bg-slate-900/70 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/90 hover:shadow-primary/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-3xl">video_camera_front</span>
+                </div>
+                <h3 className="text-xl font-black text-white">Canlı Dersler</h3>
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                  Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Birebir Takip</h3>
-              <p className="text-slate-600">Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.</p>
-            </div>
-            <div className="flex flex-col gap-4 rounded-xl border border-primary/10 bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl">
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                <span className="material-symbols-outlined text-3xl">play_circle</span>
+
+              {/* Card 2 */}
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/10 bg-slate-900/70 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/90 hover:shadow-primary/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-3xl">person_search</span>
+                </div>
+                <h3 className="text-xl font-black text-white">Birebir Takip</h3>
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                  Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Soru Çözüm Videoları</h3>
-              <p className="text-slate-600">Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.</p>
+
+              {/* Card 3 */}
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-white/10 bg-slate-900/70 p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-slate-900/90 hover:shadow-primary/20">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 text-primary border border-primary/30 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-3xl">play_circle</span>
+                </div>
+                <h3 className="text-xl font-black text-white">Soru Çözüm Videoları</h3>
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                  Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.
+                </p>
+              </div>
             </div>
           </div>
         </section>
