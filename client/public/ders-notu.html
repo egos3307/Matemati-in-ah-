@@ -652,7 +652,7 @@
         <input type="file" id="pdf-file-input" accept="application/pdf,.pdf" onchange="pdfSecildi(event)" style="display:none;" />
         <div class="drop-icon" id="pdf-icon">📄</div>
         <div class="drop-text" id="pdf-drop-text">PDF Yüklemek İçin Tıklayın veya Dosyayı Sürükleyin</div>
-        <div class="drop-sub" id="pdf-drop-sub">Metin veya taranmış görselli tüm PDF'ler Google Gemini Vision AI ile okunur</div>
+        <div class="drop-sub" id="pdf-drop-sub">Metin veya taranmış görselli tüm PDF'ler Yapay Zeka (Cerebras / Groq / Gemini Vision AI) ile okunur</div>
       </div>
       
       <div id="pdf-bilgi-kutusu" style="display:none;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10b981;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700;margin-bottom:12px;">
@@ -672,7 +672,7 @@
       </div>
 
       <div class="model-info">
-        ⚡ Model: <strong>Google Gemini 1.5 Flash Vision AI</strong>
+        ⚡ Model: <strong>Çoklu Yapay Zeka Motoru (Cerebras / Groq / Gemini)</strong>
       </div>
 
       <button class="btn btn-ai" id="btn-baslat" onclick="fasikuluBaslat()">
@@ -1577,7 +1577,7 @@ async function pdfGorselIleAiTara(dosya) {
   for (let s = 1; s <= toplamSayfa; s++) {
     if (s > 1) await new Promise(r => setTimeout(r, 1200));
     aiDurumYaz(`⚡ Yapay Zeka PDF'i Doğrudan Okuyor: Sayfa ${s}/${toplamSayfa}…`, 20 + Math.round((s / toplamSayfa) * 65));
-    document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Gemini Vision AI doğrudan tarıyor`;
+    document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Yapay Zeka Vision AI doğrudan tarıyor`;
 
     const gorsel = await pdfSayfasiniGorselYap(pdfDoc, s);
 
@@ -1608,9 +1608,9 @@ window.fasikuluBaslat = async function() {
     let bloklar;
 
     if (secilenPdfDosyasi) {
-      // PDF doğrudan Yapay Zeka (Gemini Vision AI) tarafından taranıp okunur
+      // PDF doğrudan Yapay Zeka (Vision AI) tarafından taranıp okunur
       toast('⚡ PDF sayfaları doğrudan Yapay Zeka (Vision AI) ile taranıyor…', 'inf');
-      aiDurumYaz('⚡ Yapay Zeka (Gemini Vision AI) PDF sayfalarını doğrudan okuyor…', 15);
+      aiDurumYaz('⚡ Yapay Zeka (Vision AI) PDF sayfalarını doğrudan okuyor…', 15);
       bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
     } else {
       const inputEl = document.getElementById('hoca-metin-girdisi');
@@ -1622,7 +1622,7 @@ window.fasikuluBaslat = async function() {
         return;
       }
       aiDurumYaz('Metin alındı…', 10);
-      aiDurumYaz('Yapay Zeka (Gemini AI) ile fasikül hazırlanıyor…', 30);
+      aiDurumYaz('Yapay Zeka (AI Engine) ile fasikül hazırlanıyor…', 30);
       document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
       bloklar = await geminiIleEtiketle(hamMetin);
     }

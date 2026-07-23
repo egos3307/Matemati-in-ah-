@@ -2169,57 +2169,54 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
 
   const errorLogs = [];
 
-  // 1. Google Gemini (2.0 Flash -> 2.0 Flash Lite -> 1.5 Flash Latest -> 1.5 Pro)
-  if (geminiKey) {
-    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
-    const parts = [];
+  // 1. Cerebras AI (Öncelikli — Çok Hızlı ve Yüksek Limitli)
+  if (cerebrasKey) {
+    try {
+      const model = base64Image ? 'gemma-4-31b' : 'gpt-oss-120b';
+      const messages = [{ role: 'system', content: systemPrompt }];
 
-    if (base64Image) {
-      const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
-      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-      const data = base64Image.replace(/^data:[^;]+;base64,/, '');
-      parts.push({ inline_data: { mime_type: mimeType, data } });
-    }
-
-    parts.push({ text: `${systemPrompt}\n\n${userText || ''}` });
-
-    for (const model of models) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: {
-              temperature: 0.15,
-              ...(jsonFormat ? { response_mime_type: 'application/json' } : {})
-            }
-          })
+      if (base64Image) {
+        messages.push({
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: base64Image } },
+            { type: 'text', text: userText || 'İçeriği çözümle.' }
+          ]
         });
-
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return text;
-        } else {
-          const errText = await res.text();
-          console.warn(`Gemini ${model} hatası (${res.status}):`, errText.substring(0, 150));
-          if (res.status === 429) {
-            errorLogs.push(`Gemini ${model} (429 Kota/Hız Limiti Aşıldı)`);
-            // Rate limit durumunda modeller arası 1 saniye bekle
-            await new Promise(r => setTimeout(r, 1000));
-          } else {
-            errorLogs.push(`Gemini ${model} (${res.status})`);
-          }
-        }
-      } catch (e) {
-        console.warn(`Gemini ${model} catch:`, e.message);
-        errorLogs.push(`Gemini ${model}: ${e.message}`);
+      } else {
+        messages.push({ role: 'user', content: userText });
       }
+
+      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cerebrasKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.15,
+          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return text;
+      } else {
+        const errText = await res.text();
+        console.warn(`Cerebras ${model} error:`, errText.substring(0, 150));
+        errorLogs.push(`Cerebras ${model} (${res.status})`);
+      }
+    } catch (e) {
+      console.warn('Cerebras catch:', e.message);
+      errorLogs.push(`Cerebras: ${e.message}`);
     }
   }
 
-  // 2. Groq AI
+  // 2. Groq AI (Yüksek Limitli)
   if (groqKey) {
     const groqModels = base64Image
       ? ['llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-preview']
@@ -2271,55 +2268,56 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
     }
   }
 
-  // 3. Cerebras AI (gemma-4-31b for vision, gpt-oss-120b for text)
-  if (cerebrasKey) {
-    try {
-      const model = base64Image ? 'gemma-4-31b' : 'gpt-oss-120b';
-      const messages = [{ role: 'system', content: systemPrompt }];
+  // 3. Google Gemini (2.0 Flash -> 2.0 Flash Lite -> 1.5 Flash Latest -> 1.5 Pro)
+  if (geminiKey) {
+    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
+    const parts = [];
 
-      if (base64Image) {
-        messages.push({
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: base64Image } },
-            { type: 'text', text: userText || 'İçeriği çözümle.' }
-          ]
+    if (base64Image) {
+      const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      const data = base64Image.replace(/^data:[^;]+;base64,/, '');
+      parts.push({ inline_data: { mime_type: mimeType, data } });
+    }
+
+    parts.push({ text: `${systemPrompt}\n\n${userText || ''}` });
+
+    for (const model of models) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: 0.15,
+              ...(jsonFormat ? { response_mime_type: 'application/json' } : {})
+            }
+          })
         });
-      } else {
-        messages.push({ role: 'user', content: userText });
-      }
 
-      const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cerebrasKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.15,
-          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content;
-        if (text) return text;
-      } else {
-        const errText = await res.text();
-        console.warn(`Cerebras ${model} error:`, errText.substring(0, 150));
-        errorLogs.push(`Cerebras ${model} (${res.status})`);
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`Gemini ${model} hatası (${res.status}):`, errText.substring(0, 150));
+          if (res.status === 429) {
+            errorLogs.push(`Gemini ${model} (429 Kota Aşıldı)`);
+          } else {
+            errorLogs.push(`Gemini ${model} (${res.status})`);
+          }
+        }
+      } catch (e) {
+        console.warn(`Gemini ${model} catch:`, e.message);
+        errorLogs.push(`Gemini ${model}: ${e.message}`);
       }
-    } catch (e) {
-      console.warn('Cerebras catch:', e.message);
-      errorLogs.push(`Cerebras: ${e.message}`);
     }
   }
 
   if (!geminiKey && !groqKey && !cerebrasKey) {
-    throw new Error('Vercel ortam değişkenlerinde (Environment Variables) GEMINI_API_KEY veya GROQ_API_KEY bulunamadı. Lütfen Vercel panelinden anahtarı ekleyip projenizi "Redeploy" yapın.');
+    throw new Error('Vercel ortam değişkenlerinde (Environment Variables) CEREBRAS_API_KEY, GROQ_API_KEY veya GEMINI_API_KEY bulunamadı. Lütfen anahtarı ekleyip projenizi "Redeploy" yapın.');
   }
 
   throw new Error(`Yapay zeka servisinden yanıt alınamadı. Hata detayı: ${errorLogs.join(' | ')}`);
