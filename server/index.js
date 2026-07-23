@@ -2177,7 +2177,7 @@ app.post('/api/ai/ask', auth, async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: imageData ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile',
         messages: messages,
         temperature: 0.2
       })
@@ -2203,20 +2203,14 @@ app.post('/api/ai/ask', auth, async (req, res) => {
   }
 });
 
-// TEST TARA — Fotoğraftaki soruları Groq Vision ile JSON'a çıkarır
+// TEST TARA — Fotoğraftaki soruları Groq / Gemini Vision ile JSON'a çıkarır
 app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body; // base64 data URL
   if (!gorsel) {
     return res.status(400).json({ error: 'Görsel gönderilmedi.' });
   }
 
-  try {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'GROQ_API_KEY tanımlanmamış.' });
-    }
-
-    const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek.
+  const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek.
 Bu fotoğraftaki TÜM soruları tek tek tespit et ve aşağıdaki JSON formatında döndür.
 
 KURALLAR:
@@ -2245,6 +2239,51 @@ KURALLAR:
   }
 ]}`;
 
+  try {
+    // 1. Gemini Vision dene (varsa)
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const mimeMatch = gorsel.match(/^data:(image\/[a-zA-Z]+|application\/pdf);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const base64Data = gorsel.replace(/^data:[^;]+;base64,/, '');
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: mimeType, data: base64Data } },
+                { text: sistemTalimati + "\n\nBu fotoğraftaki soruları JSON formatında çıkar." }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              response_mime_type: "application/json"
+            }
+          })
+        });
+
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          const ayristirilmis = JSON.parse(rawContent);
+          if (Array.isArray(ayristirilmis.sorular)) {
+            return res.json(ayristirilmis);
+          }
+        }
+      } catch (e) {
+        console.warn('Gemini test-tara catch hatası:', e.message);
+      }
+    }
+
+    // 2. Groq Vision
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY veya GROQ_API_KEY tanımlanmamış.' });
+    }
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -2252,7 +2291,7 @@ KURALLAR:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.2-11b-vision-preview',
         messages: [
           { role: 'system', content: sistemTalimati },
           {
@@ -2367,7 +2406,7 @@ KURALLAR:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: sistemTalimati },
             { role: 'user', content: parca }
@@ -2507,7 +2546,7 @@ KURALLAR:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'llama-3.2-11b-vision-preview',
         messages: [
           { role: 'system', content: sistemTalimati },
           {
