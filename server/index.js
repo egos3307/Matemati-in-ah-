@@ -2279,24 +2279,13 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
   // 2. Groq AI (Yüksek Limitli)
   if (groqKey) {
     const groqModels = base64Image
-      ? ['llama-3.2-11b-vision-instruct', 'llama-3.2-90b-vision-preview']
-      : ['llama-3.3-70b-versatile', 'llama3-70b-8192'];
+      ? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
+      : ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
     for (const model of groqModels) {
       try {
         const messages = [{ role: 'system', content: systemPrompt }];
-
-        if (base64Image) {
-          messages.push({
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: base64Image } },
-              { type: 'text', text: userText || 'İçeriği çözümle.' }
-            ]
-          });
-        } else {
-          messages.push({ role: 'user', content: userText });
-        }
+        messages.push({ role: 'user', content: userText || 'İçeriği ders notu ve soru formatında çözümle.' });
 
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
