@@ -85,18 +85,30 @@ const Navbar = () => {
 
       {/* Sub Orange Banner Bar */}
       <div className="bg-primary text-white py-1.5 px-3 sm:px-6 shadow-sm border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4 text-xs font-bold">
-          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar py-0.5">
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-4 flex-wrap text-xs font-bold">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5 justify-center flex-wrap">
             <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs">
               LGS 2027
             </span>
             <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs">
               YKS 2027
             </span>
-            <div className="flex items-center gap-1 whitespace-nowrap pl-1">
-              <span className="font-['Caveat',cursive] text-base sm:text-lg font-bold text-white tracking-wide leading-none">maarif</span>
+            <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs">
+              KPSS 2027
+            </span>
+            <div className="flex items-center gap-2 whitespace-nowrap px-1.5">
+              <span className="font-['Caveat',cursive] text-base sm:text-xl font-bold text-white tracking-wider leading-none">maarif</span>
               <span className="font-extrabold tracking-widest text-[10px] sm:text-[11px] uppercase text-white/90">MODELİ</span>
             </div>
+            <a
+              href="/ders-notu.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/25 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap shadow-xs flex items-center gap-1 text-white transition-all"
+            >
+              <span className="material-symbols-outlined text-[13px]">description</span>
+              <span>PDF Notlar</span>
+            </a>
           </div>
 
           {/* YouTube & Instagram Logoları (Mobil ve Masaüstü Tüm Cihazlarda Görünür) */}
