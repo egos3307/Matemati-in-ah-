@@ -90,7 +90,7 @@ const Navbar = () => {
           <div className="flex items-center justify-end gap-2 flex-shrink-0 ml-auto md:ml-0 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
             {/* YouTube */}
             <a
-              href="https://www.youtube.com/@FULLEMATEM%C4%B0T%C4%B0G%C4%B0"
+              href="https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"

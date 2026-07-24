@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
 
-const YT_CHANNEL_URL = 'https://www.youtube.com/@FULLEMATEM%C4%B0T%C4%B0G%C4%B0';
+const YT_CHANNEL_URL = 'https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0';
 const IG_URL = 'https://www.instagram.com/fullematematigi';
 
 const IgIcon = () => (
