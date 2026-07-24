@@ -97,6 +97,10 @@ const StudentDashboard = () => {
   const [showInstallPopup, setShowInstallPopup] = useState(false);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
+  useEffect(() => {
     const timer = setTimeout(() => setShowInstallPopup(true), 5000);
     return () => clearTimeout(timer);
   }, []);
@@ -987,7 +991,7 @@ const StudentDashboard = () => {
   const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-white pb-20 md:pb-0 md:pt-4">
+    <div className="min-h-screen bg-white pb-32 md:pt-4">
       {/* Mobile Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-primary/10 md:hidden bg-white sticky top-0 z-10">
         <div className="flex items-center gap-2">

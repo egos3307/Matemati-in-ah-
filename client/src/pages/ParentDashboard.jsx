@@ -95,8 +95,12 @@ const ParentDashboard = () => {
   };
   const curPayment = paymentStatusMap[student?.paymentStatus] || { label: 'Belirtilmemiş', color: 'bg-slate-100 text-slate-600 border-slate-200' };
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-28 md:pb-6 md:pt-4 font-sans text-slate-800">
+    <div className="min-h-screen bg-slate-50/50 pb-32 md:pt-4 font-sans text-slate-800">
       {/* Header Banner */}
       <div className="max-w-4xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6">
         <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">

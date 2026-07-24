@@ -70,7 +70,7 @@ const TeacherDashboard = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [migrateResult, setMigrateResult] = useState(null);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Calendar states
   const [lessons, setLessons] = useState([]);
@@ -969,85 +969,98 @@ const TeacherDashboard = () => {
   return (
     <div className="flex min-h-screen bg-white text-slate-900">
       {/* Side Navigation */}
-      <aside className="w-72 border-r border-primary/10 bg-slate-50/50 p-6 flex flex-col gap-8 hidden md:flex">
-        <div className="flex items-center gap-3 px-2">
-          <img src="/logo.png" alt="Fullematematiği Logo" className="h-12 w-12 object-contain" />
-          <div>
-            <h1 className="text-lg font-black leading-none">Fullematematiği</h1>
-            <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Öğretmen Paneli</p>
+      <aside className="w-72 border-r border-primary/10 bg-slate-50/50 p-6 flex flex-col justify-between hidden md:flex h-screen sticky top-0">
+        <div className="flex flex-col gap-6 overflow-y-auto">
+          <div className="flex items-center gap-3 px-2">
+            <img src="/logo.png" alt="Fullematematiği Logo" className="h-12 w-12 object-contain" />
+            <div>
+              <h1 className="text-lg font-black leading-none">Fullematematiği</h1>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Öğretmen Paneli</p>
+            </div>
           </div>
+          <nav className="flex flex-col gap-2">
+            <button 
+              onClick={() => { setActiveTab('dashboard'); setSelectedStudent(null); }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'dashboard' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined">grid_view</span>
+              <span>Dashboard</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('students'); setSelectedStudent(null); }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'students' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined">group</span>
+              <span>Öğrencilerim</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('new-lesson'); setSelectedStudent(null); }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'new-lesson' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined">calendar_month</span>
+              <span>Derslerim</span>
+            </button>
+            {user?.role === 'HEAD_TEACHER' && (
+              <>
+                <button 
+                  onClick={() => { setActiveTab('teachers'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'teachers' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">badge</span>
+                  <span>Öğretmenler</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('blog'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'blog' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">edit_note</span>
+                  <span>Blog Yönetimi</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'camps' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">school</span>
+                  <span>Eğitim Kampları</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">forum</span>
+                  <span>Formdan Gelenler</span>
+                </button>
+                <button
+                  onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">payments</span>
+                  <span>Ödemeler</span>
+                </button>
+              </>
+            )}
+            <a
+              href="/ders-notu.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all hover:bg-amber-50 text-slate-500 hover:text-amber-600 mt-2 border border-dashed border-slate-200 hover:border-amber-300"
+            >
+              <span className="material-symbols-outlined">description</span>
+              <span>Ders Notu Oluştur</span>
+            </a>
+          </nav>
         </div>
-        <nav className="flex flex-col gap-2">
-          <button 
-            onClick={() => { setActiveTab('dashboard'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'dashboard' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+
+        {/* Sidebar Bottom Logout Section */}
+        <div className="pt-4 border-t border-slate-200/80 mt-auto">
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-red-600 bg-red-50/80 hover:bg-red-100 hover:text-red-700 transition-all border border-red-200/60 shadow-sm hover:shadow cursor-pointer active:scale-95"
           >
-            <span className="material-symbols-outlined">grid_view</span>
-            <span>Dashboard</span>
+            <span className="material-symbols-outlined text-xl">logout</span>
+            <span>Çıkış Yap</span>
           </button>
-          <button 
-            onClick={() => { setActiveTab('students'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'students' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">group</span>
-            <span>Öğrencilerim</span>
-          </button>
-          <button 
-            onClick={() => { setActiveTab('new-lesson'); setSelectedStudent(null); }}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'new-lesson' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-          >
-            <span className="material-symbols-outlined">calendar_month</span>
-            <span>Derslerim</span>
-          </button>
-          {user?.role === 'HEAD_TEACHER' && (
-            <>
-              <button 
-                onClick={() => { setActiveTab('teachers'); setSelectedStudent(null); }}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'teachers' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-              >
-                <span className="material-symbols-outlined">badge</span>
-                <span>Öğretmenler</span>
-              </button>
-              <button 
-                onClick={() => { setActiveTab('blog'); setSelectedStudent(null); }}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'blog' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-              >
-                <span className="material-symbols-outlined">edit_note</span>
-                <span>Blog Yönetimi</span>
-              </button>
-              <button 
-                onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'camps' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-              >
-                <span className="material-symbols-outlined">school</span>
-                <span>Eğitim Kampları</span>
-              </button>
-              <button 
-                onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'forms' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-              >
-                <span className="material-symbols-outlined">forum</span>
-                <span>Formdan Gelenler</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('payments'); setSelectedStudent(null); }}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'payments' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
-              >
-                <span className="material-symbols-outlined">payments</span>
-                <span>Ödemeler</span>
-              </button>
-            </>
-          )}
-          <a
-            href="/ders-notu.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all hover:bg-amber-50 text-slate-500 hover:text-amber-600 mt-2 border border-dashed border-slate-200 hover:border-amber-300"
-          >
-            <span className="material-symbols-outlined">description</span>
-            <span>Ders Notu Oluştur</span>
-          </a>
-        </nav>
+        </div>
       </aside>
 
       {/* Main Content */}

@@ -359,15 +359,21 @@ app.put('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res)
 app.delete('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    const whereClause = req.user.role === 'HEAD_TEACHER' ? { id } : { id, teacherId: req.user.id };
+    const whereClause = req.user.role === 'HEAD_TEACHER' ? { id, deletedAt: null } : { id, teacherId: req.user.id, deletedAt: null };
     const existing = await prisma.user.findFirst({ where: whereClause });
     if (!existing) return res.status(403).json({ error: 'Bu öğrenciye erişim yetkiniz yok' });
 
-    await prisma.trial.deleteMany({ where: { studentId: id } });
-    await prisma.studentHomework.deleteMany({ where: { studentId: id } });
-    await prisma.lesson.updateMany({ where: { studentId: id }, data: { studentId: null } });
-    await prisma.user.delete({ where: { id } });
-    res.json({ success: true });
+    const timestamp = Date.now();
+    await prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        email: existing.email.includes('_deleted_') ? existing.email : `${existing.email}_deleted_${timestamp}`,
+        studentCode: existing.studentCode ? (existing.studentCode.includes('_deleted_') ? existing.studentCode : `${existing.studentCode}_deleted_${timestamp}`) : null,
+        parentCode: existing.parentCode ? (existing.parentCode.includes('_deleted_') ? existing.parentCode : `${existing.parentCode}_deleted_${timestamp}`) : null,
+      }
+    });
+    res.json({ success: true, message: 'Öğrenci çöp kutusuna taşındı.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -558,34 +564,25 @@ app.delete('/api/teacher/classrooms/:id', auth, checkRole('TEACHER'), async (req
 app.delete('/api/teacher/lessons/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    // Detach homework from this lesson to prevent foreign key constraint issues
-    await prisma.homework.updateMany({
-      where: { lessonId: id },
-      data: { lessonId: null }
+    const deleted = await prisma.lesson.update({
+      where: { id },
+      data: { deletedAt: new Date() }
     });
-
-    const deleted = await prisma.lesson.delete({
-      where: { id }
-    });
-    res.json({ success: true, deleted });
+    res.json({ success: true, deleted, message: 'Ders çöp kutusuna taşındı.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Tekrarlayan bir ders serisindeki tüm gelecek/geçmiş dersleri toplu siler
+// Tekrarlayan bir ders serisindeki tüm gelecek/geçmiş dersleri çöp kutusuna taşır
 app.delete('/api/teacher/lesson-series/:seriesId', auth, checkRole('TEACHER'), async (req, res) => {
   const { seriesId } = req.params;
   try {
-    await prisma.homework.updateMany({
-      where: { lesson: { seriesId } },
-      data: { lessonId: null }
+    const deleted = await prisma.lesson.updateMany({
+      where: { seriesId },
+      data: { deletedAt: new Date() }
     });
-
-    const deleted = await prisma.lesson.deleteMany({
-      where: { seriesId }
-    });
-    res.json({ success: true, count: deleted.count });
+    res.json({ success: true, count: deleted.count, message: 'Ders serisi çöp kutusuna taşındı.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -621,6 +618,7 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
     let lessons;
     if (req.user.role === 'HEAD_TEACHER') {
       lessons = await prisma.lesson.findMany({
+        where: { deletedAt: null },
         orderBy: { date: 'asc' },
         include: { 
           student: { 
@@ -642,7 +640,7 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
       });
     } else {
       lessons = await prisma.lesson.findMany({
-        where: { teacherId: req.user.id },
+        where: { teacherId: req.user.id, deletedAt: null },
         orderBy: { date: 'asc' },
         include: { 
           student: { 
@@ -1283,12 +1281,12 @@ app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) =>
     let students;
     if (req.user.role === 'HEAD_TEACHER') {
       students = await prisma.user.findMany({
-        where: { role: 'STUDENT' },
+        where: { role: 'STUDENT', deletedAt: null },
         select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true, teacher: { select: { id: true, name: true } } }
       });
     } else {
       students = await prisma.user.findMany({
-        where: { role: 'STUDENT', teacherId: req.user.id },
+        where: { role: 'STUDENT', teacherId: req.user.id, deletedAt: null },
         select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true }
       });
     }
@@ -1304,7 +1302,7 @@ app.get('/api/teacher/teachers', auth, checkRole('TEACHER'), async (req, res) =>
   }
   try {
     const teachers = await prisma.user.findMany({
-      where: { role: 'TEACHER' },
+      where: { role: 'TEACHER', deletedAt: null },
       select: { id: true, name: true, email: true, role: true, studentTel: true }
     });
     res.json(teachers);
@@ -1386,42 +1384,101 @@ app.delete('/api/teacher/teachers/:id', auth, checkRole('TEACHER'), async (req, 
   }
   const id = parseInt(req.params.id);
   try {
-    // Set teacherId to null for all assigned students
-    await prisma.user.updateMany({
-      where: { teacherId: id },
-      data: { teacherId: null }
-    });
+    const existing = await prisma.user.findFirst({ where: { id, role: 'TEACHER', deletedAt: null } });
+    if (!existing) return res.status(404).json({ error: 'Öğretmen bulunamadı.' });
 
-    // Delete blog posts authored by this teacher
-    await prisma.blogPost.deleteMany({
-      where: { authorId: id }
+    const timestamp = Date.now();
+    const deleted = await prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        email: existing.email.includes('_deleted_') ? existing.email : `${existing.email}_deleted_${timestamp}`
+      }
     });
+    res.json({ success: true, deleted, message: 'Öğretmen hesabı çöp kutusuna taşındı. Dersleri korundu.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    // Delete lessons and their homeworks
-    const teacherLessons = await prisma.lesson.findMany({
-      where: { teacherId: id },
-      select: { id: true }
+// --- TRASH / ÇÖP KUTUSU ENDPOINTS ---
+app.get('/api/teacher/trash', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const isHead = req.user.role === 'HEAD_TEACHER';
+    const studentsWhere = isHead ? { role: 'STUDENT', NOT: { deletedAt: null } } : { role: 'STUDENT', teacherId: req.user.id, NOT: { deletedAt: null } };
+    const teachersWhere = isHead ? { role: 'TEACHER', NOT: { deletedAt: null } } : { id: -1 };
+    const lessonsWhere = isHead ? { NOT: { deletedAt: null } } : { teacherId: req.user.id, NOT: { deletedAt: null } };
+
+    const students = await prisma.user.findMany({ where: studentsWhere, select: { id: true, name: true, email: true, role: true, deletedAt: true, grade: true, studentCode: true } });
+    const teachers = await prisma.user.findMany({ where: teachersWhere, select: { id: true, name: true, email: true, role: true, deletedAt: true } });
+    const lessons = await prisma.lesson.findMany({ where: lessonsWhere, include: { student: { select: { name: true } }, teacher: { select: { name: true } } } });
+
+    res.json({ students, teachers, lessons });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/trash/restore-user/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || !user.deletedAt) return res.status(404).json({ error: 'Çöp kutusunda kullanıcı bulunamadı.' });
+
+    const cleanEmail = user.email.replace(/_deleted_\d+$/, '');
+    const cleanStudentCode = user.studentCode ? user.studentCode.replace(/_deleted_\d+$/, '') : null;
+    const cleanParentCode = user.parentCode ? user.parentCode.replace(/_deleted_\d+$/, '') : null;
+
+    const restored = await prisma.user.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        email: cleanEmail,
+        studentCode: cleanStudentCode,
+        parentCode: cleanParentCode
+      }
     });
-    const lessonIds = teacherLessons.map(l => l.id);
-    if (lessonIds.length > 0) {
-      await prisma.studentHomework.deleteMany({
-        where: { homework: { lessonId: { in: lessonIds } } }
-      });
-      await prisma.homework.deleteMany({
-        where: { lessonId: { in: lessonIds } }
-      });
-      await prisma.lessonChunk.deleteMany({
-        where: { lessonId: { in: lessonIds } }
-      });
-      await prisma.lesson.deleteMany({
-        where: { teacherId: id }
+    res.json({ success: true, restored, message: 'Kullanıcı başarıyla geri yüklendi.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/trash/restore-lesson/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const lesson = await prisma.lesson.findUnique({ where: { id } });
+    if (!lesson || !lesson.deletedAt) return res.status(404).json({ error: 'Çöp kutusunda ders bulunamadı.' });
+
+    const restored = await prisma.lesson.update({
+      where: { id },
+      data: { deletedAt: null }
+    });
+    res.json({ success: true, restored, message: 'Ders başarıyla geri yüklendi.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/trash/restore-all', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const deletedUsers = await prisma.user.findMany({ where: { NOT: { deletedAt: null } } });
+    for (const u of deletedUsers) {
+      const cleanEmail = u.email.replace(/_deleted_\d+$/, '');
+      const cleanStudentCode = u.studentCode ? u.studentCode.replace(/_deleted_\d+$/, '') : null;
+      const cleanParentCode = u.parentCode ? u.parentCode.replace(/_deleted_\d+$/, '') : null;
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { deletedAt: null, email: cleanEmail, studentCode: cleanStudentCode, parentCode: cleanParentCode }
       });
     }
 
-    const deleted = await prisma.user.delete({
-      where: { id }
+    await prisma.lesson.updateMany({
+      where: { NOT: { deletedAt: null } },
+      data: { deletedAt: null }
     });
-    res.json({ success: true, deleted });
+
+    res.json({ success: true, message: 'Çöp kutusundaki tüm veri ve dersler başarıyla geri yüklendi!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1503,6 +1560,7 @@ app.get('/api/student/lessons', auth, checkRole('STUDENT'), async (req, res) => 
   try {
     const userId = req.user.id;
     const allLessons = await prisma.lesson.findMany({
+      where: { deletedAt: null },
       orderBy: { date: 'asc' },
       include: { teacher: { select: { name: true } } }
     });
