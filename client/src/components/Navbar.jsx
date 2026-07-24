@@ -12,7 +12,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/80 backdrop-blur-md dark:bg-background-dark/80">
+    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-hidden border-b border-primary/10 bg-white/80 backdrop-blur-md dark:bg-background-dark/80">
       {/* Top Main Header */}
       <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-6 md:py-4 lg:px-10">
         <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
@@ -22,7 +22,6 @@ const Navbar = () => {
         <nav className="flex flex-1 justify-center gap-2 sm:gap-6 md:gap-10 text-[11px] sm:text-xs md:text-sm px-2">
           <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/">Ana Sayfa</Link>
           <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/derslerimiz">Derslerimiz</Link>
-          <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/pdf-notlari">PDF Notlar</Link>
           <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/blog">Blog</Link>
           <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/iletisim">İletişim</Link>
         </nav>
@@ -60,40 +59,41 @@ const Navbar = () => {
       </div>
 
       {/* Sub Orange Banner Bar */}
-      <div className="bg-primary text-white py-1 px-2 sm:px-6 shadow-sm border-t border-white/10 text-[9px] sm:text-xs font-bold">
-        <div className="mx-auto flex flex-col md:flex-row items-center justify-between gap-1 md:gap-4 max-w-7xl">
-          {/* Row 1 on Mobile / Center Content on Desktop */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar py-[2px] flex-wrap w-full md:w-auto">
-            <span className="bg-white/20 px-1.5 sm:px-2 py-[1px] rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+      <div className="bg-primary text-white py-1.5 px-3 sm:px-6 shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden">
+        <div className="mx-auto flex flex-col md:flex-row items-center justify-between gap-1.5 md:gap-0 max-w-7xl relative">
+          
+          {/* Masaüstünde Tam Ortalanmış Rozetler & Metinler / Mobilde Üst Satır */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap w-full md:w-full py-0.5">
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
               LGS 2027
             </span>
-            <span className="bg-white/20 px-1.5 sm:px-2 py-[1px] rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
               YKS 2027
             </span>
-            <span className="bg-white/20 px-1.5 sm:px-2 py-[1px] rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
               KPSS 2027
             </span>
-            <div className="flex items-center gap-1.5 whitespace-nowrap px-0.5">
-              <span className="font-['Caveat',cursive] text-xs sm:text-lg font-bold text-white leading-none">maarif</span>
-              <span className="font-extrabold tracking-widest text-[8px] sm:text-[10px] uppercase text-white/90">MODELİ</span>
+            <div className="flex items-center gap-1.5 whitespace-nowrap px-1">
+              <span className="font-['Caveat',cursive] text-sm sm:text-lg font-bold text-white leading-none">maarif</span>
+              <span className="font-extrabold tracking-widest text-[9px] sm:text-[10px] uppercase text-white/90">MODELİ</span>
             </div>
             <Link
               to="/pdf-notlari"
-              className="bg-white/25 hover:bg-white/35 px-2 py-[1px] rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 text-white transition-all"
+              className="bg-white/25 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 text-white transition-all hover:scale-105"
             >
-              <span className="material-symbols-outlined text-[11px] sm:text-[13px]">description</span>
+              <span className="material-symbols-outlined text-[12px] sm:text-[14px]">description</span>
               <span>PDF Notlar</span>
             </Link>
           </div>
 
-          {/* Row 2 on Mobile (Stuck Right) / Right Content on Desktop */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2 flex-shrink-0 ml-auto w-full md:w-auto pb-0.5 md:pb-0">
+          {/* Logolar (Masaüstünde En Sağda Sabit / Mobilde Alt Satırda En Sağda) */}
+          <div className="flex items-center justify-end gap-2 flex-shrink-0 ml-auto md:ml-0 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2">
             {/* YouTube */}
             <a
               href="https://www.youtube.com/@FULLEMATEM%C4%B0T%C4%B0G%C4%B0"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
+              className="flex items-center justify-center w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
               aria-label="YouTube"
             >
               <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current">
@@ -105,7 +105,7 @@ const Navbar = () => {
               href="https://www.instagram.com/fullematematigi"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
+              className="flex items-center justify-center w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
               aria-label="Instagram"
             >
               <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current">
@@ -113,6 +113,7 @@ const Navbar = () => {
               </svg>
             </a>
           </div>
+
         </div>
       </div>
     </header>
