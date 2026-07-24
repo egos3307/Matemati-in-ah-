@@ -54,6 +54,10 @@ const ParentDashboard = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 text-slate-650 font-sans">
@@ -94,10 +98,6 @@ const ParentDashboard = () => {
     PARTIAL: { label: 'Kısmi Ödeme', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' }
   };
   const curPayment = paymentStatusMap[student?.paymentStatus] || { label: 'Belirtilmemiş', color: 'bg-slate-100 text-slate-600 border-slate-200' };
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-32 md:pt-4 font-sans text-slate-800">
