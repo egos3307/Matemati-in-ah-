@@ -13,6 +13,7 @@ import Derslerimiz from './pages/Derslerimiz';
 import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
 import Contact from './pages/Contact';
+import PdfNotes from './pages/PdfNotes';
 
 import WatchRecording from './pages/WatchRecording';
 import KVKK from './pages/KVKK';
@@ -76,7 +77,11 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/derslerimiz" element={<Derslerimiz />} />
+        <Route path="/pdf-notlari" element={<PdfNotes />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogPostDetail />} />
+        <Route path="/iletisim" element={<Contact />} />
+        <Route path="/kvkk" element={<KVKK />} />
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/iletisim" element={<Contact />} />
         <Route path="/kvkk" element={<KVKK />} />

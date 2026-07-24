@@ -2000,6 +2000,55 @@ app.delete('/api/teacher/blog/:id', auth, checkRole('TEACHER'), async (req, res)
   }
 });
 
+// PDF Note Routes
+app.get('/api/pdf-notes', async (req, res) => {
+  try {
+    const notes = await prisma.pdfNote.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { name: true } } }
+    });
+    res.json(notes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/pdf-notes', auth, checkRole('TEACHER'), async (req, res) => {
+  const { title, description, category, pdfUrl, fileName } = req.body;
+  if (!title || !pdfUrl) {
+    return res.status(400).json({ error: 'Lütfen ders notu başlığı ve PDF dosyası giriniz.' });
+  }
+  try {
+    const note = await prisma.pdfNote.create({
+      data: {
+        title,
+        description,
+        category: category || 'Genel',
+        pdfUrl,
+        fileName: fileName || 'ders-notu.pdf',
+        authorId: req.user.id
+      }
+    });
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/pdf-notes/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const note = await prisma.pdfNote.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Camp / Course Routes
 app.get('/api/camps', async (req, res) => {
   try {

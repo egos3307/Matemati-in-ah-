@@ -118,6 +118,16 @@ const TeacherDashboard = () => {
   const [studentHomeworks, setStudentHomeworks] = useState([]);
   const [assignType, setAssignType] = useState('HOMEWORK'); // 'HOMEWORK' | 'QUESTION'
   const [assignText, setAssignText] = useState('');
+
+  // PDF Notes States
+  const [pdfNotesList, setPdfNotesList] = useState([]);
+  const [showAddPdfModal, setShowAddPdfModal] = useState(false);
+  const [newPdfTitle, setNewPdfTitle] = useState('');
+  const [newPdfDescription, setNewPdfDescription] = useState('');
+  const [newPdfCategory, setNewPdfCategory] = useState('LGS');
+  const [newPdfBase64, setNewPdfBase64] = useState('');
+  const [newPdfFileName, setNewPdfFileName] = useState('');
+  const [pdfPublishing, setPdfPublishing] = useState(false);
   const [assignImage, setAssignImage] = useState('');
   const [assignDeadline, setAssignDeadline] = useState('');
   const [assignSending, setAssignSending] = useState(false);
@@ -621,8 +631,59 @@ const TeacherDashboard = () => {
     } else if (activeTab === 'forms') {
       fetchTrialRequests();
       fetchContactMessages();
+    } else if (activeTab === 'pdf-notes') {
+      fetchPdfNotes();
     }
   }, [activeTab]);
+
+  const fetchPdfNotes = async () => {
+    try {
+      const res = await axios.get('/api/pdf-notes');
+      setPdfNotesList(res.data);
+    } catch (err) {
+      console.error('Error fetching pdf notes:', err);
+    }
+  };
+
+  const handlePublishPdfNote = async (e) => {
+    e.preventDefault();
+    if (!newPdfTitle || !newPdfBase64) {
+      alert('Lütfen ders notu başlığı ve PDF dosyası seçiniz.');
+      return;
+    }
+    try {
+      setPdfPublishing(true);
+      await axios.post('/api/teacher/pdf-notes', {
+        title: newPdfTitle,
+        description: newPdfDescription,
+        category: newPdfCategory,
+        pdfUrl: newPdfBase64,
+        fileName: newPdfFileName || 'ders-notu.pdf'
+      });
+      alert('PDF ders notu başarıyla yayınlandı!');
+      setNewPdfTitle('');
+      setNewPdfDescription('');
+      setNewPdfCategory('LGS');
+      setNewPdfBase64('');
+      setNewPdfFileName('');
+      setShowAddPdfModal(false);
+      fetchPdfNotes();
+    } catch (err) {
+      alert('Not yayınlanırken hata oluştu: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPdfPublishing(false);
+    }
+  };
+
+  const handleDeletePdfNote = async (id) => {
+    if (!window.confirm('Bu PDF ders notunu silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/pdf-notes/${id}`);
+      fetchPdfNotes();
+    } catch (err) {
+      alert('Not silinirken hata oluştu: ' + (err.response?.data?.error || err.message));
+    }
+  };
 
   const fetchBlogs = async () => {
     try {
@@ -999,6 +1060,13 @@ const TeacherDashboard = () => {
             >
               <span className="material-symbols-outlined">calendar_month</span>
               <span>Derslerim</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('pdf-notes'); setSelectedStudent(null); }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'pdf-notes' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined">picture_as_pdf</span>
+              <span>PDF Not Yayınla</span>
             </button>
             {user?.role === 'HEAD_TEACHER' && (
               <>
@@ -3946,6 +4014,78 @@ const TeacherDashboard = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'pdf-notes' && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">PDF Ders Notu Yayınla</h3>
+                  <p className="text-xs text-slate-500 font-bold mt-1">Öğrencilerin ve ziyaretçilerin ücretsiz indirebileceği PDF not ve yaprak testleri burada yayınlayabilirsiniz.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddPdfModal(true)}
+                  className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-lg">upload_file</span>
+                  Yeni PDF Not Yükle
+                </button>
+              </div>
+
+              {/* PDF Notes List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {pdfNotesList.length === 0 ? (
+                  <div className="col-span-full bg-white p-12 rounded-3xl border border-slate-100 shadow-sm text-center">
+                    <span className="material-symbols-outlined text-5xl text-slate-300">picture_as_pdf</span>
+                    <h4 className="font-black text-slate-700 text-base mt-2">Henüz Yayınlanmış Not Bulunmuyor</h4>
+                    <p className="text-xs text-slate-400 font-medium mt-1">Yukarıdaki butona tıklayarak ilk PDF ders notunuzu hemen yayınlayabilirsiniz.</p>
+                  </div>
+                ) : (
+                  pdfNotesList.map(note => (
+                    <div key={note.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="bg-primary/10 text-primary border border-primary/20 px-3 py-0.5 rounded-full text-[10px] font-black uppercase">
+                            {note.category || 'Genel'}
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-400">
+                            {new Date(note.createdAt).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                        <h4 className="font-black text-slate-900 text-base leading-snug">{note.title}</h4>
+                        {note.description && (
+                          <p className="text-xs text-slate-500 font-medium mt-2 line-clamp-2">{note.description}</p>
+                        )}
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-50 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-slate-400">
+                          Yazar: {note.author?.name || 'Siz'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={note.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all"
+                            title="PDF'i İncele"
+                          >
+                            <span className="material-symbols-outlined text-base">visibility</span>
+                          </a>
+                          <button
+                            onClick={() => handleDeletePdfNote(note.id)}
+                            className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-all cursor-pointer"
+                            title="Notu Sil"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -4379,6 +4519,111 @@ const TeacherDashboard = () => {
             onClose={() => setActiveMeeting(null)}
           />
         )
+      )}
+
+      {/* Add PDF Note Modal */}
+      {showAddPdfModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 relative animate-in zoom-in-95 duration-200">
+            <button onClick={() => setShowAddPdfModal(false)} className="absolute right-6 top-6 text-slate-300 hover:text-slate-900 transition-colors">
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
+            <h3 className="text-2xl font-black text-slate-900 mb-1">Yeni PDF Not Yayınla</h3>
+            <p className="text-slate-400 font-bold text-xs mb-6 uppercase tracking-wider">Ders Notu Detaylarını Giriniz</p>
+
+            <form onSubmit={handlePublishPdfNote} className="space-y-4">
+              <div>
+                <label className="text-xs font-black text-slate-500 uppercase ml-1 block mb-1">Ders Notu / Test Başlığı *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: 8. Sınıf Üslü İfadeler Çalışma Fasikülü"
+                  value={newPdfTitle}
+                  onChange={e => setNewPdfTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-500 uppercase ml-1 block mb-1">Kategori / Sınıf Seviyesi</label>
+                <select
+                  value={newPdfCategory}
+                  onChange={e => setNewPdfCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:border-primary"
+                >
+                  <option value="LGS">LGS Matematik</option>
+                  <option value="YKS">YKS (TYT/AYT) Matematik</option>
+                  <option value="KPSS">KPSS Matematik</option>
+                  <option value="9. Sınıf">9. Sınıf</option>
+                  <option value="10. Sınıf">10. Sınıf</option>
+                  <option value="11. Sınıf">11. Sınıf</option>
+                  <option value="12. Sınıf">12. Sınıf</option>
+                  <option value="Genel">Genel Matematik</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-500 uppercase ml-1 block mb-1">Açıklama / Not Detayları</label>
+                <textarea
+                  rows="3"
+                  placeholder="Bu ders notunda hangi konular anlatılıyor?"
+                  value={newPdfDescription}
+                  onChange={e => setNewPdfDescription(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-primary"
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="text-xs font-black text-slate-500 uppercase ml-1 block mb-1">PDF Dosyası Seç *</label>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  required
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      if (file.size > 25 * 1024 * 1024) {
+                        alert('PDF dosyası 25MB sınırından büyük olamaz.');
+                        return;
+                      }
+                      setNewPdfFileName(file.name);
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setNewPdfBase64(reader.result);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPdfModal(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl text-xs hover:bg-slate-200 transition-all"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={pdfPublishing}
+                  className="flex-1 py-3 bg-primary text-white font-black rounded-2xl text-xs shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {pdfPublishing ? (
+                    <span>Yayınlanıyor...</span>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm">publish</span>
+                      <span>Notu Yayınla</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

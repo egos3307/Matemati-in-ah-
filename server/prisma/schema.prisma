@@ -48,6 +48,7 @@ model User {
   blogPosts BlogPost[]
   hataDefteri HataDefteri[]
   classrooms Classroom[]
+  pdfNotes   PdfNote[]
 }
 
 // Hesap + cihaz (IP) bazlı yanlış giriş kilidi: sadece deneme yapan cihaz kilitlenir
@@ -192,4 +193,18 @@ model Classroom {
   studentIds String   // JSON array string: "[1, 2, 3]"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model PdfNote {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  category    String?  // LGS, YKS, KPSS, Genel vb.
+  pdfUrl      String   // base64 or URL
+  fileName    String?
+  authorId    Int?
+  author      User?    @relation(fields: [authorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 }
