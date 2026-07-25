@@ -2457,6 +2457,8 @@ app.delete('/api/teacher/quota-courses/:id', auth, checkRole('TEACHER'), async (
   }
 });
 
+let DEFAULT_QUOTA_APPLICATIONS = [];
+
 // Student Quota Application endpoints
 app.post('/api/quota-applications', async (req, res) => {
   const { quotaCourseId, category, courseTitle, track, studentName, phone, email } = req.body;
@@ -2477,46 +2479,38 @@ app.post('/api/quota-applications', async (req, res) => {
       return res.status(400).json({ message: 'Lütfen geçerli bir e-posta adresi girin.' });
     }
 
-    let application;
+    let application = {
+      id: Date.now(),
+      quotaCourseId: quotaCourseId ? parseInt(quotaCourseId) : null,
+      category: category || 'YKS 2027',
+      courseTitle: courseTitle || 'Ders / Kamp',
+      track: track || 'Sayısal',
+      studentName: studentName.trim(),
+      phone: cleanPhone,
+      email: email.trim().toLowerCase(),
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    };
+
     try {
-      application = await prisma.quotaApplication.create({
+      const dbApp = await prisma.quotaApplication.create({
         data: {
-          quotaCourseId: quotaCourseId ? parseInt(quotaCourseId) : null,
-          category: category || 'YKS 2027',
-          courseTitle: courseTitle || 'Ders / Kamp',
-          track: track || 'Sayısal',
-          studentName: studentName.trim(),
-          phone: cleanPhone,
-          email: email.trim().toLowerCase(),
+          quotaCourseId: application.quotaCourseId,
+          category: application.category,
+          courseTitle: application.courseTitle,
+          track: application.track,
+          studentName: application.studentName,
+          phone: application.phone,
+          email: application.email,
           status: 'PENDING'
         }
       });
-
-      // Kontenjanı 1 düşür
-      if (quotaCourseId) {
-        const cId = parseInt(quotaCourseId);
-        const existingCourse = await prisma.quotaCourse.findUnique({ where: { id: cId } });
-        if (existingCourse && existingCourse.remainingQuota > 0) {
-          await prisma.quotaCourse.update({
-            where: { id: cId },
-            data: { remainingQuota: existingCourse.remainingQuota - 1 }
-          });
-        }
-      }
+      if (dbApp) application = dbApp;
     } catch (dbErr) {
       console.warn('DB QuotaApplication create fallback:', dbErr.message);
-      application = {
-        id: Date.now(),
-        category,
-        courseTitle,
-        track,
-        studentName,
-        phone: cleanPhone,
-        email,
-        status: 'PENDING',
-        createdAt: new Date()
-      };
     }
+
+    DEFAULT_QUOTA_APPLICATIONS.unshift(application);
 
     res.json({ success: true, application });
   } catch (err) {
@@ -2531,10 +2525,16 @@ app.get('/api/teacher/quota-applications', auth, checkRole('TEACHER'), async (re
       orderBy: { createdAt: 'desc' },
       include: { quotaCourse: true }
     });
-    res.json(apps);
+    const combined = [...apps];
+    for (const memApp of DEFAULT_QUOTA_APPLICATIONS) {
+      if (!combined.some(a => a.id === memApp.id || (a.phone === memApp.phone && a.courseTitle === memApp.courseTitle))) {
+        combined.unshift(memApp);
+      }
+    }
+    res.json(combined);
   } catch (err) {
     console.error('Error fetching quota applications:', err);
-    res.json([]);
+    res.json(DEFAULT_QUOTA_APPLICATIONS);
   }
 });
 
@@ -2556,9 +2556,11 @@ app.delete('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), as
   const id = parseInt(req.params.id);
   try {
     await prisma.quotaApplication.delete({ where: { id } });
+    DEFAULT_QUOTA_APPLICATIONS = DEFAULT_QUOTA_APPLICATIONS.filter(a => a.id !== id);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    DEFAULT_QUOTA_APPLICATIONS = DEFAULT_QUOTA_APPLICATIONS.filter(a => a.id !== id);
+    res.json({ success: true });
   }
 });
 

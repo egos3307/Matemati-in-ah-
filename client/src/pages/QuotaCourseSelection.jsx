@@ -570,16 +570,6 @@ const QuotaCourseSelection = () => {
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a
-                href={`https://wa.me/905350598950?text=Merhaba,%20ben%20${encodeURIComponent(formData.studentName)}.%20${encodeURIComponent(selectedCategory)}%20${encodeURIComponent(selectedCourse?.title)}%20(${encodeURIComponent(selectedTrack)})%20için%20yer%20ayırmıştım.`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
-              >
-                <span className="material-symbols-outlined text-lg">chat</span>
-                <span>Öğretmene WhatsApp'tan Bildir</span>
-              </a>
-
               <button
                 onClick={() => {
                   setStep(1);
@@ -588,9 +578,16 @@ const QuotaCourseSelection = () => {
                   setSelectedTrack('');
                   setFormData({ studentName: '', phone: '', email: '' });
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs rounded-2xl transition-all cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm rounded-2xl shadow-lg shadow-primary/20 transition-all cursor-pointer"
               >
-                Başka Yer Ayırt
+                Başka Bir Ders İçin Yer Ayırt
+              </button>
+
+              <button
+                onClick={() => navigate('/')}
+                className="w-full sm:w-auto px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm rounded-2xl transition-all cursor-pointer"
+              >
+                Anasayfaya Dön
               </button>
             </div>
           </div>

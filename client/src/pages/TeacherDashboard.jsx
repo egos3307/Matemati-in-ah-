@@ -4418,15 +4418,19 @@ const TeacherDashboard = () => {
                               <td className="py-4 px-6 font-black text-slate-900">{app.studentName || 'İsimsiz'}</td>
                               <td className="py-4 px-6">
                                 {app.phone ? (
-                                  <a
-                                    href={`https://wa.me/90${(app.phone || '').toString().replace(/\D/g, '').replace(/^0/, '')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">chat</span>
-                                    <span>{app.phone}</span>
-                                  </a>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-slate-900">{app.phone}</span>
+                                    <a
+                                      href={`https://wa.me/90${(app.phone || '').toString().replace(/\D/g, '').replace(/^0/, '')}?text=Merhaba%20${encodeURIComponent(app.studentName||'')},%20${encodeURIComponent(app.courseTitle||'')} (${encodeURIComponent(app.track||'')})%20başvurunuz%20hakkında%20ulaşıyorum.`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] rounded-lg shadow-sm flex items-center gap-1 transition-all"
+                                      title="WhatsApp üzerinden doğrudan mesaj atın"
+                                    >
+                                      <span className="material-symbols-outlined text-xs">chat</span>
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  </div>
                                 ) : (
                                   <span className="text-slate-400">-</span>
                                 )}
