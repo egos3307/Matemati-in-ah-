@@ -237,17 +237,39 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleToggleCampCategory = async (camp, catToToggle) => {
+  const getInitialCampCategories = (camp) => {
+    if (!camp) return [];
     let categories = [];
     if (camp.category) {
-      try {
-        const parsed = JSON.parse(camp.category);
-        if (Array.isArray(parsed)) categories = parsed;
-        else categories = camp.category.split(',').map(s => s.trim());
-      } catch (e) {
-        categories = camp.category.split(',').map(s => s.trim());
+      if (Array.isArray(camp.category)) {
+        categories = [...camp.category];
+      } else if (typeof camp.category === 'string') {
+        try {
+          const parsed = JSON.parse(camp.category);
+          if (Array.isArray(parsed)) categories = parsed;
+          else categories = camp.category.split(',').map(s => s.trim()).filter(Boolean);
+        } catch (e) {
+          categories = camp.category.split(',').map(s => s.trim()).filter(Boolean);
+        }
       }
+    } else {
+      if (camp.badge?.includes('LGS') || camp.title?.includes('LGS') || camp.title?.includes('Ortaokul')) categories.push('LGS 2027');
+      if (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS')) categories.push('KPSS 2027');
+      if (camp.badge?.includes('YKS') || camp.title?.includes('YKS') || camp.title?.includes('Lisans')) categories.push('YKS 2027');
+      if (camp.badge?.includes('Maarif') || camp.title?.includes('Maarif')) categories.push('MAARIF');
     }
+    return Array.from(new Set(categories));
+  };
+
+  const isCampCategoryActive = (camp, cat) => {
+    if (!camp) return false;
+    const categories = getInitialCampCategories(camp);
+    return categories.includes(cat);
+  };
+
+  const handleToggleCampCategory = async (camp, catToToggle) => {
+    if (!camp) return;
+    let categories = getInitialCampCategories(camp);
 
     if (categories.includes(catToToggle)) {
       categories = categories.filter(c => c !== catToToggle);
@@ -255,31 +277,20 @@ const TeacherDashboard = () => {
       categories.push(catToToggle);
     }
 
-    const updatedCategory = JSON.stringify(categories);
+    const newCatString = JSON.stringify(categories);
+
+    // Instant optimistic state update
+    setCampsList(prev => prev.map(c => c.id === camp.id ? { ...c, category: newCatString } : c));
+
     try {
       await axios.put(`/api/teacher/camps/${camp.id}`, {
         ...camp,
-        category: updatedCategory
+        category: newCatString
       });
-      fetchCamps();
     } catch (err) {
       console.error('Error toggling camp category:', err);
+      fetchCamps();
     }
-  };
-
-  const isCampCategoryActive = (camp, cat) => {
-    if (!camp.category) {
-      if (cat === 'LGS 2027' && (camp.badge?.includes('LGS') || camp.title?.includes('LGS'))) return true;
-      if (cat === 'KPSS 2027' && (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS'))) return true;
-      if (cat === 'YKS 2027' && (camp.badge?.includes('YKS') || camp.title?.includes('YKS'))) return true;
-      if (cat === 'MAARIF' && (camp.badge?.includes('Maarif') || camp.title?.includes('Maarif'))) return true;
-      return false;
-    }
-    try {
-      const parsed = JSON.parse(camp.category);
-      if (Array.isArray(parsed)) return parsed.includes(cat);
-    } catch (e) {}
-    return camp.category.includes(cat);
   };
 
   // Form submission and question states
