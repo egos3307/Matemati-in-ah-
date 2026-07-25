@@ -12,6 +12,9 @@ const Navbar = () => {
     let lastScrollY = window.scrollY;
 
     const handleScroll = () => {
+      // Sadece mobil cihazlarda (< 768px) kaydırma gizleme çalışır
+      if (window.innerWidth >= 768) return;
+
       const currentScrollY = window.scrollY;
       if (currentScrollY > 50 && currentScrollY > lastScrollY) {
         // Aşağı kaydırıldığında turuncu menü yukarı doğru kaybolur
@@ -79,8 +82,8 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Sub Orange Banner Bar */}
-      <div className={`bg-primary text-white shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden transition-all duration-300 ease-in-out ${
+      {/* Sub Orange Banner Bar (Masaüstünde Sabit Açık, Mobilde Açılır-Kapanır) */}
+      <div className={`bg-primary text-white shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden transition-all duration-300 ease-in-out md:!max-h-24 md:!opacity-100 md:!py-1.5 md:!px-6 md:!pointer-events-auto ${
         isSubBannerOpen ? 'max-h-24 opacity-100 py-1.5 px-2 sm:px-6' : 'max-h-0 opacity-0 py-0 px-0 pointer-events-none'
       }`}>
         <div className="mx-auto flex items-center justify-center max-w-7xl">
@@ -149,10 +152,10 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Toggle Arrow Button Under Navbar */}
+      {/* Toggle Arrow Button Under Navbar (Sadece Mobil Cihazlarda Görünür) */}
       <button
         onClick={() => setIsSubBannerOpen(prev => !prev)}
-        className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-20 w-8 h-5 bg-primary text-white rounded-b-xl flex items-center justify-center shadow-md hover:bg-primary/90 transition-all cursor-pointer border-b border-x border-white/20"
+        className="md:hidden absolute -bottom-3 left-1/2 -translate-x-1/2 z-20 w-8 h-5 bg-primary text-white rounded-b-xl flex items-center justify-center shadow-md hover:bg-primary/90 transition-all cursor-pointer border-b border-x border-white/20"
         title={isSubBannerOpen ? 'Alt Menüyü Gizle' : 'Alt Menüyü Göster'}
         aria-label="Toggle Alt Menü"
       >

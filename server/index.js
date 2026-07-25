@@ -2096,26 +2096,7 @@ app.delete('/api/teacher/blog/:id', auth, checkRole('TEACHER'), async (req, res)
   }
 });
 
-let DEFAULT_PDF_NOTES = [
-  {
-    id: 1,
-    title: '8. Sınıf LGS Matematik Mantık Muhakeme Notları',
-    description: 'LGS sınavında çıkabilecek yeni nesil sorular ve pratik çözüm yolları.',
-    category: 'LGS',
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    fileName: 'lgs-matematik-notlari.pdf',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 2,
-    title: 'YKS (TYT-AYT) Formül & Özet Yaprak Test',
-    description: 'TYT ve AYT Matematik için tüm formüller ve püf noktalar.',
-    category: 'YKS',
-    pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    fileName: 'yks-formul-ozet.pdf',
-    createdAt: new Date().toISOString()
-  }
-];
+let DEFAULT_PDF_NOTES = [];
 
 // PDF Note Routes
 app.get('/api/pdf-notes', async (req, res) => {
@@ -2125,10 +2106,7 @@ app.get('/api/pdf-notes', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: { select: { name: true } } }
     });
-    if (notes.length === 0) {
-      return res.json(DEFAULT_PDF_NOTES);
-    }
-    res.json(notes);
+    res.json(notes.length > 0 ? notes : DEFAULT_PDF_NOTES);
   } catch (err) {
     console.error('Error fetching pdf notes:', err.message);
     res.json(DEFAULT_PDF_NOTES);
@@ -2151,6 +2129,7 @@ app.post('/api/teacher/pdf-notes', auth, checkRole('TEACHER'), async (req, res) 
         authorId: req.user?.id || null
       }
     });
+    DEFAULT_PDF_NOTES.unshift(note);
     res.json({ success: true, note });
   } catch (err) {
     console.error('PDF note save fallback:', err.message);
@@ -2175,13 +2154,11 @@ app.delete('/api/teacher/pdf-notes/:id', auth, checkRole('TEACHER'), async (req,
       where: { id },
       data: { deletedAt: new Date() }
     });
-    DEFAULT_PDF_NOTES = DEFAULT_PDF_NOTES.filter(n => n.id !== id);
-    res.json({ success: true });
   } catch (err) {
     console.error('PDF note delete fallback:', err.message);
-    DEFAULT_PDF_NOTES = DEFAULT_PDF_NOTES.filter(n => n.id !== id);
-    res.json({ success: true });
   }
+  DEFAULT_PDF_NOTES = DEFAULT_PDF_NOTES.filter(n => n.id !== id);
+  res.json({ success: true });
 });
 
 // Camp / Course Routes
