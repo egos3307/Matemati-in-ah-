@@ -138,77 +138,126 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Hesap + cihaz (IP) bazlı yanlış giriş kilidi: aynı hesaba veya koda aynı cihazdan 3 kez yanlış
-// girilirse 15 dakika kilitlenir.
+// Hesap + cihaz (IP) bazlı yanlış giriş kilidi: 3 kez yanlış girilirse 15 dakika kilitlenir.
 const MAX_FAILED_LOGIN_ATTEMPTS = 3;
 const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 dakika
 
-const getLoginAttemptKey = (identifier, ip) => {
+// İn-memory kilit deposu (DB gecikmelerine veya baglanti hatalarina karsi aninda kilit)
+const MEMORY_LOGIN_ATTEMPTS = new Map();
+
+const getLockoutKeys = (identifier, ip) => {
   const cleanId = (identifier || 'unknown').toString().trim().toLowerCase();
   const cleanIp = (ip || '127.0.0.1').toString().trim();
-  return `${cleanId}:${cleanIp}`;
+  return {
+    comboKey: `combo:${cleanId}:${cleanIp}`,
+    idKey: `id:${cleanId}`,
+    ipKey: `ip:${cleanIp}`
+  };
 };
 
-const getLoginLockRemainingMinutes = async (key) => {
-  try {
-    const record = await prisma.loginAttempt.findUnique({ where: { key } });
-    if (!record || !record.lockedUntil) return 0;
-    const remainingMs = new Date(record.lockedUntil).getTime() - Date.now();
-    return remainingMs > 0 ? Math.ceil(remainingMs / 60000) : 0;
-  } catch (err) {
-    console.error('getLoginLockRemainingMinutes error:', err);
-    return 0;
+const getLoginLockRemainingMinutes = async (identifier, ip) => {
+  const keys = getLockoutKeys(identifier, ip);
+  const now = Date.now();
+
+  // 1. Memory deposunu kontrol et
+  for (const key of [keys.comboKey, keys.idKey, keys.ipKey]) {
+    const memRecord = MEMORY_LOGIN_ATTEMPTS.get(key);
+    if (memRecord && memRecord.lockedUntil && memRecord.lockedUntil > now) {
+      return Math.max(1, Math.ceil((memRecord.lockedUntil - now) / 60000));
+    }
   }
-};
 
-const registerFailedLoginAttempt = async (key) => {
+  // 2. Veritabanı deposunu kontrol et
   try {
-    const record = await prisma.loginAttempt.findUnique({ where: { key } });
-    const now = Date.now();
-    let currentFailedCount = 0;
-
-    if (record) {
-      if (record.lockedUntil) {
-        if (new Date(record.lockedUntil).getTime() > now) {
-          currentFailedCount = MAX_FAILED_LOGIN_ATTEMPTS;
-        } else {
-          currentFailedCount = 0;
+    const records = await prisma.loginAttempt.findMany({
+      where: { key: { in: [keys.comboKey, keys.idKey, keys.ipKey] } }
+    });
+    for (const record of records) {
+      if (record && record.lockedUntil) {
+        const remainingMs = new Date(record.lockedUntil).getTime() - now;
+        if (remainingMs > 0) {
+          return Math.max(1, Math.ceil(remainingMs / 60000));
         }
-      } else if (record.updatedAt && (now - new Date(record.updatedAt).getTime() > LOGIN_LOCK_DURATION_MS)) {
-        currentFailedCount = 0;
-      } else {
-        currentFailedCount = record.failedAttempts || 0;
       }
     }
-
-    const nextAttempts = currentFailedCount + 1;
-    const isLocked = nextAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
-    const lockedUntil = isLocked ? new Date(now + LOGIN_LOCK_DURATION_MS) : null;
-
-    const data = {
-      failedAttempts: nextAttempts,
-      lockedUntil
-    };
-
-    await prisma.loginAttempt.upsert({
-      where: { key },
-      update: data,
-      create: { key, ...data }
-    });
-
-    const remainingAttempts = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - nextAttempts);
-    return { nextAttempts, isLocked, remainingAttempts, lockedUntil };
   } catch (err) {
-    console.error('registerFailedLoginAttempt error:', err);
-    return { nextAttempts: 1, isLocked: false, remainingAttempts: 2, lockedUntil: null };
+    console.error('getLoginLockRemainingMinutes DB check error:', err.message);
   }
+
+  return 0;
 };
 
-const clearLoginAttempts = async (key) => {
+const registerFailedLoginAttempt = async (identifier, ip) => {
+  const keys = getLockoutKeys(identifier, ip);
+  const now = Date.now();
+  let maxAttempts = 0;
+
+  for (const key of [keys.comboKey, keys.idKey, keys.ipKey]) {
+    const mem = MEMORY_LOGIN_ATTEMPTS.get(key);
+    if (mem) {
+      if (mem.lockedUntil && mem.lockedUntil > now) {
+        maxAttempts = Math.max(maxAttempts, MAX_FAILED_LOGIN_ATTEMPTS);
+      } else if (mem.updatedAt && (now - mem.updatedAt > LOGIN_LOCK_DURATION_MS)) {
+        MEMORY_LOGIN_ATTEMPTS.delete(key);
+      } else {
+        maxAttempts = Math.max(maxAttempts, mem.failedAttempts || 0);
+      }
+    }
+  }
+
   try {
-    await prisma.loginAttempt.deleteMany({ where: { key } });
+    const records = await prisma.loginAttempt.findMany({
+      where: { key: { in: [keys.comboKey, keys.idKey, keys.ipKey] } }
+    });
+    for (const rec of records) {
+      if (rec.lockedUntil && new Date(rec.lockedUntil).getTime() > now) {
+        maxAttempts = Math.max(maxAttempts, MAX_FAILED_LOGIN_ATTEMPTS);
+      } else if (rec.updatedAt && (now - new Date(rec.updatedAt).getTime() <= LOGIN_LOCK_DURATION_MS)) {
+        maxAttempts = Math.max(maxAttempts, rec.failedAttempts || 0);
+      }
+    }
+  } catch (e) {}
+
+  const nextAttempts = maxAttempts + 1;
+  const isLocked = nextAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+  const lockedUntil = isLocked ? (now + LOGIN_LOCK_DURATION_MS) : null;
+
+  for (const key of [keys.comboKey, keys.idKey, keys.ipKey]) {
+    MEMORY_LOGIN_ATTEMPTS.set(key, {
+      failedAttempts: nextAttempts,
+      lockedUntil,
+      updatedAt: now
+    });
+  }
+
+  try {
+    const lockDate = lockedUntil ? new Date(lockedUntil) : null;
+    for (const key of [keys.comboKey, keys.idKey, keys.ipKey]) {
+      await prisma.loginAttempt.upsert({
+        where: { key },
+        update: { failedAttempts: nextAttempts, lockedUntil: lockDate },
+        create: { key, failedAttempts: nextAttempts, lockedUntil: lockDate }
+      });
+    }
   } catch (err) {
-    console.error('clearLoginAttempts error:', err);
+    console.warn('DB loginAttempt upsert fallback:', err.message);
+  }
+
+  const remainingAttempts = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - nextAttempts);
+  return { nextAttempts, isLocked, remainingAttempts, lockedUntil };
+};
+
+const clearLoginAttempts = async (identifier, ip) => {
+  const keys = getLockoutKeys(identifier, ip);
+  for (const key of [keys.comboKey, keys.idKey, keys.ipKey]) {
+    MEMORY_LOGIN_ATTEMPTS.delete(key);
+  }
+  try {
+    await prisma.loginAttempt.deleteMany({
+      where: { key: { in: [keys.comboKey, keys.idKey, keys.ipKey] } }
+    });
+  } catch (err) {
+    console.error('clearLoginAttempts DB error:', err.message);
   }
 };
 
@@ -238,13 +287,11 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       ? req.headers['x-forwarded-for'].split(',')[0].trim()
       : (req.ip || req.socket.remoteAddress || '127.0.0.1');
 
-    const attemptKey = getLoginAttemptKey(normalizedCode, clientIp);
-
-    // 1. Kilit kontrolü
-    const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
+    // 1. KESİN KİLİT KONTROLÜ (Doğru şifre girilse dahi kilitliyken panele sokmaz!)
+    const lockedMinutes = await getLoginLockRemainingMinutes(normalizedCode, clientIp);
     if (lockedMinutes > 0) {
       return res.status(429).json({
-        message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.`
+        message: `Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.`
       });
     }
 
@@ -256,10 +303,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         user = await prisma.user.findUnique({ where: { parentCode: normalizedCode } });
         if (!user) {
           console.log('Parent user not found');
-          const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+          const attemptInfo = await registerFailedLoginAttempt(normalizedCode, clientIp);
           if (attemptInfo.isLocked) {
             return res.status(429).json({
-              message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+              message: 'Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen 15 dakika sonra tekrar deneyin.'
             });
           }
           return res.status(400).json({
@@ -272,10 +319,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         user = await prisma.user.findUnique({ where: { studentCode: normalizedCode } });
         if (!user) {
           console.log('Student user not found');
-          const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+          const attemptInfo = await registerFailedLoginAttempt(normalizedCode, clientIp);
           if (attemptInfo.isLocked) {
             return res.status(429).json({
-              message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+              message: 'Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen 15 dakika sonra tekrar deneyin.'
             });
           }
           return res.status(400).json({
@@ -288,10 +335,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       user = await prisma.user.findUnique({ where: { email: normalizedCode } });
       if (!user) {
         console.log('User not found');
-        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        const attemptInfo = await registerFailedLoginAttempt(normalizedCode, clientIp);
         if (attemptInfo.isLocked) {
           return res.status(429).json({
-            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+            message: 'Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen 15 dakika sonra tekrar deneyin.'
           });
         }
         return res.status(400).json({
@@ -300,10 +347,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       }
 
       if (!password) {
-        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        const attemptInfo = await registerFailedLoginAttempt(normalizedCode, clientIp);
         if (attemptInfo.isLocked) {
           return res.status(429).json({
-            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+            message: 'Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen 15 dakika sonra tekrar deneyin.'
           });
         }
         return res.status(400).json({
@@ -314,10 +361,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         console.log('Password mismatch');
-        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        const attemptInfo = await registerFailedLoginAttempt(normalizedCode, clientIp);
         if (attemptInfo.isLocked) {
           return res.status(429).json({
-            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+            message: 'Üst üste 3 kez yanlış giriş yapıldığı için sistem 15 dakika kilitlenmiştir. Doğru şifre girilse dahi kilit süresi bitene kadar giriş yapılamaz. Lütfen 15 dakika sonra tekrar deneyin.'
           });
         }
         return res.status(400).json({
@@ -343,7 +390,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    await clearLoginAttempts(attemptKey);
+    await clearLoginAttempts(normalizedCode, clientIp);
     console.log('Login successful for:', user.email || user.studentCode || user.parentCode);
     res.json({
       token, 
