@@ -62,15 +62,24 @@ const Navbar = () => {
       <div className="bg-primary text-white py-1.5 px-2 sm:px-6 shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden">
         <div className="mx-auto flex items-center justify-center max-w-7xl">
           <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap w-full py-0.5">
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+            <Link
+              to="/kontenjan-dersleri?kategori=LGS%202027"
+              className="bg-white/20 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105"
+            >
               LGS 2027
-            </span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+            </Link>
+            <Link
+              to="/kontenjan-dersleri?kategori=YKS%202027"
+              className="bg-white/20 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105"
+            >
               YKS 2027
-            </span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+            </Link>
+            <Link
+              to="/kontenjan-dersleri?kategori=KPSS%202027"
+              className="bg-white/20 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all hover:scale-105"
+            >
               KPSS 2027
-            </span>
+            </Link>
             <div className="flex items-center gap-1.5 whitespace-nowrap px-1">
               <span className="font-['Caveat',cursive] text-sm sm:text-lg font-bold text-white leading-none">maarif</span>
               <span className="font-extrabold tracking-widest text-[9px] sm:text-[10px] uppercase text-white/90">MODELİ</span>

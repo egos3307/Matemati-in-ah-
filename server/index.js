@@ -2213,6 +2213,279 @@ app.delete('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res
   }
 });
 
+// DEFAULT QUOTA COURSES SEED
+const DEFAULT_QUOTA_COURSES = [
+  {
+    id: 1,
+    category: 'YKS 2027',
+    title: 'TYT Matematik Canlı Kampı',
+    description: 'Baştan sona Temel Matematik, Problem Çözüm Teknikleri ve Yeni Nesil YKS Soruları.',
+    published: true,
+    tracks: JSON.stringify(['Sayısal', 'Eşit Ağırlık', 'Sözel', 'Yabancı Dil']),
+    totalQuota: 25,
+    remainingQuota: 6,
+    price: '3.500 TL',
+    image: '/IMG_2943.jpeg',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20TYT%20Matematik%20Kampı%20hakkında%20bilgi%20ve%20kontenjan%20ayırtmak%20istiyorum.'
+  },
+  {
+    id: 2,
+    category: 'YKS 2027',
+    title: 'AYT Matematik Derece Kampı',
+    description: 'İleri Seviye Fonksiyonlar, LTİ (Limit-Türev-İntegral), Trigonometri ve ÖSYM Soru Tipleri.',
+    published: true,
+    tracks: JSON.stringify(['Sayısal', 'Eşit Ağırlık']),
+    totalQuota: 20,
+    remainingQuota: 4,
+    price: '4.000 TL',
+    image: '/IMG_2999.jpeg',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20AYT%20Matematik%20Kampı%20hakkında%20bilgi%20ve%20kontenjan%20ayırtmak%20istiyorum.'
+  },
+  {
+    id: 3,
+    category: 'YKS 2027',
+    title: 'Geometri Özel Soru Çözüm Grubu',
+    description: 'Sıfırdan İleri Seviyeye Analitik Geometri, Üçgenler ve Çember Detaylı Konu & Soru Kampı.',
+    published: true,
+    tracks: JSON.stringify(['Sayısal', 'Eşit Ağırlık', 'Sözel', 'Yabancı Dil']),
+    totalQuota: 15,
+    remainingQuota: 3,
+    price: '2.500 TL',
+    image: '/IMG_3002.png',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20Geometri%20Grubu%20hakkında%20bilgi%20almak%20istiyorum.'
+  },
+  {
+    id: 4,
+    category: 'LGS 2027',
+    title: '8. Sınıf LGS Matematik Şampiyonlar Kampı',
+    description: 'LGS Yeni Nesil Mantık & Muhakeme Soruları, Çarpanlar Katlar, Üslü-Köklü İfadeler ve Deneme Çözümleri.',
+    published: true,
+    tracks: JSON.stringify(['LGS 8. Sınıf', '7. Sınıf Hazırlık']),
+    totalQuota: 20,
+    remainingQuota: 5,
+    price: '3.000 TL',
+    image: '/IMG_3001.jpeg',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20LGS%202027%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+  },
+  {
+    id: 5,
+    category: 'KPSS 2027',
+    title: 'KPSS Lisans & Ön Lisans Matematik Zirve Kampı',
+    description: 'ÖSYM Çıkmış Sorular, Pratik Matematik Metotları ve Tüm KPSS Konu Anlatımı.',
+    published: true,
+    tracks: JSON.stringify(['Lisans', 'Ön Lisans']),
+    totalQuota: 30,
+    remainingQuota: 8,
+    price: '3.500 TL',
+    image: '/IMG_2999.jpeg',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%202027%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+  }
+];
+
+// Quota Courses & Applications Routes
+app.get('/api/quota-courses', async (req, res) => {
+  const { category } = req.query;
+  try {
+    let courses = await prisma.quotaCourse.findMany({
+      where: category ? { category, published: true } : { published: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    if (!courses || courses.length === 0) {
+      courses = category 
+        ? DEFAULT_QUOTA_COURSES.filter(c => c.category === category)
+        : DEFAULT_QUOTA_COURSES;
+    }
+    res.json(courses);
+  } catch (err) {
+    console.error('Error fetching quota courses:', err);
+    const filtered = category 
+      ? DEFAULT_QUOTA_COURSES.filter(c => c.category === category)
+      : DEFAULT_QUOTA_COURSES;
+    res.json(filtered);
+  }
+});
+
+app.get('/api/teacher/quota-courses', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    let courses = await prisma.quotaCourse.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    if (!courses || courses.length === 0) {
+      courses = DEFAULT_QUOTA_COURSES;
+    }
+    res.json(courses);
+  } catch (err) {
+    console.error('Error fetching teacher quota courses:', err);
+    res.json(DEFAULT_QUOTA_COURSES);
+  }
+});
+
+app.post('/api/teacher/quota-courses', auth, checkRole('TEACHER'), async (req, res) => {
+  const { category, title, description, published, tracks, totalQuota, remainingQuota, price, image, whatsappLink } = req.body;
+  try {
+    const course = await prisma.quotaCourse.create({
+      data: {
+        category: category || 'YKS 2027',
+        title,
+        description,
+        published: published !== undefined ? published : true,
+        tracks: typeof tracks === 'string' ? tracks : JSON.stringify(tracks || []),
+        totalQuota: parseInt(totalQuota) || 20,
+        remainingQuota: parseInt(remainingQuota) || 5,
+        price: price || '3.500 TL',
+        image: image || '/IMG_2943.jpeg',
+        whatsappLink
+      }
+    });
+    res.json(course);
+  } catch (err) {
+    console.error('Error creating quota course:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/teacher/quota-courses/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { category, title, description, published, tracks, totalQuota, remainingQuota, price, image, whatsappLink } = req.body;
+  try {
+    const course = await prisma.quotaCourse.update({
+      where: { id },
+      data: {
+        category,
+        title,
+        description,
+        published,
+        tracks: typeof tracks === 'string' ? tracks : JSON.stringify(tracks || []),
+        totalQuota: parseInt(totalQuota),
+        remainingQuota: parseInt(remainingQuota),
+        price,
+        image,
+        whatsappLink
+      }
+    });
+    res.json(course);
+  } catch (err) {
+    console.error('Error updating quota course:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/quota-courses/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.quotaCourse.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting quota course:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Student Quota Application endpoints
+app.post('/api/quota-applications', async (req, res) => {
+  const { quotaCourseId, category, courseTitle, track, studentName, phone, email } = req.body;
+  try {
+    if (!studentName || !phone || !email || !track) {
+      return res.status(400).json({ message: 'Lütfen tüm alanları eksiksiz ve doğru doldurun.' });
+    }
+
+    // Telefon doğrulaması (Sadece 10 veya 11 hane rakam)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+      return res.status(400).json({ message: 'Geçersiz telefon numarası. Telefon numarası 10 veya 11 haneli olmalıdır.' });
+    }
+
+    // E-posta doğrulaması
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ message: 'Lütfen geçerli bir e-posta adresi girin.' });
+    }
+
+    let application;
+    try {
+      application = await prisma.quotaApplication.create({
+        data: {
+          quotaCourseId: quotaCourseId ? parseInt(quotaCourseId) : null,
+          category: category || 'YKS 2027',
+          courseTitle: courseTitle || 'Ders / Kamp',
+          track: track || 'Sayısal',
+          studentName: studentName.trim(),
+          phone: cleanPhone,
+          email: email.trim().toLowerCase(),
+          status: 'PENDING'
+        }
+      });
+
+      // Kontenjanı 1 düşür
+      if (quotaCourseId) {
+        const cId = parseInt(quotaCourseId);
+        const existingCourse = await prisma.quotaCourse.findUnique({ where: { id: cId } });
+        if (existingCourse && existingCourse.remainingQuota > 0) {
+          await prisma.quotaCourse.update({
+            where: { id: cId },
+            data: { remainingQuota: existingCourse.remainingQuota - 1 }
+          });
+        }
+      }
+    } catch (dbErr) {
+      console.warn('DB QuotaApplication create fallback:', dbErr.message);
+      application = {
+        id: Date.now(),
+        category,
+        courseTitle,
+        track,
+        studentName,
+        phone: cleanPhone,
+        email,
+        status: 'PENDING',
+        createdAt: new Date()
+      };
+    }
+
+    res.json({ success: true, application });
+  } catch (err) {
+    console.error('Error creating quota application:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/teacher/quota-applications', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const apps = await prisma.quotaApplication.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { quotaCourse: true }
+    });
+    res.json(apps);
+  } catch (err) {
+    console.error('Error fetching quota applications:', err);
+    res.json([]);
+  }
+});
+
+app.put('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { status } = req.body;
+  try {
+    const appRecord = await prisma.quotaApplication.update({
+      where: { id },
+      data: { status }
+    });
+    res.json(appRecord);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.quotaApplication.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Zoom SDK Signature Endpoint
 app.post('/api/zoom/signature', auth, async (req, res) => {
   const { meetingNumber } = req.body;

@@ -208,3 +208,37 @@ model PdfNote {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 }
+
+model QuotaCourse {
+  id             Int      @id @default(autoincrement())
+  category       String   // "YKS 2027", "LGS 2027", "KPSS 2027"
+  title          String   // Örn: "TYT Matematik Canlı Kampı"
+  description    String?
+  published      Boolean  @default(true)
+  tracks         String?  // JSON array string: '["Sayısal","Sözel","Eşit Ağırlık","Yabancı Dil"]'
+  totalQuota     Int?     @default(20)
+  remainingQuota Int?     @default(5)
+  price          String?  // Örn: "3.500 TL"
+  image          String?
+  whatsappLink   String?
+  teacherId      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  applications   QuotaApplication[]
+}
+
+model QuotaApplication {
+  id            Int          @id @default(autoincrement())
+  quotaCourseId Int?
+  quotaCourse   QuotaCourse? @relation(fields: [quotaCourseId], references: [id], onDelete: SetNull)
+  category      String       // Örn: "YKS 2027"
+  courseTitle   String       // Örn: "TYT Matematik Canlı Kampı"
+  track         String       // "Sayısal", "Sözel", "Eşit Ağırlık", "Yabancı Dil"
+  studentName   String       // Ad Soyad
+  phone         String       // Tel No
+  email         String       // E-posta
+  status        String       @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+

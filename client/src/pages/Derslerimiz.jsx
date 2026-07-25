@@ -112,8 +112,8 @@ const Derslerimiz = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
-        <div className="grid gap-8 lg:grid-cols-2">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 lg:px-8">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {camps.map((camp) => (
             <div 
               key={camp.id} 
@@ -179,15 +179,22 @@ const Derslerimiz = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex">
+                <div className="flex flex-col gap-2.5">
+                  <a
+                    href={`/kontenjan-dersleri?kategori=${encodeURIComponent(camp.badge?.includes('LGS') || camp.title?.includes('LGS') ? 'LGS 2027' : camp.title?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027')}`}
+                    className="w-full flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-black text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/95 hover:scale-102"
+                  >
+                    <span className="material-symbols-outlined">event_seat</span>
+                    Yer Ayırt
+                  </a>
                   <a
                     href={camp.whatsappLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/95 hover:shadow-xl"
+                    className="w-full flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200"
                   >
-                    <span className="material-symbols-outlined">chat</span>
-                    WhatsApp ile Bilgi & Kayıt
+                    <span className="material-symbols-outlined text-base">chat</span>
+                    WhatsApp İletişim
                   </a>
                 </div>
               </div>

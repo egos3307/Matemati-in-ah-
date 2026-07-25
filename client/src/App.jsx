@@ -14,6 +14,7 @@ import Blog from './pages/Blog';
 import BlogPostDetail from './pages/BlogPostDetail';
 import Contact from './pages/Contact';
 import PdfNotes from './pages/PdfNotes';
+import QuotaCourseSelection from './pages/QuotaCourseSelection';
 
 import WatchRecording from './pages/WatchRecording';
 import KVKK from './pages/KVKK';
@@ -77,6 +78,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/derslerimiz" element={<Derslerimiz />} />
+        <Route path="/kontenjan-dersleri" element={<QuotaCourseSelection />} />
         <Route path="/pdf-notlari" element={<PdfNotes />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPostDetail />} />

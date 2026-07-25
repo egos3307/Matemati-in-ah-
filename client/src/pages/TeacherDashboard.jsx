@@ -134,12 +134,108 @@ const TeacherDashboard = () => {
   const [assignLightbox, setAssignLightbox] = useState(null);
   const [messagedStudentIds, setMessagedStudentIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('fulle_messaged_students');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
+      return JSON.parse(localStorage.getItem('messagedStudentIds') || '[]');
+    } catch (e) {
       return [];
     }
   });
+
+  // Quota Management States
+  const [quotaCoursesList, setQuotaCoursesList] = useState([]);
+  const [quotaAppsList, setQuotaAppsList] = useState([]);
+  const [quotaCatFilter, setQuotaCatFilter] = useState('YKS 2027');
+  const [showQuotaCourseModal, setShowQuotaCourseModal] = useState(false);
+  const [editingQuotaId, setEditingQuotaId] = useState(null);
+  const [quotaFormState, setQuotaFormState] = useState({
+    category: 'YKS 2027',
+    title: '',
+    description: '',
+    published: true,
+    tracks: ['Sayısal', 'Eşit Ağırlık', 'Sözel', 'Yabancı Dil'],
+    totalQuota: 20,
+    remainingQuota: 5,
+    price: '3.500 TL',
+    image: '/IMG_2943.jpeg',
+    whatsappLink: ''
+  });
+
+  const fetchQuotaCourses = async () => {
+    try {
+      const res = await axios.get('/api/teacher/quota-courses');
+      setQuotaCoursesList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching quota courses:', err);
+    }
+  };
+
+  const fetchQuotaApplications = async () => {
+    try {
+      const res = await axios.get('/api/teacher/quota-applications');
+      setQuotaAppsList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching quota applications:', err);
+    }
+  };
+
+  const handleSaveQuotaCourse = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingQuotaId) {
+        await axios.put(`/api/teacher/quota-courses/${editingQuotaId}`, quotaFormState);
+      } else {
+        await axios.post('/api/teacher/quota-courses', quotaFormState);
+      }
+      setShowQuotaCourseModal(false);
+      setEditingQuotaId(null);
+      setQuotaFormState({
+        category: quotaCatFilter,
+        title: '',
+        description: '',
+        published: true,
+        tracks: ['Sayısal', 'Eşit Ağırlık', 'Sözel', 'Yabancı Dil'],
+        totalQuota: 20,
+        remainingQuota: 5,
+        price: '3.500 TL',
+        image: '/IMG_2943.jpeg',
+        whatsappLink: ''
+      });
+      fetchQuotaCourses();
+    } catch (err) {
+      alert('Hata: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteQuotaCourse = async (id) => {
+    if (!window.confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/quota-courses/${id}`);
+      fetchQuotaCourses();
+    } catch (err) {
+      alert('Hata: ' + err.message);
+    }
+  };
+
+  const handleToggleQuotaPublished = async (course) => {
+    try {
+      await axios.put(`/api/teacher/quota-courses/${course.id}`, {
+        ...course,
+        published: !course.published
+      });
+      fetchQuotaCourses();
+    } catch (err) {
+      console.error('Toggle error:', err);
+    }
+  };
+
+  const handleDeleteQuotaApplication = async (id) => {
+    if (!window.confirm('Bu başvuruyu silmek istediğinize emin misiniz?')) return;
+    try {
+      await axios.delete(`/api/teacher/quota-applications/${id}`);
+      fetchQuotaApplications();
+    } catch (err) {
+      alert('Hata: ' + err.message);
+    }
+  };
 
   // Form submission and question states
   const [trialRequests, setTrialRequests] = useState([]);
@@ -633,6 +729,9 @@ const TeacherDashboard = () => {
       fetchContactMessages();
     } else if (activeTab === 'pdf-notes') {
       fetchPdfNotes();
+    } else if (activeTab === 'quota') {
+      fetchQuotaCourses();
+      fetchQuotaApplications();
     }
   }, [activeTab]);
 
@@ -1068,6 +1167,13 @@ const TeacherDashboard = () => {
               <span className="material-symbols-outlined">picture_as_pdf</span>
               <span>PDF Not Yayınla</span>
             </button>
+            <button 
+              onClick={() => { setActiveTab('quota'); setSelectedStudent(null); }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'quota' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined">how_to_reg</span>
+              <span>Kontenjan Yönetimi</span>
+            </button>
             {user?.role === 'HEAD_TEACHER' && (
               <>
                 <button 
@@ -1137,6 +1243,7 @@ const TeacherDashboard = () => {
           <div>
             <h2 className="text-2xl font-black text-slate-900">
               {activeTab === 'student-detail' ? `Öğrenci Detayı` : 
+               activeTab === 'quota' ? `Kontenjan & Ders Yönetimi` :
                activeTab === 'camps' ? `Kamp Yönetimi` :
                activeTab === 'forms' ? `Form Başvuruları & Sorular` :
                activeTab === 'payments' ? `Ödeme Takip Sistemi` :
