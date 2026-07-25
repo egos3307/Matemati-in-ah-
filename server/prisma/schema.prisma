@@ -142,6 +142,7 @@ model Camp {
   highlights   String   // JSON string: string[]
   price        String?
   whatsappLink String?
+  category     String?  // Örn: "YKS 2027", "LGS 2027", "KPSS 2027", "MAARIF"
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

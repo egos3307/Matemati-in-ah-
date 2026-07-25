@@ -75,8 +75,13 @@ const QuotaCourseSelection = () => {
     const fetchCourses = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`/api/quota-courses?category=${encodeURIComponent(selectedCategory)}`);
-        setCourses(res.data || []);
+        const res = await axios.get(`/api/camps?category=${encodeURIComponent(selectedCategory)}`);
+        if (res.data && res.data.length > 0) {
+          setCourses(res.data);
+        } else {
+          const quotaRes = await axios.get(`/api/quota-courses?category=${encodeURIComponent(selectedCategory)}`);
+          setCourses(quotaRes.data || []);
+        }
       } catch (err) {
         console.error('Error loading quota courses:', err);
       } finally {

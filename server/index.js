@@ -2147,10 +2147,22 @@ app.delete('/api/teacher/pdf-notes/:id', auth, checkRole('TEACHER'), async (req,
 
 // Camp / Course Routes
 app.get('/api/camps', async (req, res) => {
+  const { category } = req.query;
   try {
     const camps = await prisma.camp.findMany({
       orderBy: { createdAt: 'desc' }
     });
+    if (category) {
+      const filtered = camps.filter(c => {
+        if (c.category && c.category === category) return true;
+        if (category === 'LGS 2027' && (c.badge?.includes('LGS') || c.title?.includes('LGS') || c.title?.includes('Ortaokul'))) return true;
+        if (category === 'KPSS 2027' && (c.badge?.includes('KPSS') || c.title?.includes('KPSS'))) return true;
+        if (category === 'YKS 2027' && (c.badge?.includes('YKS') || c.title?.includes('YKS') || c.title?.includes('Lisans'))) return true;
+        if (category === 'MAARIF' && (c.badge?.includes('Maarif') || c.title?.includes('Maarif') || c.category === 'MAARIF')) return true;
+        return false;
+      });
+      return res.json(filtered.length > 0 ? filtered : camps);
+    }
     res.json(camps);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2158,7 +2170,7 @@ app.get('/api/camps', async (req, res) => {
 });
 
 app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
-  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink } = req.body;
+  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink, category } = req.body;
   try {
     const camp = await prisma.camp.create({
       data: {
@@ -2170,7 +2182,8 @@ app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
         description,
         highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
         price,
-        whatsappLink
+        whatsappLink,
+        category: category || 'YKS 2027'
       }
     });
     res.json(camp);
@@ -2181,21 +2194,25 @@ app.post('/api/teacher/camps', auth, checkRole('TEACHER'), async (req, res) => {
 
 app.put('/api/teacher/camps/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink } = req.body;
+  const { badge, title, subtitle, image, details, description, highlights, price, whatsappLink, category } = req.body;
   try {
+    const data = {
+      badge,
+      title,
+      subtitle,
+      image,
+      details: typeof details === 'string' ? details : JSON.stringify(details),
+      description,
+      highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
+      price,
+      whatsappLink
+    };
+    if (category !== undefined) {
+      data.category = category;
+    }
     const camp = await prisma.camp.update({
       where: { id },
-      data: {
-        badge,
-        title,
-        subtitle,
-        image,
-        details: typeof details === 'string' ? details : JSON.stringify(details),
-        description,
-        highlights: typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
-        price,
-        whatsappLink
-      }
+      data
     });
     res.json(camp);
   } catch (err) {

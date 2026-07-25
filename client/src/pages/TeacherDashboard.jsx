@@ -237,6 +237,20 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleUpdateCampCategory = async (campId, newCategory) => {
+    try {
+      const existingCamp = camps.find(c => c.id === campId);
+      if (!existingCamp) return;
+      await axios.put(`/api/teacher/camps/${campId}`, {
+        ...existingCamp,
+        category: newCategory
+      });
+      fetchCamps();
+    } catch (err) {
+      console.error('Camp category update error:', err);
+    }
+  };
+
   // Form submission and question states
   const [trialRequests, setTrialRequests] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
@@ -4252,83 +4266,76 @@ const TeacherDashboard = () => {
                 </div>
               </div>
 
-              {/* Section 1: Yayınlanan Dersler */}
+              {/* Section 1: Derslerimiz Sayfasındaki Kamplar & Kategori Eşleştirme */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xl font-black text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">school</span>
-                    <span>{quotaCatFilter === 'MAARIF' ? 'MAARİF MODELİ' : quotaCatFilter} Yayınlanmış Dersler</span>
+                    <span>Derslerimiz Sayfası Kampları ({quotaCatFilter === 'MAARIF' ? 'MAARİF MODELİ' : quotaCatFilter})</span>
                   </h4>
                   <span className="text-xs font-bold text-slate-400">
-                    Öğrenci seçim ekranında gösterilen ders kartları
+                    Öğretmenin yayınladığı derslerimiz kartlarının kategori eşleştirmesi
                   </span>
                 </div>
 
-                {quotaCoursesList.filter(c => c.category === quotaCatFilter).length === 0 ? (
+                {camps.length === 0 ? (
                   <div className="bg-white rounded-3xl p-10 text-center border border-slate-100">
                     <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">folder_open</span>
-                    <p className="text-slate-500 font-bold text-sm">Bu kategoride henüz yayınlanmış ders kartı bulunmuyor.</p>
+                    <p className="text-slate-500 font-bold text-sm">Henüz Eğitim Kampları sekmesinde yayınlanmış ders bulunmuyor.</p>
                   </div>
                 ) : (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {quotaCoursesList.filter(c => c.category === quotaCatFilter).map((course) => (
-                      <div key={course.id} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col justify-between space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${course.published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                              {course.published ? 'Yayında' : 'Taslak'}
-                            </span>
-                            <span className="text-xs font-bold text-slate-400">
-                              Kalan Kontenjan: <strong className="text-amber-600 font-black">{course.remainingQuota} / {course.totalQuota}</strong>
-                            </span>
+                    {camps.map((camp) => {
+                      const isMatchingCategory = (camp.category === quotaCatFilter) || 
+                        (quotaCatFilter === 'LGS 2027' && (camp.badge?.includes('LGS') || camp.title?.includes('LGS'))) ||
+                        (quotaCatFilter === 'KPSS 2027' && (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS'))) ||
+                        (quotaCatFilter === 'YKS 2027' && (camp.badge?.includes('YKS') || camp.title?.includes('YKS'))) ||
+                        (quotaCatFilter === 'MAARIF' && (camp.badge?.includes('Maarif') || camp.title?.includes('Maarif')));
+
+                      return (
+                        <div key={camp.id} className={`bg-white rounded-3xl border p-6 shadow-sm flex flex-col justify-between space-y-4 transition-all ${isMatchingCategory ? 'border-primary/40 ring-2 ring-primary/10' : 'border-slate-100'}`}>
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-primary/10 text-primary">
+                                {camp.badge || 'Eğitim Kampı'}
+                              </span>
+                              {isMatchingCategory && (
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-black text-[10px] rounded-full flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-xs">check_circle</span>
+                                  <span>{quotaCatFilter} Eşleşti</span>
+                                </span>
+                              )}
+                            </div>
+
+                            <h5 className="font-black text-slate-900 text-base">{camp.title}</h5>
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{camp.description}</p>
+                            <div className="mt-3 text-xs font-black text-primary">{camp.price || 'Ücret Bilgisi'}</div>
                           </div>
 
-                          <h5 className="font-black text-slate-900 text-base">{course.title}</h5>
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{course.description}</p>
-                          <div className="mt-3 text-xs font-black text-primary">{course.price}</div>
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <button
-                            onClick={() => handleToggleQuotaPublished(course)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${course.published ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
-                          >
-                            {course.published ? 'Yayından Kaldır' : 'Yayınla'}
-                          </button>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                setEditingQuotaId(course.id);
-                                setQuotaFormState({
-                                  category: course.category,
-                                  title: course.title,
-                                  description: course.description || '',
-                                  published: course.published,
-                                  tracks: typeof course.tracks === 'string' ? JSON.parse(course.tracks) : (course.tracks || []),
-                                  totalQuota: course.totalQuota || 20,
-                                  remainingQuota: course.remainingQuota || 5,
-                                  price: course.price || '',
-                                  image: course.image || '',
-                                  whatsappLink: course.whatsappLink || ''
-                                });
-                                setShowQuotaCourseModal(true);
-                              }}
-                              className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                              title="Düzenle"
-                            >
-                              <span className="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteQuotaCourse(course.id)}
-                              className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
-                              title="Sil"
-                            >
-                              <span className="material-symbols-outlined text-lg">delete</span>
-                            </button>
+                          <div className="pt-3 border-t border-slate-100 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                              Sınav Kategorisine Eşitle:
+                            </label>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'].map((cat) => (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => handleUpdateCampCategory(camp.id, cat)}
+                                  className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                                    camp.category === cat
+                                      ? 'bg-primary text-white font-black shadow-sm'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  {cat === 'MAARIF' ? 'MAARİF' : cat}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
