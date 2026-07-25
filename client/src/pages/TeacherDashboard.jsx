@@ -4193,6 +4193,332 @@ const TeacherDashboard = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'quota' && (
+            <div className="p-8 space-y-8 animate-in fade-in duration-300">
+              {/* Header & Stats Banner */}
+              <div className="bg-slate-900 text-white rounded-[32px] p-8 shadow-xl relative overflow-hidden">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <span className="px-3 py-1 bg-primary/20 text-primary text-xs font-black uppercase tracking-widest rounded-full">
+                      Kontenjan & Ders Yönetimi
+                    </span>
+                    <h3 className="text-3xl font-black mt-2">Ders & Kontenjan Paneli</h3>
+                    <p className="text-slate-400 text-xs font-medium mt-1">
+                      YKS 2027, LGS 2027, KPSS 2027 ve Maarif Modeli kategorilerinde yayınlanacak dersleri düzenleyin ve gelen öğrenci başvurularını takip edin.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingQuotaId(null);
+                      setQuotaFormState({
+                        category: quotaCatFilter,
+                        title: '',
+                        description: '',
+                        published: true,
+                        tracks: ['Sayısal', 'Eşit Ağırlık', 'Sözel', 'Yabancı Dil'],
+                        totalQuota: 20,
+                        remainingQuota: 5,
+                        price: '3.500 TL',
+                        image: '/IMG_2943.jpeg',
+                        whatsappLink: ''
+                      });
+                      setShowQuotaCourseModal(true);
+                    }}
+                    className="px-6 py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm rounded-2xl shadow-lg shadow-primary/30 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined">add_circle</span>
+                    <span>Yeni Ders Ekle</span>
+                  </button>
+                </div>
+
+                {/* Category Tabs */}
+                <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-800 flex-wrap">
+                  {['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setQuotaCatFilter(cat)}
+                      className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        quotaCatFilter === cat
+                          ? 'bg-primary text-white shadow-md shadow-primary/30 font-black scale-105'
+                          : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      {cat === 'MAARIF' ? 'MAARİF MODELİ' : cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 1: Yayınlanan Dersler */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">school</span>
+                    <span>{quotaCatFilter === 'MAARIF' ? 'MAARİF MODELİ' : quotaCatFilter} Yayınlanmış Dersler</span>
+                  </h4>
+                  <span className="text-xs font-bold text-slate-400">
+                    Öğrenci seçim ekranında gösterilen ders kartları
+                  </span>
+                </div>
+
+                {quotaCoursesList.filter(c => c.category === quotaCatFilter).length === 0 ? (
+                  <div className="bg-white rounded-3xl p-10 text-center border border-slate-100">
+                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">folder_open</span>
+                    <p className="text-slate-500 font-bold text-sm">Bu kategoride henüz yayınlanmış ders kartı bulunmuyor.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {quotaCoursesList.filter(c => c.category === quotaCatFilter).map((course) => (
+                      <div key={course.id} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${course.published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {course.published ? 'Yayında' : 'Taslak'}
+                            </span>
+                            <span className="text-xs font-bold text-slate-400">
+                              Kalan Kontenjan: <strong className="text-amber-600 font-black">{course.remainingQuota} / {course.totalQuota}</strong>
+                            </span>
+                          </div>
+
+                          <h5 className="font-black text-slate-900 text-base">{course.title}</h5>
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{course.description}</p>
+                          <div className="mt-3 text-xs font-black text-primary">{course.price}</div>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleToggleQuotaPublished(course)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${course.published ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                          >
+                            {course.published ? 'Yayından Kaldır' : 'Yayınla'}
+                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingQuotaId(course.id);
+                                setQuotaFormState({
+                                  category: course.category,
+                                  title: course.title,
+                                  description: course.description || '',
+                                  published: course.published,
+                                  tracks: typeof course.tracks === 'string' ? JSON.parse(course.tracks) : (course.tracks || []),
+                                  totalQuota: course.totalQuota || 20,
+                                  remainingQuota: course.remainingQuota || 5,
+                                  price: course.price || '',
+                                  image: course.image || '',
+                                  whatsappLink: course.whatsappLink || ''
+                                });
+                                setShowQuotaCourseModal(true);
+                              }}
+                              className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                              title="Düzenle"
+                            >
+                              <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteQuotaCourse(course.id)}
+                              className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                              title="Sil"
+                            >
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Gelen Kontenjan Başvuruları / Yer Ayırtanlar */}
+              <div className="space-y-4 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">person_add</span>
+                    <span>Gelen Yer Ayırtma & Kontenjan Başvuruları ({quotaAppsList.length})</span>
+                  </h4>
+                  <span className="text-xs font-bold text-slate-400">
+                    Öğrencilerin yer ayırttığı ders, alan ve doğrulanmış iletişim bilgileri
+                  </span>
+                </div>
+
+                {quotaAppsList.length === 0 ? (
+                  <div className="bg-white rounded-3xl p-10 text-center border border-slate-100">
+                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">inbox</span>
+                    <p className="text-slate-500 font-bold text-sm">Henüz gelen yer ayırtma başvurusu bulunmuyor.</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-black uppercase tracking-wider">
+                          <tr>
+                            <th className="py-4 px-6">Öğrenci Adı Soyadı</th>
+                            <th className="py-4 px-6">Telefon Numarası</th>
+                            <th className="py-4 px-6">E-posta</th>
+                            <th className="py-4 px-6">Kategori & Ders</th>
+                            <th className="py-4 px-6">Seçilen Alan</th>
+                            <th className="py-4 px-6">Tarih</th>
+                            <th className="py-4 px-6 text-right">İşlem</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                          {quotaAppsList.map((app) => (
+                            <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="py-4 px-6 font-black text-slate-900">{app.studentName}</td>
+                              <td className="py-4 px-6">
+                                <a
+                                  href={`https://wa.me/90${app.phone.replace(/^0/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-sm">chat</span>
+                                  <span>{app.phone}</span>
+                                </a>
+                              </td>
+                              <td className="py-4 px-6">{app.email}</td>
+                              <td className="py-4 px-6">
+                                <span className="font-bold text-slate-900 block">{app.category}</span>
+                                <span className="text-slate-400 text-[11px]">{app.courseTitle}</span>
+                              </td>
+                              <td className="py-4 px-6">
+                                <span className="px-2.5 py-1 bg-primary/10 text-primary font-black rounded-lg text-[11px]">
+                                  {app.track}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-slate-400 text-[11px]">
+                                {new Date(app.createdAt).toLocaleDateString('tr-TR')}
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <button
+                                  onClick={() => handleDeleteQuotaApplication(app.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                                  title="Sil"
+                                >
+                                  <span className="material-symbols-outlined text-base">delete</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add/Edit Quota Course Modal */}
+              {showQuotaCourseModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                      <h3 className="text-xl font-black text-slate-900">
+                        {editingQuotaId ? 'Kontenjan Dersi Düzenle' : 'Yeni Kontenjan Dersi Ekle'}
+                      </h3>
+                      <button
+                        onClick={() => setShowQuotaCourseModal(false)}
+                        className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveQuotaCourse} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Kategori</label>
+                        <select
+                          value={quotaFormState.category}
+                          onChange={(e) => setQuotaFormState({ ...quotaFormState, category: e.target.value })}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none"
+                        >
+                          <option value="YKS 2027">YKS 2027</option>
+                          <option value="LGS 2027">LGS 2027</option>
+                          <option value="KPSS 2027">KPSS 2027</option>
+                          <option value="MAARIF">MAARİF MODELİ</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Ders Adı *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Örn: TYT Matematik Canlı Kampı"
+                          value={quotaFormState.title}
+                          onChange={(e) => setQuotaFormState({ ...quotaFormState, title: e.target.value })}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Açıklama</label>
+                        <textarea
+                          placeholder="Ders içeriği, soru çözüm detayları vb."
+                          value={quotaFormState.description}
+                          onChange={(e) => setQuotaFormState({ ...quotaFormState, description: e.target.value })}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none h-20"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Toplam Kontenjan</label>
+                          <input
+                            type="number"
+                            value={quotaFormState.totalQuota}
+                            onChange={(e) => setQuotaFormState({ ...quotaFormState, totalQuota: parseInt(e.target.value) || 0 })}
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Kalan Kontenjan</label>
+                          <input
+                            type="number"
+                            value={quotaFormState.remainingQuota}
+                            onChange={(e) => setQuotaFormState({ ...quotaFormState, remainingQuota: parseInt(e.target.value) || 0 })}
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Fiyat</label>
+                        <input
+                          type="text"
+                          placeholder="Örn: 3.500 TL"
+                          value={quotaFormState.price}
+                          onChange={(e) => setQuotaFormState({ ...quotaFormState, price: e.target.value })}
+                          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 font-bold outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="publishedCheck"
+                          checked={quotaFormState.published}
+                          onChange={(e) => setQuotaFormState({ ...quotaFormState, published: e.target.checked })}
+                          className="w-4 h-4 rounded text-primary cursor-pointer"
+                        />
+                        <label htmlFor="publishedCheck" className="text-xs font-bold text-slate-700 cursor-pointer">Sitede Hemen Yayınla</label>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm rounded-2xl shadow-lg shadow-primary/20 transition-all mt-4 cursor-pointer"
+                      >
+                        Kaydet ve Yayınla
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

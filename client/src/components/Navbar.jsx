@@ -80,10 +80,13 @@ const Navbar = () => {
             >
               KPSS 2027
             </Link>
-            <div className="flex items-center gap-1.5 whitespace-nowrap px-1">
+            <Link
+              to="/kontenjan-dersleri?kategori=MAARIF"
+              className="flex items-center gap-1.5 whitespace-nowrap px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/35 transition-all hover:scale-105 cursor-pointer"
+            >
               <span className="font-['Caveat',cursive] text-sm sm:text-lg font-bold text-white leading-none">maarif</span>
               <span className="font-extrabold tracking-widest text-[9px] sm:text-[10px] uppercase text-white/90">MODELİ</span>
-            </div>
+            </Link>
             <Link
               to="/pdf-notlari"
               className="bg-white/25 hover:bg-white/35 px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 text-white transition-all hover:scale-105"

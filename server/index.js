@@ -2279,6 +2279,19 @@ const DEFAULT_QUOTA_COURSES = [
     price: '3.500 TL',
     image: '/IMG_2999.jpeg',
     whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%202027%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+  },
+  {
+    id: 6,
+    category: 'MAARIF',
+    title: 'Türkiye Yüzyılı Maarif Modeli Yeni Müfredat Matematik Kampı',
+    description: 'Yeni müfredat beceri temelli sorular, kavramsal anlama ve yeni nesil soru çözümleri.',
+    published: true,
+    tracks: JSON.stringify(['Maarif Lise', 'Maarif Ortaokul']),
+    totalQuota: 20,
+    remainingQuota: 7,
+    price: '3.500 TL',
+    image: '/IMG_3002.png',
+    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Maarif%20Modeli%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
   }
 ];
 

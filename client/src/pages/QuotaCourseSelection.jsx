@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
 
-const CATEGORIES = ['YKS 2027', 'LGS 2027', 'KPSS 2027'];
+const CATEGORIES = ['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'];
 
 const TRACK_OPTIONS = {
   'YKS 2027': [
@@ -19,6 +19,10 @@ const TRACK_OPTIONS = {
   'KPSS 2027': [
     { id: 'Lisans', label: 'KPSS Lisans', icon: 'workspace_premium', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     { id: 'Ön Lisans', label: 'KPSS Ön Lisans', icon: 'badge', color: 'bg-teal-50 text-teal-700 border-teal-200' }
+  ],
+  'MAARIF': [
+    { id: 'Maarif Lise', label: 'Maarif Modeli Lise (9-12. Sınıf)', icon: 'auto_awesome', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    { id: 'Maarif Ortaokul', label: 'Maarif Modeli Ortaokul (5-8. Sınıf)', icon: 'school', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
   ]
 };
 
