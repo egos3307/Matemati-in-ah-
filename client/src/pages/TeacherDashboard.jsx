@@ -783,7 +783,11 @@ const TeacherDashboard = () => {
       setShowAddPdfModal(false);
       fetchPdfNotes();
     } catch (err) {
-      alert('Not yayınlanırken hata oluştu: ' + (err.response?.data?.error || err.message));
+      console.error('PDF publish error:', err);
+      const errMsg = typeof err.response?.data?.error === 'string' 
+        ? err.response.data.error 
+        : (err.response?.data?.message || err.message || 'Bilinmeyen hata');
+      alert('Not yayınlanırken hata oluştu: ' + errMsg);
     } finally {
       setPdfPublishing(false);
     }
@@ -795,7 +799,10 @@ const TeacherDashboard = () => {
       await axios.delete(`/api/teacher/pdf-notes/${id}`);
       fetchPdfNotes();
     } catch (err) {
-      alert('Not silinirken hata oluştu: ' + (err.response?.data?.error || err.message));
+      const errMsg = typeof err.response?.data?.error === 'string' 
+        ? err.response.data.error 
+        : (err.response?.data?.message || err.message || 'Bilinmeyen hata');
+      alert('Not silinirken hata oluştu: ' + errMsg);
     }
   };
 
