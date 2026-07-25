@@ -7,6 +7,7 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const [isSubBannerOpen, setIsSubBannerOpen] = useState(true);
+  const [manualToggle, setManualToggle] = useState(false);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
@@ -16,19 +17,30 @@ const Navbar = () => {
       if (window.innerWidth >= 768) return;
 
       const currentScrollY = window.scrollY;
-      if (currentScrollY > 60 && currentScrollY > lastScrollY) {
-        // Aşağı kaydırıldığında turuncu menü yukarı doğru yumuşakça kapanır
-        setIsSubBannerOpen(false);
-      } else if (currentScrollY < 20) {
-        // En yukarı çıkıldığında otomatik tekrar açılır
+
+      // En yukarı çıkıldığında otomatik sıfırlanır ve açılır
+      if (currentScrollY < 20) {
         setIsSubBannerOpen(true);
+        setManualToggle(false);
+      } else if (!manualToggle) {
+        // Kullanıcı elle oka basmadıysa kaydırmaya göre otomatik kapanır
+        if (currentScrollY > 60 && currentScrollY > lastScrollY) {
+          setIsSubBannerOpen(false);
+        }
       }
       lastScrollY = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [manualToggle]);
+
+  const toggleSubBanner = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setManualToggle(true);
+    setIsSubBannerOpen(prev => !prev);
+  };
 
   const handleLogout = () => {
     logout();
@@ -82,9 +94,9 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Sub Orange Banner Bar (CSS Grid 1fr -> 0fr Ultra Pürüzsüz Akordiyon) */}
+      {/* Sub Orange Banner Bar (CSS Grid 1fr -> 0fr Akordiyon) */}
       <div className={`grid bg-primary text-white shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full transition-[grid-template-rows,opacity] duration-500 cubic-bezier(0.4,0,0.2,1) md:!grid-rows-[1fr] md:!opacity-100 md:!pointer-events-auto ${
-        isSubBannerOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+        isSubBannerOpen ? 'grid-rows-[1fr] opacity-100 pointer-events-auto' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
       }`}>
         <div className="overflow-hidden min-h-0">
           <div className="mx-auto flex items-center justify-center max-w-7xl px-2 sm:px-6 py-2">
@@ -152,16 +164,16 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobil Ok Aç/Kapat Butonu (Sadece Mobil Cihazlarda Görünür, Sınırda Taşmasız) */}
-      <div className="md:hidden flex justify-center w-full relative z-30 -mb-3.5">
+      {/* Mobil Ok Aç/Kapat Butonu (Tüm Katmanların Üstünde, %100 Dokunmatik & Tıklanabilir) */}
+      <div className="md:hidden flex justify-center w-full relative z-50 -mb-3.5 pointer-events-auto">
         <button
           type="button"
-          onClick={() => setIsSubBannerOpen(prev => !prev)}
-          className="w-10 h-6 bg-primary text-white rounded-b-2xl flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-all duration-300 border-b border-x border-white/20 cursor-pointer"
+          onClick={toggleSubBanner}
+          className="w-12 h-7 bg-primary text-white rounded-b-2xl flex items-center justify-center shadow-xl shadow-primary/40 active:scale-90 transition-all duration-200 border-b border-x border-white/30 cursor-pointer pointer-events-auto"
           title={isSubBannerOpen ? 'Alt Menüyü Gizle' : 'Alt Menüyü Göster'}
           aria-label="Toggle Alt Menü"
         >
-          <span className="material-symbols-outlined text-xl leading-none transition-transform duration-300 font-black">
+          <span className="material-symbols-outlined text-2xl leading-none font-black select-none pointer-events-none">
             {isSubBannerOpen ? 'expand_less' : 'expand_more'}
           </span>
         </button>
