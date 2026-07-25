@@ -6,10 +6,13 @@ import SEO from '../components/SEO';
 const CATEGORIES = ['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'];
 
 const MAARIF_GRADES = [
+  { id: '5. Sınıf', label: '5. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { id: '6. Sınıf', label: '6. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  { id: '7. Sınıf', label: '7. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { id: '8. Sınıf', label: '8. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   { id: '9. Sınıf', label: '9. Sınıf (Maarif Modeli)', icon: 'auto_stories', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { id: '10. Sınıf', label: '10. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { id: '11. Sınıf', label: '11. Sınıf (Alan Seçimli)', icon: 'psychology', color: 'bg-purple-50 text-purple-700 border-purple-200', hasTrack: true },
-  { id: '12. Sınıf', label: '12. Sınıf (Maarif Modeli)', icon: 'workspace_premium', color: 'bg-amber-50 text-amber-700 border-amber-200' }
+  { id: '10. Sınıf', label: '10. Sınıf (Maarif Modeli)', icon: 'auto_stories', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  { id: '11. Sınıf', label: '11. Sınıf (Alan Seçimli)', icon: 'psychology', color: 'bg-amber-50 text-amber-700 border-amber-200', hasTrack: true }
 ];
 
 const ALAN_TRACKS_11 = [
