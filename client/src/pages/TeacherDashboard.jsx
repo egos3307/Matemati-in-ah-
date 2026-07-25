@@ -239,7 +239,7 @@ const TeacherDashboard = () => {
 
   const handleUpdateCampCategory = async (campId, newCategory) => {
     try {
-      const existingCamp = camps.find(c => c.id === campId);
+      const existingCamp = campsList.find(c => c.id === campId);
       if (!existingCamp) return;
       await axios.put(`/api/teacher/camps/${campId}`, {
         ...existingCamp,
@@ -4285,14 +4285,14 @@ const TeacherDashboard = () => {
                   </span>
                 </div>
 
-                {camps.length === 0 ? (
+                {(!campsList || campsList.length === 0) ? (
                   <div className="bg-white rounded-3xl p-10 text-center border border-slate-100">
                     <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">folder_open</span>
                     <p className="text-slate-500 font-bold text-sm">Henüz Eğitim Kampları sekmesinde yayınlanmış ders bulunmuyor.</p>
                   </div>
                 ) : (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {camps.map((camp) => {
+                    {campsList.map((camp) => {
                       const isMatchingCategory = (camp.category === quotaCatFilter) || 
                         (quotaCatFilter === 'LGS 2027' && (camp.badge?.includes('LGS') || camp.title?.includes('LGS'))) ||
                         (quotaCatFilter === 'KPSS 2027' && (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS'))) ||
@@ -4382,30 +4382,34 @@ const TeacherDashboard = () => {
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                           {quotaAppsList.map((app) => (
                             <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="py-4 px-6 font-black text-slate-900">{app.studentName}</td>
+                              <td className="py-4 px-6 font-black text-slate-900">{app.studentName || 'İsimsiz'}</td>
                               <td className="py-4 px-6">
-                                <a
-                                  href={`https://wa.me/90${app.phone.replace(/^0/, '')}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
-                                >
-                                  <span className="material-symbols-outlined text-sm">chat</span>
-                                  <span>{app.phone}</span>
-                                </a>
+                                {app.phone ? (
+                                  <a
+                                    href={`https://wa.me/90${(app.phone || '').toString().replace(/\D/g, '').replace(/^0/, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">chat</span>
+                                    <span>{app.phone}</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
                               </td>
-                              <td className="py-4 px-6">{app.email}</td>
+                              <td className="py-4 px-6">{app.email || '-'}</td>
                               <td className="py-4 px-6">
-                                <span className="font-bold text-slate-900 block">{app.category}</span>
-                                <span className="text-slate-400 text-[11px]">{app.courseTitle}</span>
+                                <span className="font-bold text-slate-900 block">{app.category || '-'}</span>
+                                <span className="text-slate-400 text-[11px]">{app.courseTitle || '-'}</span>
                               </td>
                               <td className="py-4 px-6">
                                 <span className="px-2.5 py-1 bg-primary/10 text-primary font-black rounded-lg text-[11px]">
-                                  {app.track}
+                                  {app.track || '-'}
                                 </span>
                               </td>
                               <td className="py-4 px-6 text-slate-400 text-[11px]">
-                                {new Date(app.createdAt).toLocaleDateString('tr-TR')}
+                                {app.createdAt ? new Date(app.createdAt).toLocaleDateString('tr-TR') : '-'}
                               </td>
                               <td className="py-4 px-6 text-right">
                                 <button
@@ -4464,7 +4468,7 @@ const TeacherDashboard = () => {
                           onChange={(e) => {
                             const selectedCampTitle = e.target.value;
                             if (selectedCampTitle) {
-                              const foundCamp = camps.find(c => c.title === selectedCampTitle);
+                              const foundCamp = campsList.find(c => c.title === selectedCampTitle);
                               setQuotaFormState(prev => ({
                                 ...prev,
                                 title: selectedCampTitle,
@@ -4477,7 +4481,7 @@ const TeacherDashboard = () => {
                           className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 font-bold outline-none text-xs"
                         >
                           <option value="">-- Derslerimiz Sayfasından Bir Ders Seçin --</option>
-                          {camps.map(camp => (
+                          {campsList.map(camp => (
                             <option key={camp.id} value={camp.title}>{camp.title} ({camp.price || 'Ücretsiz'})</option>
                           ))}
                         </select>
