@@ -138,33 +138,78 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Hesap + cihaz (IP) bazlı yanlış giriş kilidi: aynı hesaba aynı cihazdan 3 kez yanlış
-// girilirse sadece o cihaz 10 dakika kilitlenir, diğer cihazlardan girişe dokunulmaz.
-// Kayıtlar LoginAttempt tablosunda tutulur (serverless ortamda istekler farklı
-// instance'lara düşebildiğinden bellek içi sayaç güvenilir değildir).
+// Hesap + cihaz (IP) bazlı yanlış giriş kilidi: aynı hesaba veya koda aynı cihazdan 3 kez yanlış
+// girilirse 15 dakika kilitlenir.
 const MAX_FAILED_LOGIN_ATTEMPTS = 3;
-const LOGIN_LOCK_DURATION_MS = 10 * 60 * 1000;
+const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 dakika
 
-const getLoginAttemptKey = (userId, ip) => `${userId}:${ip}`;
+const getLoginAttemptKey = (identifier, ip) => {
+  const cleanId = (identifier || 'unknown').toString().trim().toLowerCase();
+  const cleanIp = (ip || '127.0.0.1').toString().trim();
+  return `${cleanId}:${cleanIp}`;
+};
 
 const getLoginLockRemainingMinutes = async (key) => {
-  const record = await prisma.loginAttempt.findUnique({ where: { key } });
-  if (!record || !record.lockedUntil) return 0;
-  const remainingMs = new Date(record.lockedUntil).getTime() - Date.now();
-  return remainingMs > 0 ? Math.ceil(remainingMs / 60000) : 0;
+  try {
+    const record = await prisma.loginAttempt.findUnique({ where: { key } });
+    if (!record || !record.lockedUntil) return 0;
+    const remainingMs = new Date(record.lockedUntil).getTime() - Date.now();
+    return remainingMs > 0 ? Math.ceil(remainingMs / 60000) : 0;
+  } catch (err) {
+    console.error('getLoginLockRemainingMinutes error:', err);
+    return 0;
+  }
 };
 
 const registerFailedLoginAttempt = async (key) => {
-  const record = await prisma.loginAttempt.findUnique({ where: { key } });
-  const nextAttempts = (record?.failedAttempts || 0) + 1;
-  const data = nextAttempts >= MAX_FAILED_LOGIN_ATTEMPTS
-    ? { failedAttempts: 0, lockedUntil: new Date(Date.now() + LOGIN_LOCK_DURATION_MS) }
-    : { failedAttempts: nextAttempts, lockedUntil: null };
-  await prisma.loginAttempt.upsert({ where: { key }, update: data, create: { key, ...data } });
+  try {
+    const record = await prisma.loginAttempt.findUnique({ where: { key } });
+    const now = Date.now();
+    let currentFailedCount = 0;
+
+    if (record) {
+      if (record.lockedUntil) {
+        if (new Date(record.lockedUntil).getTime() > now) {
+          currentFailedCount = MAX_FAILED_LOGIN_ATTEMPTS;
+        } else {
+          currentFailedCount = 0;
+        }
+      } else if (record.updatedAt && (now - new Date(record.updatedAt).getTime() > LOGIN_LOCK_DURATION_MS)) {
+        currentFailedCount = 0;
+      } else {
+        currentFailedCount = record.failedAttempts || 0;
+      }
+    }
+
+    const nextAttempts = currentFailedCount + 1;
+    const isLocked = nextAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+    const lockedUntil = isLocked ? new Date(now + LOGIN_LOCK_DURATION_MS) : null;
+
+    const data = {
+      failedAttempts: nextAttempts,
+      lockedUntil
+    };
+
+    await prisma.loginAttempt.upsert({
+      where: { key },
+      update: data,
+      create: { key, ...data }
+    });
+
+    const remainingAttempts = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - nextAttempts);
+    return { nextAttempts, isLocked, remainingAttempts, lockedUntil };
+  } catch (err) {
+    console.error('registerFailedLoginAttempt error:', err);
+    return { nextAttempts: 1, isLocked: false, remainingAttempts: 2, lockedUntil: null };
+  }
 };
 
 const clearLoginAttempts = async (key) => {
-  await prisma.loginAttempt.deleteMany({ where: { key } });
+  try {
+    await prisma.loginAttempt.deleteMany({ where: { key } });
+  } catch (err) {
+    console.error('clearLoginAttempts error:', err);
+  }
 };
 
 // Serve static recorded lessons
@@ -174,69 +219,119 @@ app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
 
-// Debug endpoint kaldırıldı (güvenlik)
-
 // Auth Routes
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { email, password, studentCode, loginType } = req.body;
   console.log('Login attempt:', { email, studentCode, loginType }); // Debug log
 
   try {
+    const isStudentLogin = loginType === 'STUDENT';
+    const rawIdentifier = isStudentLogin ? studentCode : email;
+
+    if (!rawIdentifier || typeof rawIdentifier !== 'string' || !rawIdentifier.trim()) {
+      return res.status(400).json({ message: 'Geçersiz bilgiler' });
+    }
+
+    const normalizedCode = isStudentLogin ? rawIdentifier.trim().toUpperCase() : rawIdentifier.trim().toLowerCase();
+
+    const clientIp = req.headers['x-forwarded-for']
+      ? req.headers['x-forwarded-for'].split(',')[0].trim()
+      : (req.ip || req.socket.remoteAddress || '127.0.0.1');
+
+    const attemptKey = getLoginAttemptKey(normalizedCode, clientIp);
+
+    // 1. Kilit kontrolü
+    const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
+    if (lockedMinutes > 0) {
+      return res.status(429).json({
+        message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.`
+      });
+    }
+
     let user;
-    if (loginType === 'STUDENT') {
-      const normalizedCode = (studentCode || '').trim().toUpperCase();
+
+    if (isStudentLogin) {
       if (normalizedCode.startsWith('FMV')) {
-        // Parent login via parent code
+        // Veli girişi
         user = await prisma.user.findUnique({ where: { parentCode: normalizedCode } });
         if (!user) {
           console.log('Parent user not found');
-          return res.status(400).json({ message: 'Geçersiz bilgiler' });
+          const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+          if (attemptInfo.isLocked) {
+            return res.status(429).json({
+              message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+            });
+          }
+          return res.status(400).json({
+            message: `Geçersiz bilgiler. (Kalan deneme hakkı: ${attemptInfo.remainingAttempts})`
+          });
         }
-        const attemptKey = getLoginAttemptKey(user.id, req.ip);
-        const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
-        if (lockedMinutes > 0) {
-          return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
-        }
-        // Force role to PARENT for session
         user = { ...user, role: 'PARENT' };
       } else {
-        // Student login
+        // Öğrenci girişi
         user = await prisma.user.findUnique({ where: { studentCode: normalizedCode } });
         if (!user) {
           console.log('Student user not found');
-          return res.status(400).json({ message: 'Geçersiz bilgiler' });
-        }
-        const attemptKey = getLoginAttemptKey(user.id, req.ip);
-        const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
-        if (lockedMinutes > 0) {
-          return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
+          const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+          if (attemptInfo.isLocked) {
+            return res.status(429).json({
+              message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+            });
+          }
+          return res.status(400).json({
+            message: `Geçersiz bilgiler. (Kalan deneme hakkı: ${attemptInfo.remainingAttempts})`
+          });
         }
       }
     } else {
-      user = await prisma.user.findUnique({ where: { email } });
+      // Öğretmen / Yönetici girişi
+      user = await prisma.user.findUnique({ where: { email: normalizedCode } });
       if (!user) {
         console.log('User not found');
-        return res.status(400).json({ message: 'Geçersiz bilgiler' });
+        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        if (attemptInfo.isLocked) {
+          return res.status(429).json({
+            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+          });
+        }
+        return res.status(400).json({
+          message: `Geçersiz bilgiler. (Kalan deneme hakkı: ${attemptInfo.remainingAttempts})`
+        });
       }
-      const attemptKey = getLoginAttemptKey(user.id, req.ip);
-      const lockedMinutes = await getLoginLockRemainingMinutes(attemptKey);
-      if (lockedMinutes > 0) {
-        return res.status(429).json({ message: `Çok fazla yanlış giriş denemesi. Lütfen ${lockedMinutes} dakika sonra tekrar deneyin.` });
+
+      if (!password) {
+        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        if (attemptInfo.isLocked) {
+          return res.status(429).json({
+            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+          });
+        }
+        return res.status(400).json({
+          message: `Geçersiz bilgiler. (Kalan deneme hakkı: ${attemptInfo.remainingAttempts})`
+        });
       }
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         console.log('Password mismatch');
-        await registerFailedLoginAttempt(attemptKey);
-        return res.status(400).json({ message: 'Geçersiz bilgiler' });
+        const attemptInfo = await registerFailedLoginAttempt(attemptKey);
+        if (attemptInfo.isLocked) {
+          return res.status(429).json({
+            message: 'Çok fazla yanlış giriş denemesi yapıldı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen daha sonra tekrar deneyin.'
+          });
+        }
+        return res.status(400).json({
+          message: `Geçersiz bilgiler. (Kalan deneme hakkı: ${attemptInfo.remainingAttempts})`
+        });
       }
 
       // Auto upgrade specific emails to HEAD_TEACHER
-      if ((email === 'burakcelik@fullematematigi.com.tr' || email === 'test@fulle.com') && user.role !== 'HEAD_TEACHER') {
+      if ((normalizedCode === 'burakcelik@fullematematigi.com.tr' || normalizedCode === 'test@fulle.com') && user.role !== 'HEAD_TEACHER') {
         user = await prisma.user.update({
-          where: { email },
+          where: { email: normalizedCode },
           data: { role: 'HEAD_TEACHER' }
         });
-        console.log(`User ${email} automatically upgraded to HEAD_TEACHER in DB`);
+        console.log(`User ${normalizedCode} automatically upgraded to HEAD_TEACHER in DB`);
       }
     }
 
@@ -248,7 +343,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    await clearLoginAttempts(getLoginAttemptKey(user.id, req.ip));
+    await clearLoginAttempts(attemptKey);
     console.log('Login successful for:', user.email || user.studentCode || user.parentCode);
     res.json({
       token, 
@@ -266,6 +361,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       } 
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: err.message });
   }
 });
