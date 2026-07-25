@@ -237,18 +237,49 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleUpdateCampCategory = async (campId, newCategory) => {
+  const handleToggleCampCategory = async (camp, catToToggle) => {
+    let categories = [];
+    if (camp.category) {
+      try {
+        const parsed = JSON.parse(camp.category);
+        if (Array.isArray(parsed)) categories = parsed;
+        else categories = camp.category.split(',').map(s => s.trim());
+      } catch (e) {
+        categories = camp.category.split(',').map(s => s.trim());
+      }
+    }
+
+    if (categories.includes(catToToggle)) {
+      categories = categories.filter(c => c !== catToToggle);
+    } else {
+      categories.push(catToToggle);
+    }
+
+    const updatedCategory = JSON.stringify(categories);
     try {
-      const existingCamp = campsList.find(c => c.id === campId);
-      if (!existingCamp) return;
-      await axios.put(`/api/teacher/camps/${campId}`, {
-        ...existingCamp,
-        category: newCategory
+      await axios.put(`/api/teacher/camps/${camp.id}`, {
+        ...camp,
+        category: updatedCategory
       });
       fetchCamps();
     } catch (err) {
-      console.error('Camp category update error:', err);
+      console.error('Error toggling camp category:', err);
     }
+  };
+
+  const isCampCategoryActive = (camp, cat) => {
+    if (!camp.category) {
+      if (cat === 'LGS 2027' && (camp.badge?.includes('LGS') || camp.title?.includes('LGS'))) return true;
+      if (cat === 'KPSS 2027' && (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS'))) return true;
+      if (cat === 'YKS 2027' && (camp.badge?.includes('YKS') || camp.title?.includes('YKS'))) return true;
+      if (cat === 'MAARIF' && (camp.badge?.includes('Maarif') || camp.title?.includes('Maarif'))) return true;
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(camp.category);
+      if (Array.isArray(parsed)) return parsed.includes(cat);
+    } catch (e) {}
+    return camp.category.includes(cat);
   };
 
   // Form submission and question states
@@ -4293,11 +4324,7 @@ const TeacherDashboard = () => {
                 ) : (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {campsList.map((camp) => {
-                      const isMatchingCategory = (camp.category === quotaCatFilter) || 
-                        (quotaCatFilter === 'LGS 2027' && (camp.badge?.includes('LGS') || camp.title?.includes('LGS'))) ||
-                        (quotaCatFilter === 'KPSS 2027' && (camp.badge?.includes('KPSS') || camp.title?.includes('KPSS'))) ||
-                        (quotaCatFilter === 'YKS 2027' && (camp.badge?.includes('YKS') || camp.title?.includes('YKS'))) ||
-                        (quotaCatFilter === 'MAARIF' && (camp.badge?.includes('Maarif') || camp.title?.includes('Maarif')));
+                      const isMatchingCategory = isCampCategoryActive(camp, quotaCatFilter);
 
                       return (
                         <div key={camp.id} className={`bg-white rounded-3xl border p-6 shadow-sm flex flex-col justify-between space-y-4 transition-all ${isMatchingCategory ? 'border-primary/40 ring-2 ring-primary/10' : 'border-slate-100'}`}>
@@ -4309,7 +4336,7 @@ const TeacherDashboard = () => {
                               {isMatchingCategory && (
                                 <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-black text-[10px] rounded-full flex items-center gap-1">
                                   <span className="material-symbols-outlined text-xs">check_circle</span>
-                                  <span>{quotaCatFilter} Eşleşti</span>
+                                  <span>{quotaCatFilter === 'MAARIF' ? 'MAARİF' : quotaCatFilter} Seçili</span>
                                 </span>
                               )}
                             </div>
@@ -4321,23 +4348,29 @@ const TeacherDashboard = () => {
 
                           <div className="pt-3 border-t border-slate-100 space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                              Sınav Kategorisine Eşitle:
+                              Sınav Kategorileriyle Eşleştir (Çoklu Seçim):
                             </label>
                             <div className="grid grid-cols-2 gap-1.5">
-                              {['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'].map((cat) => (
-                                <button
-                                  key={cat}
-                                  type="button"
-                                  onClick={() => handleUpdateCampCategory(camp.id, cat)}
-                                  className={`px-2 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-                                    camp.category === cat
-                                      ? 'bg-primary text-white font-black shadow-sm'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                                >
-                                  {cat === 'MAARIF' ? 'MAARİF' : cat}
-                                </button>
-                              ))}
+                              {['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'].map((cat) => {
+                                const isActive = isCampCategoryActive(camp, cat);
+                                return (
+                                  <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => handleToggleCampCategory(camp, cat)}
+                                    className={`px-2.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                      isActive
+                                        ? 'bg-primary text-white font-black shadow-md shadow-primary/20 scale-102'
+                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    <span>{cat === 'MAARIF' ? 'MAARİF' : cat}</span>
+                                    <span className="material-symbols-outlined text-xs">
+                                      {isActive ? 'check_box' : 'check_box_outline_blank'}
+                                    </span>
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
