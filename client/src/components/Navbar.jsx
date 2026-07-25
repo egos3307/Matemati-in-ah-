@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,13 +6,34 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [isSubBannerOpen, setIsSubBannerOpen] = useState(true);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > 50 && currentScrollY > lastScrollY) {
+        // Aşağı kaydırıldığında turuncu menü yukarı doğru kaybolur
+        setIsSubBannerOpen(false);
+      } else if (currentScrollY < 20) {
+        // En yukarı çıkıldığında otomatik tekrar açılır
+        setIsSubBannerOpen(true);
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-hidden border-b border-primary/10 bg-white/80 backdrop-blur-md dark:bg-background-dark/80">
+    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-hidden border-b border-primary/10 bg-white/80 backdrop-blur-md dark:bg-background-dark/80 relative transition-all duration-300">
       {/* Top Main Header */}
       <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-6 md:py-4 lg:px-10">
         <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
@@ -59,7 +80,9 @@ const Navbar = () => {
       </div>
 
       {/* Sub Orange Banner Bar */}
-      <div className="bg-primary text-white py-1.5 px-2 sm:px-6 shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden">
+      <div className={`bg-primary text-white shadow-sm border-t border-white/10 text-[10px] sm:text-xs font-bold w-full max-w-full overflow-hidden transition-all duration-300 ease-in-out ${
+        isSubBannerOpen ? 'max-h-24 opacity-100 py-1.5 px-2 sm:px-6' : 'max-h-0 opacity-0 py-0 px-0 pointer-events-none'
+      }`}>
         <div className="mx-auto flex items-center justify-center max-w-7xl">
           <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap w-full py-0.5">
             <Link
@@ -125,6 +148,21 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
+      {/* Toggle Arrow Button Under Navbar */}
+      <button
+        onClick={() => setIsSubBannerOpen(prev => !prev)}
+        className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-20 w-8 h-5 bg-primary text-white rounded-b-xl flex items-center justify-center shadow-md hover:bg-primary/90 transition-all cursor-pointer border-b border-x border-white/20"
+        title={isSubBannerOpen ? 'Alt Menüyü Gizle' : 'Alt Menüyü Göster'}
+        aria-label="Toggle Alt Menü"
+      >
+        <span
+          className="material-symbols-outlined text-base leading-none transition-transform duration-300"
+          style={{ transform: isSubBannerOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}
+        >
+          keyboard_arrow_up
+        </span>
+      </button>
     </header>
   );
 };
