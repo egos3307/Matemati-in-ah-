@@ -5,6 +5,20 @@ import SEO from '../components/SEO';
 
 const CATEGORIES = ['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'];
 
+const MAARIF_GRADES = [
+  { id: '9. Sınıf', label: '9. Sınıf (Maarif Modeli)', icon: 'auto_stories', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { id: '10. Sınıf', label: '10. Sınıf (Maarif Modeli)', icon: 'school', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { id: '11. Sınıf', label: '11. Sınıf (Alan Seçimli)', icon: 'psychology', color: 'bg-purple-50 text-purple-700 border-purple-200', hasTrack: true },
+  { id: '12. Sınıf', label: '12. Sınıf (Maarif Modeli)', icon: 'workspace_premium', color: 'bg-amber-50 text-amber-700 border-amber-200' }
+];
+
+const ALAN_TRACKS_11 = [
+  { id: 'Sayısal', label: 'Sayısal (MF)', icon: 'calculate', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { id: 'Eşit Ağırlık', label: 'Eşit Ağırlık (TM)', icon: 'balance', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { id: 'Sözel', label: 'Sözel (TS)', icon: 'auto_stories', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  { id: 'Yabancı Dil', label: 'Yabancı Dil (DİL)', icon: 'translate', color: 'bg-amber-50 text-amber-700 border-amber-200' }
+];
+
 const TRACK_OPTIONS = {
   'YKS 2027': [
     { id: 'Sayısal', label: 'Sayısal (MF)', icon: 'calculate', color: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -19,10 +33,6 @@ const TRACK_OPTIONS = {
   'KPSS 2027': [
     { id: 'Lisans', label: 'KPSS Lisans', icon: 'workspace_premium', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
     { id: 'Ön Lisans', label: 'KPSS Ön Lisans', icon: 'badge', color: 'bg-teal-50 text-teal-700 border-teal-200' }
-  ],
-  'MAARIF': [
-    { id: 'Maarif Lise', label: 'Maarif Modeli Lise (9-12. Sınıf)', icon: 'auto_awesome', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { id: 'Maarif Ortaokul', label: 'Maarif Modeli Ortaokul (5-8. Sınıf)', icon: 'school', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
   ]
 };
 
@@ -37,8 +47,9 @@ const QuotaCourseSelection = () => {
   const [loading, setLoading] = useState(true);
 
   // Flow State
-  const [step, setStep] = useState(1); // 1: Ders Seçimi, 2: Alan Seçimi, 3: İletişim Bilgileri, 4: Başarılı
+  const [step, setStep] = useState(1); // 1: Ders Seçimi, 2: Sınıf/Alan Seçimi, 3: İletişim Bilgileri, 4: Başarılı
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedTrack, setSelectedTrack] = useState('');
 
   // Form State & Validation
@@ -56,6 +67,7 @@ const QuotaCourseSelection = () => {
     setSelectedCategory(initialCat);
     setStep(1);
     setSelectedCourse(null);
+    setSelectedGrade('');
     setSelectedTrack('');
   }, [initialCat]);
 
@@ -79,6 +91,7 @@ const QuotaCourseSelection = () => {
     setSelectedCategory(cat);
     setStep(1);
     setSelectedCourse(null);
+    setSelectedGrade('');
     setSelectedTrack('');
   };
 
@@ -87,8 +100,25 @@ const QuotaCourseSelection = () => {
     setStep(2);
   };
 
+  // Maarif Modeli Sınıf Seçimi
+  const handleMaarifGradeSelect = (gradeObj) => {
+    setSelectedGrade(gradeObj.id);
+    if (gradeObj.id === '11. Sınıf') {
+      // 11. Sınıf seçildiğinde ALAN seçimi gösterilecek
+      setSelectedTrack('');
+    } else {
+      // 9, 10 veya 12. Sınıf seçildiğinde ALAN SEÇİMİ GÖZÜKMEYECEK! Doğrudan 3. adıma geçecek.
+      setSelectedTrack(`${gradeObj.id} (Maarif Modeli)`);
+      setStep(3);
+    }
+  };
+
   const handleTrackSelect = (trackId) => {
-    setSelectedTrack(trackId);
+    if (selectedCategory === 'MAARIF') {
+      setSelectedTrack(`11. Sınıf - ${trackId}`);
+    } else {
+      setSelectedTrack(trackId);
+    }
     setStep(3);
   };
 
@@ -156,13 +186,11 @@ const QuotaCourseSelection = () => {
     }
   };
 
-  const currentTrackOptions = TRACK_OPTIONS[selectedCategory] || TRACK_OPTIONS['YKS 2027'];
-
   return (
     <div className="min-h-screen bg-slate-50/60 py-10 px-4 sm:px-6 lg:px-8">
       <SEO
-        title={`${selectedCategory} Kontenjan & Ders Seçimi`}
-        description={`${selectedCategory} için yayınlanmış dersleri seçin, alanınızı belirleyin ve hızlıca kontenjanınızı ayırtın.`}
+        title={`${selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory} Kontenjan & Ders Seçimi`}
+        description={`${selectedCategory} için yayınlanmış dersleri seçin ve hızlıca yerinizi ayırtın.`}
         path={`/kontenjan-dersleri?kategori=${encodeURIComponent(selectedCategory)}`}
       />
 
@@ -171,13 +199,13 @@ const QuotaCourseSelection = () => {
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 text-center">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-wider mb-3">
             <span className="material-symbols-outlined text-sm">how_to_reg</span>
-            <span>Kontenjan & Ders Yönetimi</span>
+            <span>Kontenjan & Yer Ayırtma Paneli</span>
           </span>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            {selectedCategory} <span className="text-primary">Ders Seçim Paneli</span>
+            {selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory} <span className="text-primary">Ders Seçimi</span>
           </h1>
           <p className="mt-2 text-slate-600 text-sm font-medium max-w-xl mx-auto">
-            Aşağıdaki sınav kategorilerinden ilgilendiğiniz dersi ve alanınızı (Sayısal, Sözel vb.) seçerek öğretmenimizle iletişime geçin.
+            Öğretmenimizin yayınladığı derslerden birini seçip bilgilerinizi girerek yerinizi kolayca ayırtabilirsiniz.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
@@ -191,7 +219,7 @@ const QuotaCourseSelection = () => {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {cat}
+                {cat === 'MAARIF' ? 'MAARİF MODELİ' : cat}
               </button>
             ))}
           </div>
@@ -208,7 +236,7 @@ const QuotaCourseSelection = () => {
 
             <div className={`flex items-center gap-2 ${step >= 2 ? 'text-primary' : ''}`}>
               <span className={`w-7 h-7 rounded-full flex items-center justify-center font-black ${step >= 2 ? 'bg-primary text-white' : 'bg-slate-100'}`}>2</span>
-              <span className="hidden sm:inline">Alan Seçimi</span>
+              <span className="hidden sm:inline">Seviye / Alan</span>
             </div>
             <div className={`h-0.5 flex-1 mx-2 sm:mx-4 ${step >= 3 ? 'bg-primary' : 'bg-slate-200'}`}></div>
 
@@ -225,7 +253,7 @@ const QuotaCourseSelection = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">auto_stories</span>
-                <span>Yayınlanmış Dersler ({selectedCategory})</span>
+                <span>Yayınlanan Ders Kartları ({selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory})</span>
               </h2>
               <span className="text-xs font-bold text-slate-400">Lütfen bir ders seçin</span>
             </div>
@@ -238,7 +266,7 @@ const QuotaCourseSelection = () => {
             ) : courses.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-slate-100">
                 <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">folder_off</span>
-                <p className="text-slate-600 font-bold">Bu kategoride henüz yayınlanmış ders bulunmuyor.</p>
+                <p className="text-slate-600 font-bold">Bu kategoride henüz yayınlanmış ders kartı bulunmuyor.</p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -251,7 +279,7 @@ const QuotaCourseSelection = () => {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-black uppercase">
-                          {course.category}
+                          {course.category === 'MAARIF' ? 'MAARİF MODELİ' : course.category}
                         </span>
                         {course.remainingQuota !== undefined && (
                           <span className="text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full flex items-center gap-1">
@@ -271,7 +299,7 @@ const QuotaCourseSelection = () => {
                     <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
                       <span className="text-base font-black text-slate-900">{course.price || 'Ücret Bilgisi Alın'}</span>
                       <button className="px-4 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-black rounded-xl shadow-md shadow-primary/20 flex items-center gap-1 transition-all group-hover:scale-105">
-                        <span>Dersi Seç</span>
+                        <span>Yer Ayırt</span>
                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                       </button>
                     </div>
@@ -282,16 +310,18 @@ const QuotaCourseSelection = () => {
           </div>
         )}
 
-        {/* STEP 2: ALAN SEÇİMİ (Sayısal, Sözel, Eşit Ağırlık, Yabancı Dil) */}
+        {/* STEP 2: SINIF VE ALAN SEÇİMİ */}
         {step === 2 && selectedCourse && (
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <span className="text-xs font-black text-primary uppercase tracking-widest">2. Adım</span>
-                <h2 className="text-2xl font-black text-slate-900 mt-1">Alanınızı / Seviyenizi Seçin</h2>
+                <h2 className="text-2xl font-black text-slate-900 mt-1">
+                  {selectedCategory === 'MAARIF' ? 'Sınıf Seviyenizi Seçin' : 'Alanınızı Seçin'}
+                </h2>
               </div>
               <button
-                onClick={() => setStep(1)}
+                onClick={() => { setStep(1); setSelectedGrade(''); }}
                 className="text-xs font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -302,30 +332,91 @@ const QuotaCourseSelection = () => {
             <div className="bg-slate-50 p-4 rounded-2xl flex items-center gap-3">
               <span className="material-symbols-outlined text-primary">school</span>
               <div>
-                <span className="text-xs font-bold text-slate-400">Seçilen Ders</span>
+                <span className="text-xs font-bold text-slate-400">Seçilen Ders Kartı</span>
                 <p className="text-sm font-black text-slate-900">{selectedCourse.title}</p>
               </div>
             </div>
 
-            <p className="text-slate-600 text-sm font-medium">
-              Hazırlandığınız alan veya sınıf düzeyini seçerek ilerleyin:
-            </p>
+            {/* MAARİF MODELİ ÖZEL AKIŞI */}
+            {selectedCategory === 'MAARIF' ? (
+              <div className="space-y-6">
+                <p className="text-slate-600 text-sm font-medium">
+                  Lütfen sınıf seviyenizi seçin:
+                </p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {currentTrackOptions.map((tr) => (
-                <button
-                  key={tr.id}
-                  onClick={() => handleTrackSelect(tr.id)}
-                  className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all hover:scale-102 hover:shadow-md ${tr.color}`}
-                >
-                  <span className="material-symbols-outlined text-3xl">{tr.icon}</span>
-                  <div>
-                    <h3 className="font-black text-base">{tr.label}</h3>
-                    <p className="text-xs opacity-80 font-medium mt-0.5">Tıklayarak bu alanı seçin</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {MAARIF_GRADES.map((gr) => (
+                    <button
+                      key={gr.id}
+                      onClick={() => handleMaarifGradeSelect(gr)}
+                      className={`p-5 rounded-2xl border text-left flex items-center justify-between transition-all hover:scale-102 hover:shadow-md ${
+                        selectedGrade === gr.id ? 'bg-primary text-white border-primary shadow-lg' : gr.color
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-3xl">{gr.icon}</span>
+                        <div>
+                          <h3 className="font-black text-base">{gr.label}</h3>
+                          <p className="text-xs opacity-80 font-medium mt-0.5">
+                            {gr.id === '11. Sınıf' ? '11. Sınıflar İçin Alan Seçimi Açılır' : 'Doğrudan Başvuruya Geçilir'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* YALNIZCA 11. SINIF SEÇİLDİĞİNDE ALAN SEÇİMİ GÖZÜKÜR */}
+                {selectedGrade === '11. Sınıf' && (
+                  <div className="pt-6 border-t border-slate-100 space-y-4 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-purple-100 text-purple-700 font-black text-xs rounded-full">11. Sınıf Özel</span>
+                      <h3 className="text-lg font-black text-slate-900">Lütfen Alanınızı Seçin</h3>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {ALAN_TRACKS_11.map((tr) => (
+                        <button
+                          key={tr.id}
+                          onClick={() => handleTrackSelect(tr.id)}
+                          className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all hover:scale-102 hover:shadow-md ${tr.color}`}
+                        >
+                          <span className="material-symbols-outlined text-3xl">{tr.icon}</span>
+                          <div>
+                            <h3 className="font-black text-base">{tr.label}</h3>
+                            <p className="text-xs opacity-80 font-medium mt-0.5">Tıklayarak bu alanı seçin</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </button>
-              ))}
-            </div>
+                )}
+              </div>
+            ) : (
+              /* DİĞER KATEGORİLER (YKS, LGS, KPSS) */
+              <div className="space-y-6">
+                <p className="text-slate-600 text-sm font-medium">
+                  Hazırlandığınız alanı veya seviyeyi seçerek ilerleyin:
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(TRACK_OPTIONS[selectedCategory] || TRACK_OPTIONS['YKS 2027']).map((tr) => (
+                    <button
+                      key={tr.id}
+                      onClick={() => handleTrackSelect(tr.id)}
+                      className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all hover:scale-102 hover:shadow-md ${tr.color}`}
+                    >
+                      <span className="material-symbols-outlined text-3xl">{tr.icon}</span>
+                      <div>
+                        <h3 className="font-black text-base">{tr.label}</h3>
+                        <p className="text-xs opacity-80 font-medium mt-0.5">Tıklayarak bu alanı seçin</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -342,7 +433,7 @@ const QuotaCourseSelection = () => {
                 className="text-xs font-bold text-slate-400 hover:text-slate-700 flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-sm">arrow_back</span>
-                <span>Alan Seçimine Dön</span>
+                <span>Seviye / Alan Seçimine Dön</span>
               </button>
             </div>
 
@@ -350,14 +441,14 @@ const QuotaCourseSelection = () => {
             <div className="bg-slate-50 p-4 rounded-2xl grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <span className="text-slate-400 font-bold block">Kategori</span>
-                <span className="font-black text-slate-900">{selectedCategory}</span>
+                <span className="font-black text-slate-900">{selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory}</span>
               </div>
               <div>
-                <span className="text-slate-400 font-bold block">Ders</span>
+                <span className="text-slate-400 font-bold block">Seçilen Ders</span>
                 <span className="font-black text-slate-900">{selectedCourse.title}</span>
               </div>
               <div>
-                <span className="text-slate-400 font-bold block">Seçilen Alan</span>
+                <span className="text-slate-400 font-bold block">Seçilen Seviye / Alan</span>
                 <span className="font-black text-primary">{selectedTrack}</span>
               </div>
             </div>
@@ -443,17 +534,17 @@ const QuotaCourseSelection = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-black text-base rounded-2xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 mt-4"
+                className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-black text-base rounded-2xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
               >
                 {submitting ? (
                   <>
                     <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                    <span>Başvuru İletiliyor...</span>
+                    <span>Yer Ayırtılıyor...</span>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-lg">check_circle</span>
-                    <span>Kontenjan Ayırt / Başvuruyu Tamamla</span>
+                    <span className="material-symbols-outlined text-lg">event_seat</span>
+                    <span>Yeri Ayırt & Öğretmene Gönder</span>
                   </>
                 )}
               </button>
@@ -465,17 +556,17 @@ const QuotaCourseSelection = () => {
         {step === 4 && submitSuccess && (
           <div className="bg-white rounded-3xl p-10 text-center shadow-sm border border-slate-100 space-y-6">
             <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-              <span className="material-symbols-outlined text-4xl">verified</span>
+              <span className="material-symbols-outlined text-4xl">event_seat</span>
             </div>
-            <h2 className="text-3xl font-black text-slate-900">Başvurunuz Alındı!</h2>
+            <h2 className="text-3xl font-black text-slate-900">Yeriniz Başarıyla Ayırtıldı!</h2>
             <p className="text-slate-600 font-medium text-sm max-w-md mx-auto leading-relaxed">
               Sayın <strong className="text-slate-900">{formData.studentName}</strong>, 
-              <span className="text-primary font-bold"> {selectedCategory} ({selectedCourse?.title} - {selectedTrack})</span> başvurunuz öğretmen paneline iletilmiştir. En kısa sürede sizinle iletişime geçilecektir.
+              <span className="text-primary font-bold"> {selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory} ({selectedCourse?.title} - {selectedTrack})</span> yer ayırtma talebiniz doğrudan öğretmen paneline iletilmiştir.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
-                href={`https://wa.me/905350598950?text=Merhaba,%20ben%20${encodeURIComponent(formData.studentName)}.%20${encodeURIComponent(selectedCategory)}%20${encodeURIComponent(selectedCourse?.title)}%20(${encodeURIComponent(selectedTrack)})%20için%20kontenjan%20başvurusu%20yaptım.`}
+                href={`https://wa.me/905350598950?text=Merhaba,%20ben%20${encodeURIComponent(formData.studentName)}.%20${encodeURIComponent(selectedCategory)}%20${encodeURIComponent(selectedCourse?.title)}%20(${encodeURIComponent(selectedTrack)})%20için%20yer%20ayırmıştım.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all"
@@ -488,11 +579,13 @@ const QuotaCourseSelection = () => {
                 onClick={() => {
                   setStep(1);
                   setSubmitSuccess(false);
+                  setSelectedGrade('');
+                  setSelectedTrack('');
                   setFormData({ studentName: '', phone: '', email: '' });
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs rounded-2xl transition-all"
+                className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs rounded-2xl transition-all cursor-pointer"
               >
-                Yeni Başvuru Yap
+                Başka Yer Ayırt
               </button>
             </div>
           </div>

@@ -730,6 +730,7 @@ const TeacherDashboard = () => {
     } else if (activeTab === 'pdf-notes') {
       fetchPdfNotes();
     } else if (activeTab === 'quota') {
+      fetchCamps();
       fetchQuotaCourses();
       fetchQuotaApplications();
     }
@@ -4438,6 +4439,33 @@ const TeacherDashboard = () => {
                           <option value="LGS 2027">LGS 2027</option>
                           <option value="KPSS 2027">KPSS 2027</option>
                           <option value="MAARIF">MAARİF MODELİ</option>
+                        </select>
+                      </div>
+
+                      <div className="bg-primary/5 p-3 rounded-2xl border border-primary/20">
+                        <label className="block text-xs font-black text-primary uppercase tracking-widest mb-1">
+                          Derslerimiz Sayfasındaki Ders ile Eşleştir (Opsiyonel)
+                        </label>
+                        <select
+                          onChange={(e) => {
+                            const selectedCampTitle = e.target.value;
+                            if (selectedCampTitle) {
+                              const foundCamp = camps.find(c => c.title === selectedCampTitle);
+                              setQuotaFormState(prev => ({
+                                ...prev,
+                                title: selectedCampTitle,
+                                description: foundCamp?.description || prev.description,
+                                price: foundCamp?.price || prev.price,
+                                image: foundCamp?.image || prev.image
+                              }));
+                            }
+                          }}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 font-bold outline-none text-xs"
+                        >
+                          <option value="">-- Derslerimiz Sayfasından Bir Ders Seçin --</option>
+                          {camps.map(camp => (
+                            <option key={camp.id} value={camp.title}>{camp.title} ({camp.price || 'Ücretsiz'})</option>
+                          ))}
                         </select>
                       </div>
 
