@@ -1523,66 +1523,92 @@ async function groqIleEtiketle(hamMetin) {
   return tumBloklar;
 }
 
-function sayfaCanvasKirp(canvas, bbox) {
-  if (!Array.isArray(bbox) || bbox.length < 4) return null;
-  const [y1P, x1P, y2P, x2P] = bbox.map(v => Number(v) || 0);
-  if (y2P <= y1P || x2P <= x1P) return null;
-
-  const w = canvas.width;
-  const h = canvas.height;
-  const x = Math.max(0, Math.min(w, (x1P / 100) * w));
-  const y = Math.max(0, Math.min(h, (y1P / 100) * h));
-  const cropW = Math.max(15, Math.min(w - x, ((x2P - x1P) / 100) * w));
-  const cropH = Math.max(15, Math.min(h - y, ((y2P - y1P) / 100) * h));
-
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = cropW;
-  cropCanvas.height = cropH;
-  const ctx = cropCanvas.getContext('2d');
-  ctx.drawImage(canvas, x, y, cropW, cropH, 0, 0, cropW, cropH);
-  return cropCanvas.toDataURL('image/png');
-}
-
-function bloklarHTML(bloklar) {
+function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
   let html = '';
   let soruSayaci = 0;
+
+  const isCiftSutun = sayfaDuzeni === 'cift-sutun';
+  const sutunStili = isCiftSutun
+    ? 'display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;'
+    : 'display:flex;flex-direction:column;gap:8px;';
+
+  html += `<div class="fasikul-duzen-wrap" style="${sutunStili}">`;
+
   for (const blok of (bloklar || [])) {
     if (!blok || typeof blok !== 'object') continue;
     const tip = String(blok.tip || '').toLowerCase();
+    const stil = blok.stil || {};
 
-    const gorselElement = blok.gorselUrl
-      ? `<div class="blok-gorsel-wrap" style="text-align:center;margin:8px 0;"><img src="${blok.gorselUrl}" style="max-width:100%;max-height:280px;border-radius:6px;border:1px solid #cbd5e1;box-shadow:0 2px 6px rgba(0,0,0,.08);object-fit:contain;" /></div>`
+    const bg = stil.arkaPlan || '#fafafa';
+    const borderColor = stil.kenarlikRengi || '#e5e7eb';
+    const borderType = stil.kenarlikTipi || 'sol-cizgi';
+    const ikon = stil.ikon ? `<span style="margin-right:6px;font-size:13px;">${stil.ikon}</span>` : '';
+
+    let borderCss = `border: 1px solid ${borderColor};`;
+    if (borderType === 'sol-cizgi') {
+      borderCss = `border: 1px solid #e5e7eb; border-left: 4px solid ${borderColor};`;
+    } else if (borderType === 'kesikli') {
+      borderCss = `border: 2px dashed ${borderColor};`;
+    } else if (borderType === 'yok') {
+      borderCss = `border: none;`;
+    }
+
+    const gridSpanCss = (stil.tamGenislik || !isCiftSutun)
+      ? 'grid-column: 1 / -1; width: 100%;'
       : '';
 
     if (tip === 'baslik') {
-      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 4px;"><h3 style="font-size:12.5px;font-weight:900;color:#1a1a1a;margin:0;">${String(blok.metin || '').trim()}</h3>${gorselElement}</div>`;
+      html += `<div class="konu-anlatim tam-genislik" style="${gridSpanCss}margin:10px 0 6px;"><h3 style="font-size:13.5px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : '#1a1a1a'};margin:0;border-bottom: 2px solid ${borderColor !== '#e5e7eb' ? borderColor : '#f5c518'};padding-bottom:4px;">${ikon}${String(blok.metin || '').trim()}</h3></div>`;
       continue;
     }
+
     if (tip === 'soru') {
       soruSayaci++;
       const soruMetni = String(blok.metin || '').trim();
       const dogruHarf = String(blok.dogruSik || '').trim().toUpperCase().charAt(0);
       const sikkar = Array.isArray(blok.sikkar) ? blok.sikkar : [];
+
+      let sikDisplayCss = 'display:flex;flex-wrap:wrap;gap:8px;';
+      if (blok.sikDuzen === 'block') {
+        sikDisplayCss = 'display:flex;flex-direction:column;gap:5px;';
+      } else if (blok.sikDuzen === 'grid') {
+        sikDisplayCss = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+      }
+
       const sikHTML = sikkar.map(sik => {
         const sikStr = String(sik).trim();
         const harf = sikStr.charAt(0).toUpperCase();
         return harf && harf === dogruHarf
-          ? `<span style="margin-right:8px;"><strong style="color:#e67e22;">${sikStr}</strong></span>`
-          : `<span style="margin-right:8px;">${sikStr}</span>`;
+          ? `<span><strong style="color:${borderColor !== '#e5e7eb' ? borderColor : '#e67e22'};">${sikStr}</strong></span>`
+          : `<span>${sikStr}</span>`;
       }).join('');
-      html += `<div class="soru-kutusu-beyaz" style="background:#fafafa;padding:12px 13px;border-radius:5px;border:1px solid #e5e7eb;border-left:4px solid #e67e22;box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:13px;color:#1a1a1a;">SORU ${soruSayaci}:</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0;">${soruMetni}</p>${gorselElement}<div style="font-size:12px;margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">${sikHTML}</div></div>`;
+
+      html += `<div class="soru-kutusu-beyaz" style="background:${bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
+        <strong style="font-size:12.5px;color:#1a1a1a;">${ikon}SORU ${soruSayaci}:</strong>
+        <p style="font-size:12px;line-height:1.65;margin:6px 0;">${soruMetni}</p>
+        <div style="font-size:11.5px;margin-top:6px;${sikDisplayCss}">${sikHTML}</div>
+      </div>`;
       continue;
     }
+
     if (tip === 'ornek') {
       const ornekMetni = String(blok.metin || '').trim();
-      html += `<div class="ornek-kutusu" style="background:#eff6ff;padding:12px 13px;border-radius:5px;border:1px solid #dbeafe;border-left:4px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:11px;font-weight:900;color:var(--accent);letter-spacing:.04em;">📘 ÖRNEK</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0 0;color:#1a1a1a;">${ornekMetni}</p>${gorselElement}</div>`;
+      html += `<div class="ornek-kutusu" style="background:${bg === '#ffffff' ? '#eff6ff' : bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
+        <strong style="font-size:11px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : 'var(--accent)'};letter-spacing:.04em;">${ikon || '📘 '}ÖRNEK</strong>
+        <p style="font-size:12px;line-height:1.65;margin:6px 0 0;color:#1a1a1a;">${ornekMetni}</p>
+      </div>`;
       continue;
     }
+
     if (tip === 'cozum') {
       const cozumMetni = String(blok.metin || '').trim();
-      html += `<div class="cozum-kutusu" style="background:#f0fdf4;padding:12px 13px;border-radius:5px;border:1px solid #dcfce7;border-left:4px solid var(--green);box-shadow:0 1px 4px rgba(0,0,0,.07);margin:9px 0;break-inside:avoid;"><strong style="font-size:11px;font-weight:900;color:#16a34a;letter-spacing:.04em;">✅ ÇÖZÜM</strong><p style="font-size:12.5px;line-height:1.7;margin:7px 0 0;color:#1a1a1a;">${cozumMetni}</p>${gorselElement}</div>`;
+      html += `<div class="cozum-kutusu" style="background:${bg === '#ffffff' ? '#f0fdf4' : bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
+        <strong style="font-size:11px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : 'var(--green)'};letter-spacing:.04em;">${ikon || '✅ '}ÇÖZÜM</strong>
+        <p style="font-size:12px;line-height:1.65;margin:6px 0 0;color:#1a1a1a;">${cozumMetni}</p>
+      </div>`;
       continue;
     }
+
     if (tip === 'tablo') {
       const basliklar = Array.isArray(blok.basliklar) ? blok.basliklar : [];
       const satirlar = Array.isArray(blok.satirlar) ? blok.satirlar : [];
@@ -1592,12 +1618,17 @@ function bloklarHTML(bloklar) {
         const hucreler = Array.isArray(satir) ? satir : [satir];
         tabloIci += '<tr>' + hucreler.map(h => `<td>${h}</td>`).join('') + '</tr>';
       }
-      html += `<div class="tablo-blok tam-genislik" data-tam="1" style="display:block!important;clear:both!important;float:none!important;width:100%!important;grid-column:1/-1!important;margin:8px 0;">${tabloIci ? `<table>${tabloIci}</table>` : ''}${gorselElement}</div>`;
+      html += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:8px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
       continue;
     }
+
     const paragrafMetni = String(blok.metin || '').trim();
-    if (paragrafMetni || gorselElement) html += `<div style="font-size:11px;line-height:1.65;color:#374151;padding:3px 0;">${paragrafMetni}${gorselElement}</div>`;
+    if (paragrafMetni) {
+      html += `<div style="background:${bg !== '#ffffff' ? bg : 'transparent'};padding:${bg !== '#ffffff' ? '8px 10px' : '3px 0'};border-radius:5px;${borderType !== 'yok' && bg !== '#ffffff' ? borderCss : ''};font-size:11.5px;line-height:1.65;color:#374151;margin:4px 0;${gridSpanCss}">${ikon}${paragrafMetni}</div>`;
+    }
   }
+
+  html += `</div>`;
   return html;
 }
 
@@ -1640,13 +1671,14 @@ async function pdfGorselIleAiTara(dosya) {
   const toplamSayfa = pdfDoc.numPages;
   const token = localStorage.getItem('token');
   let tumBloklar = [];
+  let algilananSayfaDuzeni = 'tek-sutun';
 
   for (let s = 1; s <= toplamSayfa; s++) {
     if (s > 1) await new Promise(r => setTimeout(r, 1200));
-    aiDurumYaz(`⚡ Yapay Zeka PDF'i Okuyor: Sayfa ${s}/${toplamSayfa}…`, 20 + Math.round((s / toplamSayfa) * 65));
-    document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Şekiller, görseller ve tablolar taranıyor`;
+    aiDurumYaz(`⚡ Yapay Zeka PDF Tasarımını Okuyor: Sayfa ${s}/${toplamSayfa}…`, 20 + Math.round((s / toplamSayfa) * 65));
+    document.getElementById('ai-parca-info').textContent = `PDF Sayfa ${s}/${toplamSayfa} — Sütun düzeni, kutu renkleri ve stiller taranıyor`;
 
-    const { dataUrl: gorsel, canvas } = await pdfSayfasiniGorselYapObj(pdfDoc, s);
+    const { dataUrl: gorsel } = await pdfSayfasiniGorselYapObj(pdfDoc, s);
 
     let yanit, veri;
     let deneme = 0;
@@ -1677,18 +1709,14 @@ async function pdfGorselIleAiTara(dosya) {
       }
     }
 
-    if (Array.isArray(veri.bloklar)) {
-      for (const blok of veri.bloklar) {
-        if (blok && Array.isArray(blok.gorselKutusu) && blok.gorselKutusu.length >= 4) {
-          const croppedImg = sayfaCanvasKirp(canvas, blok.gorselKutusu);
-          if (croppedImg) blok.gorselUrl = croppedImg;
-        }
-      }
+    if (veri && veri.sayfaDuzeni === 'cift-sutun') algilananSayfaDuzeni = 'cift-sutun';
+
+    if (veri && Array.isArray(veri.bloklar)) {
       tumBloklar.push(...veri.bloklar);
     }
   }
 
-  return tumBloklar;
+  return { sayfaDuzeni: algilananSayfaDuzeni, bloklar: tumBloklar };
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1702,13 +1730,14 @@ window.fasikuluBaslat = async function() {
   nihaiEtiketliMetin = '';
 
   try {
-    let bloklar;
+    let sayfaHTMLIcerik = '';
 
     if (secilenPdfDosyasi) {
-      // PDF doğrudan Yapay Zeka (AI Engine) tarafından taranıp okunur
-      toast('⚡ PDF sayfaları doğrudan Yapay Zeka (AI Vision) ile taranıyor…', 'inf');
-      aiDurumYaz('⚡ Yapay Zeka PDF sayfalarını doğrudan okuyor…', 15);
-      bloklar = await pdfGorselIleAiTara(secilenPdfDosyasi);
+      toast('⚡ PDF tasarımı ve içeriği Yapay Zeka (AI Vision) ile okunuyor…', 'inf');
+      aiDurumYaz('⚡ Yapay Zeka PDF düzenini ve kutu renklerini inceliyor…', 15);
+      const res = await pdfGorselIleAiTara(secilenPdfDosyasi);
+      sayfaHTMLIcerik = bloklarHTML(res.bloklar, res.sayfaDuzeni);
+      nihaiEtiketliMetin = JSON.stringify(res.bloklar);
     } else {
       const inputEl = document.getElementById('hoca-metin-girdisi');
       const hamMetin = inputEl ? inputEl.value.trim() : '';
@@ -1721,12 +1750,13 @@ window.fasikuluBaslat = async function() {
       aiDurumYaz('Metin alındı…', 10);
       aiDurumYaz('Yapay Zeka (AI Engine) ile fasikül hazırlanıyor…', 30);
       document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
-      bloklar = await groqIleEtiketle(hamMetin);
+      const bloklar = await groqIleEtiketle(hamMetin);
+      sayfaHTMLIcerik = bloklarHTML(bloklar, 'tek-sutun');
+      nihaiEtiketliMetin = JSON.stringify(bloklar);
     }
 
-    nihaiEtiketliMetin = JSON.stringify(bloklar);
-    aiDurumYaz('✅ Etiketleme tamamlandı!', 90);
-    await fasikuluOlusturVeCiz(bloklarHTML(bloklar));
+    aiDurumYaz('✅ Tasarım ve metinler işlendi!', 90);
+    await fasikuluOlusturVeCiz(sayfaHTMLIcerik);
     aiDurumYaz('✅ Fasikül hazır!', 100);
     toast('Fasikül başarıyla oluşturuldu!', 'ok');
   } catch (err) {

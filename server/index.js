@@ -2955,31 +2955,59 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   }
 });
 
-// Ders Notu Görsel Okuyucu — PDF sayfasının görselini okur (Şekiller, Resimler, Tablolar, Grafikler dahil)
+// Ders Notu Görsel Okuyucu — PDF sayfasının tasarımını, sütun yapısını ve kutu stillerini birebir okur (Resim/foto yapıştırmadan)
 app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ders notu / soru kağıdı fotoğrafını tam sadakatle fasikül bloklarına dönüştür. İçeriği asla özetleme. Matematiksel formülleri $...$ içinde KaTeX/LaTeX formatına dönüştür.
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik grafik yayıncısısın. Sana verilen ders notu / soru kağıdının HEM METİN İÇERİĞİNİ HEM DE TASARIM VE DÜZEN YAPISINI (sütun düzeni, kutu renkleri, kenarlıklar, ikonlar, şık dizilimleri) tam sadakatle çıkarıyorsun.
 
-ZORUNLU ŞEKİL, RESİM, GRAFİK VE TABLO KURALLARI:
-1. ŞEKİLLER & RESİMLER (Geometri şekilleri, grafikler, çizimler, diyagramlar): Eğer bir soru, örnek veya paragrafta herhangi bir şekil/resim/çizim/grafik varsa; o bloğa "gorselKutusu": [üst_y_yüzde, sol_x_yüzde, alt_y_yüzde, sağ_x_yüzde] (0-100 arası tamsayı % koordinatları) alanını MUTLAKA ekle. Örnek: [20, 10, 50, 90].
-2. TABLOLAR: Sayfadaki tüm tabloları "tip": "tablo", "basliklar": ["..."], "satirlar": [["..."]] şeklinde HTML tablo bloklarına dönüştür.
+ZORUNLU TASARIM VE YAPI KURALLARI:
+1. SÜTUN DÜZENİ: Sayfa 2 sütunlu düzen mi ("cift-sutun") yoksa tek sütunlu düzen mi ("tek-sutun")? "sayfaDuzeni" alanında MUTLAKA belirt.
+2. FOTOĞRAF / GÖRSEL YAPIŞTIRMA YOK: Sayfadaki içerikleri pürüzsüz metin, KaTeX matematik formülü ($...$) ve vektörel HTML kutusu olarak dönüştür. Dışarıdan resim kırpma/yapıştırma yapma.
+3. KUTU VE RENK TASARIMLARI (BİREBİR AYNISI): Her blok için orijinal PDF'teki tasarım özelliklerini "stil" objesine ekle:
+   - "arkaPlan": Kutu arka plan HEX rengi (örn: "#fafafa", "#eff6ff", "#f0fdf4", "#ffffff")
+   - "kenarlikRengi": Kenarlık HEX rengi (örn: "#e67e22", "#3b82f6", "#16a34a", "#e5e7eb")
+   - "kenarlikTipi": Kutu kenarlık stili ("sol-cizgi" | "tam-cerceve" | "kesikli" | "yok")
+   - "ikon": Kutu başındaki simge/ikon varsa yaz (örn: "📘", "✅", "💡", "📌", "✏️", "")
+   - "tamGenislik": Başlık veya tablo 2 sütunu da kaplıyorsa true yap.
+4. ŞIK DİZİLİMİ: Şıklar yan yana mı ("inline"), 2x2 grid mi ("grid"), alt alta mı ("block")? "sikDuzen" alanında belirt.
 
 Yalnızca aşağıdaki JSON formatını döndür:
-{"bloklar":[
-  {"tip":"baslik","metin":"..."},
-  {"tip":"paragraf","metin":"..."},
-  {"tip":"ornek","metin":"...","gorselKutusu":[15,10,40,90]},
-  {"tip":"cozum","metin":"..."},
-  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ..."],"dogruSik":"","gorselKutusu":[50,10,75,90]},
-  {"tip":"tablo","basliklar":["Sütun 1","Sütun 2"],"satirlar":[["Veri 1","Veri 2"]]}
-]}`;
+{
+  "sayfaDuzeni": "cift-sutun",
+  "bloklar": [
+    {
+      "tip": "baslik",
+      "metin": "ÜÇGENDE AÇILAR",
+      "stil": { "arkaPlan": "transparent", "kenarlikRengi": "#1a1a1a", "kenarlikTipi": "yok", "ikon": "", "tamGenislik": true }
+    },
+    {
+      "tip": "soru",
+      "metin": "ABC üçgeninde $m(\\hat{A}) = 60^\\circ$ ise...",
+      "sikkar": ["A) 30", "B) 45", "C) 60", "D) 90"],
+      "dogruSik": "C",
+      "sikDuzen": "inline",
+      "stil": { "arkaPlan": "#fafafa", "kenarlikRengi": "#e67e22", "kenarlikTipi": "sol-cizgi", "ikon": "", "tamGenislik": false }
+    },
+    {
+      "tip": "ornek",
+      "metin": "Örnek problem metni...",
+      "stil": { "arkaPlan": "#eff6ff", "kenarlikRengi": "#3b82f6", "kenarlikTipi": "sol-cizgi", "ikon": "📘", "tamGenislik": false }
+    },
+    {
+      "tip": "tablo",
+      "basliklar": ["X", "Y"],
+      "satirlar": [["1", "2"]],
+      "stil": { "arkaPlan": "#ffffff", "kenarlikRengi": "#cbd5e1", "kenarlikTipi": "tam-cerceve", "ikon": "", "tamGenislik": true }
+    }
+  ]
+}`;
 
   try {
     const rawContent = await executeAI({
       systemPrompt: sistemTalimati,
-      userText: 'Bu görseldeki tüm ders içeriğini, formülleri, şekilleri/resimleri (gorselKutusu ile) ve tabloları eksiksiz okuyup JSON formatında çıkar.',
+      userText: 'Bu PDF sayfasının tüm metin içeriğini, formüllerini ve birebir tasarım/kutu stillerini (sayfaDuzeni, stil, sikDuzen) eksiksiz JSON formatında çıkar.',
       base64Image: gorsel,
       jsonFormat: true
     });
