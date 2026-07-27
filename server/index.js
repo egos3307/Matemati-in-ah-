@@ -2725,84 +2725,169 @@ function parseAIJSON(raw) {
 }
 
 async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = false }) {
-  const openrouterKey = (
-    process.env.OPENROUTER_API_KEY ||
-    process.env.OPENROUTER_KEY ||
-    ''
-  ).replace(/['"\s]/g, '').trim();
+  const githubKey = (process.env.GITHUB_TOKEN || process.env.GITHUB_MODELS_KEY || '').replace(/['"\s]/g, '').trim();
+  const geminiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '').replace(/['"\s]/g, '').trim();
+  const openrouterKey = (process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY || '').replace(/['"\s]/g, '').trim();
+  const groqKey = (process.env.GROQ_API_KEY || '').replace(/['"\s]/g, '').trim();
 
-  if (!openrouterKey) {
-    throw new Error('OPENROUTER_API_KEY Vercel ortam değişkenlerinde bulunamadı. Lütfen Vercel -> Settings -> Environment Variables bölümünden OPENROUTER_API_KEY ekleyip projenizi "Redeploy" yapın.');
+  if (!githubKey && !geminiKey && !openrouterKey && !groqKey) {
+    throw new Error('HİÇBİR YAPAY ZEKA ANAHTARI BULUNAMADI! Lütfen .env veya Vercel Ortam Değişkenlerine GITHUB_TOKEN (GitHub Öğrenci Hesabı), GEMINI_API_KEY veya OPENROUTER_API_KEY ekleyin.');
   }
-
-  // OpenRouter üzerindeki en aktif ve kaliteli modeller
-  const openrouterModels = base64Image
-    ? [
-        'google/gemini-2.0-flash-001',
-        'google/gemini-flash-1.5',
-        'google/gemini-pro-1.5',
-        'meta-llama/llama-3.2-11b-vision-instruct'
-      ]
-    : [
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'meta-llama/llama-3.3-70b-instruct',
-        'google/gemini-2.0-flash-001',
-        'google/gemini-flash-1.5',
-        'deepseek/deepseek-chat',
-        'deepseek/deepseek-r1:free',
-        'qwen/qwen-2.5-coder-32b-instruct:free'
-      ];
 
   const errorLogs = [];
 
-  for (const model of openrouterModels) {
-    try {
-      const messages = [{ role: 'system', content: systemPrompt }];
+  // 1. GitHub Student Pack / GitHub Models API (Ücretsiz - GPT-4o, GPT-4o-mini, Llama-3.3-70b)
+  if (githubKey) {
+    const ghModels = base64Image ? ['gpt-4o', 'gpt-4o-mini'] : ['gpt-4o', 'gpt-4o-mini', 'meta-llama-3.3-70b-instruct'];
+    for (const model of ghModels) {
+      try {
+        const messages = [{ role: 'system', content: systemPrompt }];
+        if (base64Image) {
+          messages.push({
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: base64Image } },
+              { type: 'text', text: userText || 'İçeriği çözümle.' }
+            ]
+          });
+        } else {
+          messages.push({ role: 'user', content: userText });
+        }
 
-      if (base64Image) {
-        messages.push({
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: base64Image } },
-            { type: 'text', text: userText || 'İçeriği çözümle.' }
-          ]
+        const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${githubKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.15,
+            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+          })
         });
-      } else {
-        messages.push({ role: 'user', content: userText });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`GitHub Models ${model} error (${res.status}):`, errText.substring(0, 150));
+          errorLogs.push(`GitHub Models ${model} (${res.status})`);
+        }
+      } catch (e) {
+        console.warn(`GitHub Models ${model} catch:`, e.message);
+        errorLogs.push(`GitHub Models ${model}: ${e.message}`);
+      }
+    }
+  }
+
+  // 2. OpenRouter API
+  if (openrouterKey) {
+    const openrouterModels = base64Image
+      ? [
+          'google/gemini-2.0-flash-001',
+          'google/gemini-flash-1.5',
+          'meta-llama/llama-3.2-11b-vision-instruct'
+        ]
+      : [
+          'meta-llama/llama-3.3-70b-instruct:free',
+          'google/gemini-2.0-flash-001',
+          'google/gemini-flash-1.5',
+          'deepseek/deepseek-chat'
+        ];
+
+    for (const model of openrouterModels) {
+      try {
+        const messages = [{ role: 'system', content: systemPrompt }];
+        if (base64Image) {
+          messages.push({
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: base64Image } },
+              { type: 'text', text: userText || 'İçeriği çözümle.' }
+            ]
+          });
+        } else {
+          messages.push({ role: 'user', content: userText });
+        }
+
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openrouterKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://fullematematik.com',
+            'X-Title': 'Fullematematik AI'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.15,
+            ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content;
+          if (text) return text;
+        } else {
+          const errText = await res.text();
+          console.warn(`OpenRouter ${model} error (${res.status}):`, errText.substring(0, 150));
+          errorLogs.push(`OpenRouter ${model} (${res.status})`);
+        }
+      } catch (e) {
+        console.warn(`OpenRouter ${model} catch:`, e.message);
+        errorLogs.push(`OpenRouter ${model}: ${e.message}`);
+      }
+    }
+  }
+
+  // 3. Gemini Direct API (Google AI Studio Free)
+  if (geminiKey) {
+    try {
+      const parts = [{ text: systemPrompt + '\n\n' + userText }];
+      if (base64Image) {
+        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+        parts.unshift({
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: base64Data
+          }
+        });
       }
 
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openrouterKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://fullematematik.com',
-          'X-Title': 'Fullematematik AI'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.15,
-          ...(jsonFormat ? { response_format: { type: 'json_object' } } : {})
+          contents: [{ parts }],
+          generationConfig: {
+            temperature: 0.15,
+            ...(jsonFormat ? { responseMimeType: 'application/json' } : {})
+          }
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        const text = data.choices?.[0]?.message?.content;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) return text;
       } else {
         const errText = await res.text();
-        console.warn(`OpenRouter ${model} error (${res.status}):`, errText.substring(0, 150));
-        errorLogs.push(`${model} (${res.status})`);
+        console.warn(`Gemini Direct API error (${res.status}):`, errText.substring(0, 150));
+        errorLogs.push(`Gemini API (${res.status})`);
       }
     } catch (e) {
-      console.warn(`OpenRouter ${model} catch:`, e.message);
-      errorLogs.push(`${model}: ${e.message}`);
+      console.warn('Gemini Direct API catch:', e.message);
+      errorLogs.push(`Gemini API: ${e.message}`);
     }
   }
 
-  throw new Error(`OpenRouter yapay zeka servisi yanıt vermedi. Hata detayı: ${errorLogs.join(' | ')}`);
+  throw new Error(`Yapay zeka servislerinden yanıt alınamadı. Hata detayı: ${errorLogs.join(' | ')}`);
 }
 
 // OpenRouter AI endpoint
@@ -2824,7 +2909,7 @@ app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) 
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek. Fotoğraftaki TÜM soruları tek tek tespit et ve JSON döndür:
+  const sistemTalimati = `Sen deneyimli bir Türk matematik öğretmenisin. Sana bir test/soru kağıdı fotoğrafı gönderilecek. Fotoğraftaki TÜM soruları tek tek tespit et ve KaTeX/LaTeX formatını ($...$) kullanarak JSON döndür:
 {"sorular":[{"no":1,"metin":"...","siklar":["A) ..."],"dogruSik":"","gorselAciklama":""}]}`;
 
   try {
@@ -2845,18 +2930,18 @@ app.post('/api/teacher/test-tara', auth, checkRole('TEACHER'), async (req, res) 
   }
 });
 
-// Ders Notu Oluşturucu — OpenRouter AI ile ham metni fasiküle dönüştürür
+// Ders Notu Oluşturucu — Ham metni fasiküle dönüştürür
 app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, res) => {
   const { metin } = req.body;
   if (!metin || !metin.trim()) return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini düzenli bir fasiküle dönüştürüyorsun. İçeriği ASLA kısaltma. Yalnızca JSON döndür:
-{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""}]}`;
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini düzenli bir fasiküle dönüştürüyorsun. İçeriği ASLA kısaltma veya özetleme. Tüm matematik formüllerini $...$ içinde LaTeX formatında yaz. Yalnızca aşağıdaki JSON formatını döndür:
+{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""},{"tip":"tablo","basliklar":["..."],"satirlar":[["..."]]}]}`;
 
   try {
     const rawContent = await executeAI({
       systemPrompt: sistemTalimati,
-      userText: 'Aşağıdaki metni oku ve fasikül JSON formatında çıkar:\n\n' + metin,
+      userText: 'Aşağıdaki metni tam ve eksiksiz oku ve fasikül JSON formatında çıkar:\n\n' + metin,
       jsonFormat: true
     });
     const ayristirilmis = parseAIJSON(rawContent);
@@ -2870,18 +2955,31 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   }
 });
 
-// Ders Notu Görsel Okuyucu — PDF sayfasının görselini OpenRouter AI ile okur
+// Ders Notu Görsel Okuyucu — PDF sayfasının görselini okur (Şekiller, Resimler, Tablolar, Grafikler dahil)
 app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req, res) => {
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ders notu / soru kağıdı fotoğrafını fasikül bloklarına dönüştür. Yalnızca JSON döndür:
-{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""}]}`;
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ders notu / soru kağıdı fotoğrafını tam sadakatle fasikül bloklarına dönüştür. İçeriği asla özetleme. Matematiksel formülleri $...$ içinde KaTeX/LaTeX formatına dönüştür.
+
+ZORUNLU ŞEKİL, RESİM, GRAFİK VE TABLO KURALLARI:
+1. ŞEKİLLER & RESİMLER (Geometri şekilleri, grafikler, çizimler, diyagramlar): Eğer bir soru, örnek veya paragrafta herhangi bir şekil/resim/çizim/grafik varsa; o bloğa "gorselKutusu": [üst_y_yüzde, sol_x_yüzde, alt_y_yüzde, sağ_x_yüzde] (0-100 arası tamsayı % koordinatları) alanını MUTLAKA ekle. Örnek: [20, 10, 50, 90].
+2. TABLOLAR: Sayfadaki tüm tabloları "tip": "tablo", "basliklar": ["..."], "satirlar": [["..."]] şeklinde HTML tablo bloklarına dönüştür.
+
+Yalnızca aşağıdaki JSON formatını döndür:
+{"bloklar":[
+  {"tip":"baslik","metin":"..."},
+  {"tip":"paragraf","metin":"..."},
+  {"tip":"ornek","metin":"...","gorselKutusu":[15,10,40,90]},
+  {"tip":"cozum","metin":"..."},
+  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ..."],"dogruSik":"","gorselKutusu":[50,10,75,90]},
+  {"tip":"tablo","basliklar":["Sütun 1","Sütun 2"],"satirlar":[["Veri 1","Veri 2"]]}
+]}`;
 
   try {
     const rawContent = await executeAI({
       systemPrompt: sistemTalimati,
-      userText: 'Bu görseldeki içeriği okuyup JSON formatında çıkar.',
+      userText: 'Bu görseldeki tüm ders içeriğini, formülleri, şekilleri/resimleri (gorselKutusu ile) ve tabloları eksiksiz okuyup JSON formatında çıkar.',
       base64Image: gorsel,
       jsonFormat: true
     });
