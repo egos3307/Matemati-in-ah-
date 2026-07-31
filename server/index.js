@@ -923,55 +923,64 @@ async function getGoogleDriveAccessToken() {
 
   if (refreshToken && clientId && clientSecret) {
     console.log("Using Google OAuth2 User Refresh Token to authenticate...");
+    try {
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return { token: data.access_token, type: 'OAuth2' };
+      }
+      const errorText = await res.text();
+      console.warn(`[Drive] Google OAuth2 Refresh Token hatası: ${errorText}. Service Account deneniyor...`);
+    } catch (err) {
+      console.warn(`[Drive] Google OAuth2 hatası: ${err.message}. Service Account deneniyor...`);
+    }
+  }
+
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  if (!email || !privateKey) {
+    console.warn('[Drive] Google credentials (OAuth2 veya Service Account) eksik veya geçersiz. Skipped Google Drive upload.');
+    return null;
+  }
+
+  try {
+    console.log("Using Google Service Account to authenticate...");
+    const jwt = generateGoogleAccessToken(email, privateKey);
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token'
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt
       })
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Google OAuth2 User Token retrieval failed: ${errorText}`);
+      console.error(`[Drive] Google Service Account token isteği başarısız: ${errorText}`);
+      return null;
     }
 
     const data = await res.json();
-    return data.access_token;
-  }
-
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  if (!email || !privateKey) {
-    console.warn('Google credentials (OAuth2 or Service Account) are not set. Skipping Google Drive upload.');
+    return { token: data.access_token, type: 'ServiceAccount' };
+  } catch (err) {
+    console.error(`[Drive] Service Account kimlik doğrulama hatası: ${err.message}`);
     return null;
   }
-
-  console.log("Using Google Service Account to authenticate...");
-  const jwt = generateGoogleAccessToken(email, privateKey);
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt
-    })
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Google OAuth Service Account token retrieval failed: ${errorText}`);
-  }
-
-  const data = await res.json();
-  return data.access_token;
 }
 
 async function convertToMp4(inputBuffer) {
@@ -1006,7 +1015,7 @@ async function convertToMp4(inputBuffer) {
 async function verifyDriveFolder(accessToken, folderId) {
   if (!folderId) return false;
   try {
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType`, {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType&supportsAllDrives=true`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     if (!res.ok) {
@@ -1024,26 +1033,89 @@ async function verifyDriveFolder(accessToken, folderId) {
 }
 
 async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
-  const accessToken = await getGoogleDriveAccessToken();
-  if (!accessToken) {
+  const authData = await getGoogleDriveAccessToken();
+  if (!authData || !authData.token) {
+    console.warn('[Drive] Access token alınamadı. Yükleme atlanıyor.');
     return null;
   }
 
-  // Klasör erişilebilir mi kontrol et; yoksa root'a yükle
+  const { token: accessToken, type: authType } = authData;
+
+  // Klasör erişilebilir mi kontrol et
   let resolvedFolderId = folderId;
   if (folderId) {
     const folderOk = await verifyDriveFolder(accessToken, folderId);
     if (!folderOk) {
-      console.warn(`[Drive] Klasör erişilemez (${folderId}), root'a yüklenecek.`);
+      console.warn(`[Drive] Klasör erişilemez veya izin yetersiz (${folderId}).`);
       resolvedFolderId = null;
     }
   }
 
-  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+  // Service Account root yüklemesi yapamaz (Google Kota Kısıtlaması). Klasör zorunludur.
+  if (authType === 'ServiceAccount' && !resolvedFolderId) {
+    const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    console.error(`[Drive HATA] Service Account ile yükleme yapabilmek için Google Drive'da bir klasör oluşturup ` +
+      `service account e-postasına ("${serviceEmail}") "Düzenleyen" (Editor) izni vermelisiniz ` +
+      `ve bu klasörün ID'sini GOOGLE_DRIVE_FOLDER_ID olarak .env dosyasına eklemelisiniz.`);
+    throw new Error(`Google Drive yükleme hatası: Service Account için paylaşılan klasör izni eksik veya klasör ID geçersiz.`);
+  }
+
   const metadata = {
     name: fileName,
     parents: resolvedFolderId ? [resolvedFolderId] : []
   };
+
+  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive (${authType})${resolvedFolderId ? ` (klasör: ${resolvedFolderId})` : ' (root)'}...`);
+
+  // Büyük dosyalar (>5MB) için Resumable Upload kullanımı (daha kararlı ve kesintisiz aktarım)
+  if (assembledBuffer.length > 5 * 1024 * 1024) {
+    try {
+      console.log(`[Drive] Büyük dosya tespit edildi (${(assembledBuffer.length / 1024 / 1024).toFixed(2)} MB). Resumable Upload başlatılıyor...`);
+      const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Upload-Content-Type': mimeType,
+          'X-Upload-Content-Length': String(assembledBuffer.length)
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!initRes.ok) {
+        const errText = await initRes.text();
+        throw new Error(`Resumable upload başlatılamadı (${initRes.status}): ${errText}`);
+      }
+
+      const uploadUrl = initRes.headers.get('location');
+      if (!uploadUrl) {
+        throw new Error('Google Drive resumable upload URL alınamadı.');
+      }
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': mimeType,
+          'Content-Length': String(assembledBuffer.length)
+        },
+        body: assembledBuffer
+      });
+
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        throw new Error(`Büyük dosya aktarımı başarısız (${uploadRes.status}): ${errText}`);
+      }
+
+      const fileData = await uploadRes.json();
+      console.log(`Successfully uploaded large video to Google Drive (Resumable). File ID: ${fileData.id}`);
+      return `drive:${fileData.id}`;
+    } catch (resumableErr) {
+      console.warn(`Resumable upload başarısız oldu, multipart deneniyor: ${resumableErr.message}`);
+    }
+  }
+
+  // Küçük dosyalar veya yedek yöntem (<5MB) için Multipart Upload
+  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
   const parts = [];
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
   parts.push(Buffer.from(`--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`));
@@ -1052,7 +1124,6 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   
   const payload = Buffer.concat(parts);
   
-  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive${resolvedFolderId ? ` (klasör: ${resolvedFolderId})` : ' (root)'}...`);
   const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
     method: 'POST',
     headers: {
@@ -1065,38 +1136,30 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Google Drive upload API failed: ${errorText}`);
+    throw new Error(`Google Drive upload API failed (${response.status}): ${errorText}`);
   }
   
   const fileData = await response.json();
   const fileId = fileData.id;
   console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
   
-  // Dosyayı herkese açık YAPMA — URL sadece API üzerinden token ile verilecek
-  // Bu sayede öğrenci URL'yi paylaşsa bile başkası erişemez
-
   return `drive:${fileId}`;
 }
 
 // 🔒 Güvenli Drive Video Endpoint'i
-// JWT token zorunlu — token'ı olmayan biri bu endpoint'i tetikleyemez.
-// Google'ın dokümante edilmemiş yönlendirme linkleri (indirme linki, access_token
-// query param) güvenilmez çıktı; video verisini kendi sunucumuzdan, doğru
-// Content-Type/Range başlıklarıyla akıtıyoruz. Uzun kayıtlarda Vercel'in fonksiyon
-// süre sınırına takılmaması için vercel.json'da maxDuration yükseltilmiştir.
 app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   const { fileId } = req.params;
 
-  // Sadece harf, rakam, tire ve alt çizgi — injection koruması
   if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) {
     return res.status(400).json({ error: 'Geçersiz dosya ID.' });
   }
 
   try {
-    const accessToken = await getGoogleDriveAccessToken();
-    if (!accessToken) {
+    const authData = await getGoogleDriveAccessToken();
+    if (!authData || !authData.token) {
       return res.status(503).json({ error: 'Drive erişimi yapılandırılmamış.' });
     }
+    const accessToken = authData.token;
 
     // Range header'ı destekle (video seeking için şart)
     const rangeHeader = req.headers['range'];
@@ -1196,14 +1259,18 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       // WebM → MP4 dönüştürme (Safari uyumluluğu için)
       const isWebm = mimeType.includes('webm');
       if (isWebm) {
-        try {
-          console.log(`Converting WebM (${assembledBuffer.length} bytes) to MP4 for Safari compatibility...`);
-          assembledBuffer = await convertToMp4(assembledBuffer);
-          mimeType = 'video/mp4';
-          fileExt = 'mp4';
-          console.log(`Conversion done. MP4 size: ${assembledBuffer.length} bytes.`);
-        } catch (convErr) {
-          console.error('WebM→MP4 conversion failed, uploading original WebM:', convErr);
+        if (assembledBuffer.length > 40 * 1024 * 1024) {
+          console.log(`Büyük video (${(assembledBuffer.length / 1024 / 1024).toFixed(2)} MB), CPU ve zaman aşımını önlemek için doğrudan WebM olarak yükleniyor.`);
+        } else {
+          try {
+            console.log(`Converting WebM (${assembledBuffer.length} bytes) to MP4 for Safari compatibility...`);
+            assembledBuffer = await convertToMp4(assembledBuffer);
+            mimeType = 'video/mp4';
+            fileExt = 'mp4';
+            console.log(`Conversion done. MP4 size: ${assembledBuffer.length} bytes.`);
+          } catch (convErr) {
+            console.error('WebM→MP4 conversion failed, uploading original WebM:', convErr);
+          }
         }
       }
 
@@ -3262,11 +3329,12 @@ if (require.main === module) {
 
 async function deleteFromGoogleDrive(fileId) {
   try {
-    const accessToken = await getGoogleDriveAccessToken();
-    if (!accessToken) return;
+    const authData = await getGoogleDriveAccessToken();
+    if (!authData || !authData.token) return;
+    const accessToken = authData.token;
 
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}`,
+      `https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,
       {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${accessToken}` },
