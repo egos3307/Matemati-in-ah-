@@ -2275,6 +2275,344 @@ app.delete('/api/teacher/pdf-notes/:id', auth, checkRole('TEACHER'), async (req,
   res.json({ success: true });
 });
 
+// ─────────────────────────────────────────────────────────
+// 🎥 KONU ANLATIMI VİDEOLARI (Topic Lectures)
+// ─────────────────────────────────────────────────────────
+
+let MEMORY_TOPIC_LECTURES = [];
+
+app.post('/api/teacher/topic-lectures', auth, checkRole('TEACHER'), async (req, res) => {
+  const { title, description, videoUrl, studentIds, targetGrades } = req.body;
+  if (!title || !videoUrl) {
+    return res.status(400).json({ error: 'Başlık ve video URL / yüklemesi zorunludur.' });
+  }
+
+  const sIds = Array.isArray(studentIds) ? JSON.stringify(studentIds) : (studentIds || '[]');
+  const tGrades = Array.isArray(targetGrades) ? JSON.stringify(targetGrades) : (targetGrades || '[]');
+
+  try {
+    const lecture = await prisma.topicLecture.create({
+      data: {
+        title,
+        description: description || '',
+        videoUrl,
+        teacherId: req.user.id,
+        studentIds: sIds,
+        targetGrades: tGrades
+      }
+    });
+    return res.json({ success: true, topicLecture: lecture });
+  } catch (err) {
+    console.warn('Prisma topicLecture.create failed, using memory fallback:', err.message);
+    const lecture = {
+      id: Date.now(),
+      title,
+      description: description || '',
+      videoUrl,
+      teacherId: req.user.id,
+      studentIds: sIds,
+      targetGrades: tGrades,
+      createdAt: new Date()
+    };
+    MEMORY_TOPIC_LECTURES.unshift(lecture);
+    return res.json({ success: true, topicLecture: lecture });
+  }
+});
+
+app.get('/api/teacher/topic-lectures', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const lectures = await prisma.topicLecture.findMany({
+      where: { teacherId: req.user.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json(lectures);
+  } catch (err) {
+    console.warn('Prisma topicLecture.findMany fallback:', err.message);
+    return res.json(MEMORY_TOPIC_LECTURES.filter(l => l.teacherId === req.user.id));
+  }
+});
+
+app.delete('/api/teacher/topic-lectures/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.topicLecture.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+  } catch (err) {
+    MEMORY_TOPIC_LECTURES = MEMORY_TOPIC_LECTURES.filter(l => l.id !== id);
+  }
+  return res.json({ success: true });
+});
+
+app.get('/api/student/topic-lectures', auth, checkRole('STUDENT'), async (req, res) => {
+  const studentId = req.user.id;
+  const studentGrade = (req.user.grade || '').trim();
+
+  let allLectures = [];
+  try {
+    allLectures = await prisma.topicLecture.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' }
+    });
+  } catch (err) {
+    allLectures = MEMORY_TOPIC_LECTURES;
+  }
+
+  const assigned = allLectures.filter(l => {
+    let sIds = [];
+    let tGrades = [];
+    try { sIds = typeof l.studentIds === 'string' ? JSON.parse(l.studentIds) : (l.studentIds || []); } catch {}
+    try { tGrades = typeof l.targetGrades === 'string' ? JSON.parse(l.targetGrades) : (l.targetGrades || []); } catch {}
+
+    const isStudentAssigned = sIds.includes(studentId) || sIds.map(Number).includes(studentId);
+    const isGradeAssigned = tGrades.includes(studentGrade) || tGrades.includes('ALL');
+
+    return isStudentAssigned || isGradeAssigned || (sIds.length === 0 && tGrades.length === 0);
+  });
+
+  return res.json(assigned);
+});
+
+// ─────────────────────────────────────────────────────────
+// 📝 ÖZEL TEST OLUŞTURMA & ÇÖZME (Custom Tests)
+// ─────────────────────────────────────────────────────────
+
+let MEMORY_CUSTOM_TESTS = [];
+let MEMORY_TEST_SUBMISSIONS = [];
+
+app.post('/api/teacher/custom-tests', auth, checkRole('TEACHER'), async (req, res) => {
+  const { title, description, optionCount, studentIds, targetGrades, questions } = req.body;
+  if (!title || !Array.isArray(questions) || questions.length === 0) {
+    return res.status(400).json({ error: 'Test başlığı ve en az 1 soru zorunludur.' });
+  }
+
+  const optCount = parseInt(optionCount) === 5 ? 5 : 4;
+  const sIds = Array.isArray(studentIds) ? JSON.stringify(studentIds) : (studentIds || '[]');
+  const tGrades = Array.isArray(targetGrades) ? JSON.stringify(targetGrades) : (targetGrades || '[]');
+
+  try {
+    const newTest = await prisma.customTest.create({
+      data: {
+        title,
+        description: description || '',
+        optionCount: optCount,
+        teacherId: req.user.id,
+        studentIds: sIds,
+        targetGrades: tGrades,
+        questions: {
+          create: questions.map((q, idx) => ({
+            order: idx + 1,
+            imageUrl: q.imageUrl || null,
+            questionType: q.questionType === 'OPEN_ENDED' ? 'OPEN_ENDED' : 'MULTIPLE_CHOICE',
+            correctAnswer: q.correctAnswer || null
+          }))
+        }
+      },
+      include: { questions: true }
+    });
+    return res.json({ success: true, test: newTest });
+  } catch (err) {
+    console.warn('Prisma customTest.create failed, using memory fallback:', err.message);
+    const testId = Date.now();
+    const formattedQuestions = questions.map((q, idx) => ({
+      id: testId + idx + 1,
+      testId,
+      order: idx + 1,
+      imageUrl: q.imageUrl || null,
+      questionType: q.questionType === 'OPEN_ENDED' ? 'OPEN_ENDED' : 'MULTIPLE_CHOICE',
+      correctAnswer: q.correctAnswer || null
+    }));
+
+    const newTest = {
+      id: testId,
+      title,
+      description: description || '',
+      optionCount: optCount,
+      teacherId: req.user.id,
+      studentIds: sIds,
+      targetGrades: tGrades,
+      questions: formattedQuestions,
+      createdAt: new Date()
+    };
+    MEMORY_CUSTOM_TESTS.unshift(newTest);
+    return res.json({ success: true, test: newTest });
+  }
+});
+
+app.get('/api/teacher/custom-tests', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const tests = await prisma.customTest.findMany({
+      where: { teacherId: req.user.id, deletedAt: null },
+      include: { questions: true, submissions: { select: { id: true, studentId: true, submittedAt: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json(tests);
+  } catch (err) {
+    console.warn('Prisma customTest.findMany fallback:', err.message);
+    return res.json(MEMORY_CUSTOM_TESTS.filter(t => t.teacherId === req.user.id));
+  }
+});
+
+app.get('/api/teacher/custom-tests/:id/submissions', auth, checkRole('TEACHER'), async (req, res) => {
+  const testId = parseInt(req.params.id);
+  try {
+    const submissions = await prisma.testSubmission.findMany({
+      where: { testId },
+      include: { student: { select: { id: true, name: true, grade: true } } },
+      orderBy: { submittedAt: 'desc' }
+    });
+    return res.json(submissions);
+  } catch (err) {
+    return res.json(MEMORY_TEST_SUBMISSIONS.filter(s => s.testId === testId));
+  }
+});
+
+app.delete('/api/teacher/custom-tests/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    await prisma.customTest.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+  } catch (err) {
+    MEMORY_CUSTOM_TESTS = MEMORY_CUSTOM_TESTS.filter(t => t.id !== id);
+  }
+  return res.json({ success: true });
+});
+
+app.get('/api/student/custom-tests', auth, checkRole('STUDENT'), async (req, res) => {
+  const studentId = req.user.id;
+  const studentGrade = (req.user.grade || '').trim();
+
+  let allTests = [];
+  try {
+    allTests = await prisma.customTest.findMany({
+      where: { deletedAt: null },
+      include: {
+        questions: { select: { id: true } },
+        submissions: { where: { studentId } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  } catch (err) {
+    allTests = MEMORY_CUSTOM_TESTS.map(t => ({
+      ...t,
+      submissions: MEMORY_TEST_SUBMISSIONS.filter(s => s.testId === t.id && s.studentId === studentId)
+    }));
+  }
+
+  const assigned = allTests.filter(t => {
+    let sIds = [];
+    let tGrades = [];
+    try { sIds = typeof t.studentIds === 'string' ? JSON.parse(t.studentIds) : (t.studentIds || []); } catch {}
+    try { tGrades = typeof t.targetGrades === 'string' ? JSON.parse(t.targetGrades) : (t.targetGrades || []); } catch {}
+
+    const isStudentAssigned = sIds.includes(studentId) || sIds.map(Number).includes(studentId);
+    const isGradeAssigned = tGrades.includes(studentGrade) || tGrades.includes('ALL');
+
+    return isStudentAssigned || isGradeAssigned || (sIds.length === 0 && tGrades.length === 0);
+  });
+
+  const formatted = assigned.map(t => ({
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    optionCount: t.optionCount || 4,
+    questionCount: t.questions ? t.questions.length : 0,
+    isSubmitted: t.submissions && t.submissions.length > 0,
+    submittedAt: t.submissions && t.submissions.length > 0 ? t.submissions[0].submittedAt : null,
+    createdAt: t.createdAt
+  }));
+
+  return res.json(formatted);
+});
+
+app.get('/api/student/custom-tests/:id', auth, checkRole('STUDENT'), async (req, res) => {
+  const testId = parseInt(req.params.id);
+  const studentId = req.user.id;
+
+  try {
+    const test = await prisma.customTest.findUnique({
+      where: { id: testId },
+      include: {
+        questions: { orderBy: { order: 'asc' } },
+        submissions: { where: { studentId } }
+      }
+    });
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test bulunamadı.' });
+    }
+
+    return res.json({
+      id: test.id,
+      title: test.title,
+      description: test.description,
+      optionCount: test.optionCount || 4,
+      questions: test.questions.map(q => ({
+        id: q.id,
+        order: q.order,
+        imageUrl: q.imageUrl,
+        questionType: q.questionType
+      })),
+      isSubmitted: test.submissions && test.submissions.length > 0,
+      submission: test.submissions && test.submissions.length > 0 ? test.submissions[0] : null
+    });
+  } catch (err) {
+    const memTest = MEMORY_CUSTOM_TESTS.find(t => t.id === testId);
+    if (!memTest) return res.status(404).json({ error: 'Test bulunamadı.' });
+
+    const memSub = MEMORY_TEST_SUBMISSIONS.find(s => s.testId === testId && s.studentId === studentId);
+    return res.json({
+      id: memTest.id,
+      title: memTest.title,
+      description: memTest.description,
+      optionCount: memTest.optionCount || 4,
+      questions: memTest.questions,
+      isSubmitted: !!memSub,
+      submission: memSub || null
+    });
+  }
+});
+
+app.post('/api/student/custom-tests/:id/submit', auth, checkRole('STUDENT'), async (req, res) => {
+  const testId = parseInt(req.params.id);
+  const studentId = req.user.id;
+  const { answers } = req.body;
+
+  if (!answers || typeof answers !== 'object') {
+    return res.status(400).json({ error: 'Geçersiz cevap formatı.' });
+  }
+
+  const answersStr = JSON.stringify(answers);
+
+  try {
+    const submission = await prisma.testSubmission.create({
+      data: {
+        testId,
+        studentId,
+        answers: answersStr,
+        status: 'SUBMITTED'
+      }
+    });
+    return res.json({ success: true, submission });
+  } catch (err) {
+    console.warn('Prisma testSubmission.create fallback:', err.message);
+    const sub = {
+      id: Date.now(),
+      testId,
+      studentId,
+      answers: answersStr,
+      status: 'SUBMITTED',
+      submittedAt: new Date()
+    };
+    MEMORY_TEST_SUBMISSIONS.push(sub);
+    return res.json({ success: true, submission: sub });
+  }
+});
+
+
 // Camp / Course Routes
 app.get('/api/camps', async (req, res) => {
   const { category } = req.query;
@@ -3002,8 +3340,31 @@ app.post('/api/teacher/ders-notu-ai', auth, checkRole('TEACHER'), async (req, re
   const { metin } = req.body;
   if (!metin || !metin.trim()) return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmenisin. Sana verilen ham ders notu/soru metnini düzenli bir fasiküle dönüştürüyorsun. İçeriği ASLA kısaltma veya özetleme. Tüm matematik formüllerini $...$ içinde LaTeX formatında yaz. Yalnızca aşağıdaki JSON formatını döndür:
-{"bloklar":[{"tip":"baslik","metin":"..."},{"tip":"paragraf","metin":"..."},{"tip":"ornek","metin":"..."},{"tip":"cozum","metin":"..."},{"tip":"soru","metin":"...","sikkar":["A) ..."],"dogruSik":""},{"tip":"tablo","basliklar":["..."],"satirlar":[["..."]]}]}`;
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik öğretmeni ve dizgi grafik yayıncısısın. Sana verilen ham metni / ders notunu inceleyerek her bir öğeyi tam olarak sınıflandırıp harika bir ders fasikülü JSON yapısına dönüştürüyorsun.
+
+İÇERİK SINIFLANDIRMA KURALLARI:
+1. "konu": Konu anlatımları, kurallar, tanımlar, formüller, bilgi kutuları.
+2. "ornek": Çözümlü örnek sorular veya inceleme örnekleri.
+3. "soru": Test soruları, ödev soruları, pekiştirme soruları (varsa şıkları ile).
+4. "cozum": Bir örneğin veya sorunun adım adım çözümü.
+5. "not": Öğretmen notu, püf noktası, uyarı, dikkat edilmesi gereken hususlar.
+6. "baslik": Konu veya ünite başlıkları.
+7. "tablo": Veri tabloları veya eşleştirme matrisleri.
+
+GENEL KURALLAR:
+- İçeriği ASLA kısaltma veya özetleme.
+- Tüm matematiksel ifadeleri $...$ içinde LaTeX formatında yaz (Örn: $x^2 + y^2 = r^2$, $\\frac{a}{b}$).
+- Yalnızca aşağıdaki JSON formatını döndür:
+
+{"bloklar":[
+  {"tip":"baslik","metin":"...","stil":{"arkaPlan":"transparent","kenarlikRengi":"#1a1a1a","kenarlikTipi":"yok","ikon":"📌","tamGenislik":true}},
+  {"tip":"konu","metin":"...","stil":{"arkaPlan":"#f8fafc","kenarlikRengi":"#0284c7","kenarlikTipi":"sol-cizgi","ikon":"💡","tamGenislik":true}},
+  {"tip":"ornek","metin":"...","stil":{"arkaPlan":"#f0f9ff","kenarlikRengi":"#2563eb","kenarlikTipi":"sol-cizgi","ikon":"📘","tamGenislik":false}},
+  {"tip":"cozum","metin":"...","stil":{"arkaPlan":"#f0fdf4","kenarlikRengi":"#10b981","kenarlikTipi":"sol-cizgi","ikon":"✅","tamGenislik":false}},
+  {"tip":"soru","metin":"...","sikkar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"","sikDuzen":"grid","stil":{"arkaPlan":"#ffffff","kenarlikRengi":"#e67e22","kenarlikTipi":"sol-cizgi","ikon":"❓","tamGenislik":false}},
+  {"tip":"not","metin":"...","stil":{"arkaPlan":"#fff7ed","kenarlikRengi":"#f97316","kenarlikTipi":"kesikli","ikon":"⭐","tamGenislik":true}},
+  {"tip":"tablo","basliklar":["..."],"satirlar":[["..."]],"stil":{"arkaPlan":"#ffffff","kenarlikRengi":"#cbd5e1","kenarlikTipi":"tam-cerceve","ikon":"","tamGenislik":true}}
+]}`;
 
   try {
     const rawContent = await executeAI({
@@ -3027,18 +3388,26 @@ app.post('/api/teacher/ders-notu-gorsel', auth, checkRole('TEACHER'), async (req
   const { gorsel } = req.body;
   if (!gorsel) return res.status(400).json({ error: 'Görsel gönderilmedi.' });
 
-  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik grafik yayıncısısın. Sana verilen ders notu / soru kağıdının HEM METİN İÇERİĞİNİ HEM DE TASARIM VE DÜZEN YAPISINI (sütun düzeni, kutu renkleri, kenarlıklar, ikonlar, şık dizilimleri) tam sadakatle çıkarıyorsun.
+  const sistemTalimati = `Sen 15 yıllık deneyimli bir matematik grafik yayıncısısın. Sana verilen ders notu / PDF sayfasının HEM METİN İÇERİĞİNİ HEM DE HER ÖĞENİN İŞLEVİNİ (konu anlatımı mı, örnek soru mu, test sorusu mu, çözüm mü, öğretmen notu mu?) VE TASARIMINI tam sadakatle çıkarıyorsun.
 
-ZORUNLU TASARIM VE YAPI KURALLARI:
-1. SÜTUN DÜZENİ: Sayfa 2 sütunlu düzen mi ("cift-sutun") yoksa tek sütunlu düzen mi ("tek-sutun")? "sayfaDuzeni" alanında MUTLAKA belirt.
-2. FOTOĞRAF / GÖRSEL YAPIŞTIRMA YOK: Sayfadaki içerikleri pürüzsüz metin, KaTeX matematik formülü ($...$) ve vektörel HTML kutusu olarak dönüştür. Dışarıdan resim kırpma/yapıştırma yapma.
-3. KUTU VE RENK TASARIMLARI (BİREBİR AYNISI): Her blok için orijinal PDF'teki tasarım özelliklerini "stil" objesine ekle:
-   - "arkaPlan": Kutu arka plan HEX rengi (örn: "#fafafa", "#eff6ff", "#f0fdf4", "#ffffff")
-   - "kenarlikRengi": Kenarlık HEX rengi (örn: "#e67e22", "#3b82f6", "#16a34a", "#e5e7eb")
+ZORUNLU ÖĞE SINIFLANDIRMA VE TASARIM KURALLARI:
+1. BLOK TİPİ BELİRLEME (ÇOK ÖNEMLİ):
+   - "konu": Konu anlatımı metinleri, kural kutuları, tanımlar, bilgi notları.
+   - "ornek": Çözümlü örnek sorular veya inceleme problemleri.
+   - "soru": Test soruları, şıklı veya açık uçlu sınav soruları.
+   - "cozum": Adım adım çözümler veya açıklama adımları.
+   - "not": İpucu, dikkat kutusu, öğretmen notu, püf noktası.
+   - "baslik": Konu başlıkları, ünite başlıkları.
+   - "tablo": Veri tabloları.
+2. SÜTUN DÜZENİ: Sayfa 2 sütunlu düzen mi ("cift-sutun") yoksa tek sütunlu düzen mi ("tek-sutun")? "sayfaDuzeni" alanında MUTLAKA belirt.
+3. FOTOĞRAF / GÖRSEL YAPIŞTIRMA YOK: İçeriği pürüzsüz metin, KaTeX matematik formülü ($...$) ve vektörel HTML kutuları olarak dönüştür.
+4. KUTU VE RENK TASARIMLARI: Her blok için orijinal PDF'teki tasarım özelliklerini "stil" objesinde belirt:
+   - "arkaPlan": Kutu arka plan HEX rengi (örn: "#f8fafc", "#f0f9ff", "#fff7ed", "#f0fdf4", "#ffffff")
+   - "kenarlikRengi": Kenarlık HEX rengi (örn: "#0284c7", "#2563eb", "#e67e22", "#10b981", "#f97316")
    - "kenarlikTipi": Kutu kenarlık stili ("sol-cizgi" | "tam-cerceve" | "kesikli" | "yok")
-   - "ikon": Kutu başındaki simge/ikon varsa yaz (örn: "📘", "✅", "💡", "📌", "✏️", "")
+   - "ikon": Kutu başındaki simge/ikon varsa yaz (örn: "📌", "💡", "📘", "✅", "❓", "⭐")
    - "tamGenislik": Başlık veya tablo 2 sütunu da kaplıyorsa true yap.
-4. ŞIK DİZİLİMİ: Şıklar yan yana mı ("inline"), 2x2 grid mi ("grid"), alt alta mı ("block")? "sikDuzen" alanında belirt.
+5. ŞIK DİZİLİMİ: Şıklar yan yana mı ("inline"), 2x2 grid mi ("grid"), alt alta mı ("block")? "sikDuzen" alanında belirt.
 
 Yalnızca aşağıdaki JSON formatını döndür:
 {
@@ -3047,7 +3416,22 @@ Yalnızca aşağıdaki JSON formatını döndür:
     {
       "tip": "baslik",
       "metin": "ÜÇGENDE AÇILAR",
-      "stil": { "arkaPlan": "transparent", "kenarlikRengi": "#1a1a1a", "kenarlikTipi": "yok", "ikon": "", "tamGenislik": true }
+      "stil": { "arkaPlan": "transparent", "kenarlikRengi": "#1a1a1a", "kenarlikTipi": "yok", "ikon": "📌", "tamGenislik": true }
+    },
+    {
+      "tip": "konu",
+      "metin": "Bir üçgenin iç açıları toplamı $180^\\circ$'dir.",
+      "stil": { "arkaPlan": "#f8fafc", "kenarlikRengi": "#0284c7", "kenarlikTipi": "sol-cizgi", "ikon": "💡", "tamGenislik": true }
+    },
+    {
+      "tip": "ornek",
+      "metin": "ABC üçgeninde $m(\\hat{A}) = 50^\\circ$ ve $m(\\hat{B}) = 70^\\circ$ ise...",
+      "stil": { "arkaPlan": "#f0f9ff", "kenarlikRengi": "#2563eb", "kenarlikTipi": "sol-cizgi", "ikon": "📘", "tamGenislik": false }
+    },
+    {
+      "tip": "cozum",
+      "metin": "$m(\\hat{C}) = 180^\\circ - (50^\\circ + 70^\\circ) = 60^\\circ$ bulunur.",
+      "stil": { "arkaPlan": "#f0fdf4", "kenarlikRengi": "#10b981", "kenarlikTipi": "sol-cizgi", "ikon": "✅", "tamGenislik": false }
     },
     {
       "tip": "soru",
@@ -3055,18 +3439,7 @@ Yalnızca aşağıdaki JSON formatını döndür:
       "sikkar": ["A) 30", "B) 45", "C) 60", "D) 90"],
       "dogruSik": "C",
       "sikDuzen": "inline",
-      "stil": { "arkaPlan": "#fafafa", "kenarlikRengi": "#e67e22", "kenarlikTipi": "sol-cizgi", "ikon": "", "tamGenislik": false }
-    },
-    {
-      "tip": "ornek",
-      "metin": "Örnek problem metni...",
-      "stil": { "arkaPlan": "#eff6ff", "kenarlikRengi": "#3b82f6", "kenarlikTipi": "sol-cizgi", "ikon": "📘", "tamGenislik": false }
-    },
-    {
-      "tip": "tablo",
-      "basliklar": ["X", "Y"],
-      "satirlar": [["1", "2"]],
-      "stil": { "arkaPlan": "#ffffff", "kenarlikRengi": "#cbd5e1", "kenarlikTipi": "tam-cerceve", "ikon": "", "tamGenislik": true }
+      "stil": { "arkaPlan": "#ffffff", "kenarlikRengi": "#e67e22", "kenarlikTipi": "sol-cizgi", "ikon": "❓", "tamGenislik": false }
     }
   ]
 }`;
@@ -3074,7 +3447,7 @@ Yalnızca aşağıdaki JSON formatını döndür:
   try {
     const rawContent = await executeAI({
       systemPrompt: sistemTalimati,
-      userText: 'Bu PDF sayfasının tüm metin içeriğini, formüllerini ve birebir tasarım/kutu stillerini (sayfaDuzeni, stil, sikDuzen) eksiksiz JSON formatında çıkar.',
+      userText: 'Bu PDF sayfasının tüm metin içeriğini, formüllerini ve ögelerin işlevlerini (konu, örnek, soru, çözüm, not) ve kutu stillerini eksiksiz JSON formatında çıkar.',
       base64Image: gorsel,
       jsonFormat: true
     });

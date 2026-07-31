@@ -449,6 +449,193 @@
     .sayfa-icerik svg { display: block !important; max-width: 100%; height: auto; }
     .konu-anlatim { border-left: 4px solid var(--turuncu); background: #fff8e1; border-radius: 5px; padding: 10px 12px; }
 
+    /* ═══════════════════════════════════════════════════════════
+       EL EMEĞİ / DİZGİ PUBLICATION HARİKA KUTU VE ÇİZGİ TASARIMLARI
+    ═══════════════════════════════════════════════════════════ */
+    .fasikul-blok-item {
+      position: relative;
+      border-radius: 8px;
+      padding: 12px 15px;
+      margin: 9px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .fasikul-rozet {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Konu Anlatımı Kutusuna Özgü Stil */
+    .fasikul-konu {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 1px solid #e2e8f0;
+      border-left: 5px solid #0284c7;
+    }
+    .rozet-konu {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+    }
+
+    /* Örnek Soru Kutusuna Özgü Stil */
+    .fasikul-ornek {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 1px solid #bae6fd;
+      border-left: 5px solid #2563eb;
+    }
+    .rozet-ornek {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+    }
+
+    /* Soru Kutusuna Özgü Stil */
+    .fasikul-soru {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-left: 5px solid #e67e22;
+      box-shadow: 0 3px 10px rgba(230, 126, 34, 0.06);
+    }
+    .rozet-soru {
+      background: linear-gradient(135deg, #e67e22, #d35400);
+      color: #ffffff;
+    }
+
+    /* Çözüm Kutusuna Özgü Stil */
+    .fasikul-cozum {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 1px solid #bbf7d0;
+      border-left: 5px solid #10b981;
+    }
+    .rozet-cozum {
+      background: linear-gradient(135deg, #10b981, #047857);
+      color: #ffffff;
+    }
+
+    /* Öğretmen Notu / Püf Noktası Stil */
+    .fasikul-not {
+      background: #fff7ed;
+      border: 2px dashed #fdba74;
+      border-left: 5px solid #f97316;
+    }
+    .rozet-not {
+      background: linear-gradient(135deg, #f97316, #c2410c);
+      color: #ffffff;
+    }
+
+    /* Şık Dizilimleri */
+    .sik-wrap-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .sik-wrap-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .sik-wrap-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .sik-item-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      font-size: 11.5px;
+      color: #1e293b;
+      transition: all 0.15s;
+    }
+    .sik-item-card .sik-harf-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .sik-item-card.dogru-sik-card {
+      background: #dcfce7;
+      border-color: #86efac;
+      color: #14532d;
+      font-weight: 700;
+    }
+    .sik-item-card.dogru-sik-card .sik-harf-badge {
+      background: #16a34a;
+      color: #ffffff;
+    }
+
+    /* Sorularda Çözüm Çalışma Alanı Lines */
+    .soru-workspace-area {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+    }
+    .soru-workspace-header {
+      font-size: 9px;
+      font-weight: 800;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .soru-workspace-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .soru-workspace-line {
+      height: 18px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* Başlık ve Çizgi Stilleri */
+    .baslik-dekoratif-wrap {
+      margin: 12px 0 8px;
+      width: 100%;
+    }
+    .baslik-dekoratif-metin {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .baslik-dekoratif-cizgi {
+      height: 3px;
+      background: linear-gradient(90deg, #f5c518 0%, #e67e22 40%, transparent 100%);
+      border-radius: 2px;
+    }
+
     /* ════════════ İÇERİK — TEST (iki sütun) ════════════ */
     .sayfa-icerik-test {
       padding: 4mm 8mm;
@@ -1539,76 +1726,142 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     const tip = String(blok.tip || '').toLowerCase();
     const stil = blok.stil || {};
 
-    const bg = stil.arkaPlan || '#fafafa';
-    const borderColor = stil.kenarlikRengi || '#e5e7eb';
-    const borderType = stil.kenarlikTipi || 'sol-cizgi';
-    const ikon = stil.ikon ? `<span style="margin-right:6px;font-size:13px;">${stil.ikon}</span>` : '';
-
-    let borderCss = `border: 1px solid ${borderColor};`;
-    if (borderType === 'sol-cizgi') {
-      borderCss = `border: 1px solid #e5e7eb; border-left: 4px solid ${borderColor};`;
-    } else if (borderType === 'kesikli') {
-      borderCss = `border: 2px dashed ${borderColor};`;
-    } else if (borderType === 'yok') {
-      borderCss = `border: none;`;
-    }
+    const ikon = stil.ikon ? String(stil.ikon).trim() : '';
 
     const gridSpanCss = (stil.tamGenislik || !isCiftSutun)
       ? 'grid-column: 1 / -1; width: 100%;'
       : '';
 
+    // 1. BAŞLIK BLOKU
     if (tip === 'baslik') {
-      html += `<div class="konu-anlatim tam-genislik" style="${gridSpanCss}margin:10px 0 6px;"><h3 style="font-size:13.5px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : '#1a1a1a'};margin:0;border-bottom: 2px solid ${borderColor !== '#e5e7eb' ? borderColor : '#f5c518'};padding-bottom:4px;">${ikon}${String(blok.metin || '').trim()}</h3></div>`;
+      const baslikMetni = String(blok.metin || '').trim();
+      html += `
+        <div class="baslik-dekoratif-wrap tam-genislik" style="${gridSpanCss}">
+          <div class="baslik-dekoratif-metin">
+            <span>${ikon || '📌'}</span>
+            <span>${baslikMetni}</span>
+          </div>
+          <div class="baslik-dekoratif-cizgi"></div>
+        </div>`;
       continue;
     }
 
+    // 2. KONU ANLATIMI / BİLGİ NOTU
+    if (tip === 'konu' || tip === 'konu-anlatim' || tip === 'bilgi') {
+      const konuMetni = String(blok.metin || '').trim();
+      html += `
+        <div class="fasikul-blok-item fasikul-konu" style="${gridSpanCss}">
+          <div class="fasikul-rozet rozet-konu">
+            <span>${ikon || '📌'}</span>
+            <span>KONU ANLATIMI</span>
+          </div>
+          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${konuMetni}</div>
+        </div>`;
+      continue;
+    }
+
+    // 3. ÖRNEK SORU
+    if (tip === 'ornek' || tip === 'ornek-soru') {
+      const ornekMetni = String(blok.metin || '').trim();
+      html += `
+        <div class="fasikul-blok-item fasikul-ornek" style="${gridSpanCss}">
+          <div class="fasikul-rozet rozet-ornek">
+            <span>${ikon || '📘'}</span>
+            <span>ÇÖZÜMLÜ ÖRNEK</span>
+          </div>
+          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:500;">${ornekMetni}</div>
+        </div>`;
+      continue;
+    }
+
+    // 4. ÇÖZÜM
+    if (tip === 'cozum') {
+      const cozumMetni = String(blok.metin || '').trim();
+      html += `
+        <div class="fasikul-blok-item fasikul-cozum" style="${gridSpanCss}">
+          <div class="fasikul-rozet rozet-cozum">
+            <span>${ikon || '✅'}</span>
+            <span>ÇÖZÜM</span>
+          </div>
+          <div style="font-size:12px;line-height:1.68;color:#064e3b;">${cozumMetni}</div>
+        </div>`;
+      continue;
+    }
+
+    // 5. TEST / PEKİŞTİRME SORUSU
     if (tip === 'soru') {
       soruSayaci++;
       const soruMetni = String(blok.metin || '').trim();
       const dogruHarf = String(blok.dogruSik || '').trim().toUpperCase().charAt(0);
       const sikkar = Array.isArray(blok.sikkar) ? blok.sikkar : [];
 
-      let sikDisplayCss = 'display:flex;flex-wrap:wrap;gap:8px;';
+      let sikClass = 'sik-wrap-container';
       if (blok.sikDuzen === 'block') {
-        sikDisplayCss = 'display:flex;flex-direction:column;gap:5px;';
+        sikClass = 'sik-wrap-block';
       } else if (blok.sikDuzen === 'grid') {
-        sikDisplayCss = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+        sikClass = 'sik-wrap-grid';
       }
 
-      const sikHTML = sikkar.map(sik => {
-        const sikStr = String(sik).trim();
-        const harf = sikStr.charAt(0).toUpperCase();
-        return harf && harf === dogruHarf
-          ? `<span><strong style="color:${borderColor !== '#e5e7eb' ? borderColor : '#e67e22'};">${sikStr}</strong></span>`
-          : `<span>${sikStr}</span>`;
-      }).join('');
+      let siklarHTML = '';
+      if (sikkar.length > 0) {
+        siklarHTML = sikkar.map(sik => {
+          const sikStr = String(sik).trim();
+          // E.g. "A) 30" or "A. 30" or "30"
+          const match = sikStr.match(/^([A-Ea-e])[\)\.](.*)/);
+          let harf = '';
+          let metin = sikStr;
+          if (match) {
+            harf = match[1].toUpperCase();
+            metin = match[2].trim();
+          } else {
+            harf = sikStr.charAt(0).toUpperCase();
+          }
+          const isDogru = harf && harf === dogruHarf;
 
-      html += `<div class="soru-kutusu-beyaz" style="background:${bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
-        <strong style="font-size:12.5px;color:#1a1a1a;">${ikon}SORU ${soruSayaci}:</strong>
-        <p style="font-size:12px;line-height:1.65;margin:6px 0;">${soruMetni}</p>
-        <div style="font-size:11.5px;margin-top:6px;${sikDisplayCss}">${sikHTML}</div>
-      </div>`;
+          return `
+            <div class="sik-item-card ${isDogru ? 'dogru-sik-card' : ''}">
+              <span class="sik-harf-badge">${harf}</span>
+              <span class="sik-metin-body">${metin}</span>
+            </div>`;
+        }).join('');
+      }
+
+      html += `
+        <div class="fasikul-blok-item fasikul-soru" style="${gridSpanCss}">
+          <div class="fasikul-rozet rozet-soru">
+            <span>${ikon || '❓'}</span>
+            <span>SORU ${soruSayaci}</span>
+          </div>
+          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:600;margin-bottom:6px;">${soruMetni}</div>
+          ${siklarHTML ? `<div class="${sikClass}">${siklarHTML}</div>` : `
+            <div class="soru-workspace-area">
+              <div class="soru-workspace-header">✍️ ÇÖZÜM İÇİN ALAN</div>
+              <div class="soru-workspace-lines">
+                <div class="soru-workspace-line"></div>
+                <div class="soru-workspace-line"></div>
+                <div class="soru-workspace-line"></div>
+              </div>
+            </div>`}
+        </div>`;
       continue;
     }
 
-    if (tip === 'ornek') {
-      const ornekMetni = String(blok.metin || '').trim();
-      html += `<div class="ornek-kutusu" style="background:${bg === '#ffffff' ? '#eff6ff' : bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
-        <strong style="font-size:11px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : 'var(--accent)'};letter-spacing:.04em;">${ikon || '📘 '}ÖRNEK</strong>
-        <p style="font-size:12px;line-height:1.65;margin:6px 0 0;color:#1a1a1a;">${ornekMetni}</p>
-      </div>`;
+    // 6. ÖĞRETMEN NOTU / İPUCU / UYARI
+    if (tip === 'not' || tip === 'ipucu' || tip === 'uyari' || tip === 'puf-nokta') {
+      const notMetni = String(blok.metin || '').trim();
+      const baslikEtiket = tip === 'uyari' ? '⚠️ DİKKAT' : tip === 'ipucu' ? '⭐ PÜF NOKTA' : '💡 ÖĞRETMEN NOTU';
+      html += `
+        <div class="fasikul-blok-item fasikul-not" style="${gridSpanCss}">
+          <div class="fasikul-rozet rozet-not">
+            <span>${ikon || '💡'}</span>
+            <span>${baslikEtiket}</span>
+          </div>
+          <div style="font-size:11.8px;line-height:1.65;color:#7c2d12;font-weight:500;">${notMetni}</div>
+        </div>`;
       continue;
     }
 
-    if (tip === 'cozum') {
-      const cozumMetni = String(blok.metin || '').trim();
-      html += `<div class="cozum-kutusu" style="background:${bg === '#ffffff' ? '#f0fdf4' : bg};padding:12px 13px;border-radius:6px;${borderCss}box-shadow:0 1px 4px rgba(0,0,0,.05);margin:7px 0;break-inside:avoid;${gridSpanCss}">
-        <strong style="font-size:11px;font-weight:900;color:${borderColor !== '#e5e7eb' ? borderColor : 'var(--green)'};letter-spacing:.04em;">${ikon || '✅ '}ÇÖZÜM</strong>
-        <p style="font-size:12px;line-height:1.65;margin:6px 0 0;color:#1a1a1a;">${cozumMetni}</p>
-      </div>`;
-      continue;
-    }
-
+    // 7. TABLO
     if (tip === 'tablo') {
       const basliklar = Array.isArray(blok.basliklar) ? blok.basliklar : [];
       const satirlar = Array.isArray(blok.satirlar) ? blok.satirlar : [];
@@ -1618,13 +1871,17 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
         const hucreler = Array.isArray(satir) ? satir : [satir];
         tabloIci += '<tr>' + hucreler.map(h => `<td>${h}</td>`).join('') + '</tr>';
       }
-      html += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:8px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
+      html += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:10px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
       continue;
     }
 
+    // 8. DİĞER / PARAGRAF
     const paragrafMetni = String(blok.metin || '').trim();
     if (paragrafMetni) {
-      html += `<div style="background:${bg !== '#ffffff' ? bg : 'transparent'};padding:${bg !== '#ffffff' ? '8px 10px' : '3px 0'};border-radius:5px;${borderType !== 'yok' && bg !== '#ffffff' ? borderCss : ''};font-size:11.5px;line-height:1.65;color:#374151;margin:4px 0;${gridSpanCss}">${ikon}${paragrafMetni}</div>`;
+      html += `
+        <div class="fasikul-blok-item fasikul-konu" style="${gridSpanCss}">
+          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${paragrafMetni}</div>
+        </div>`;
     }
   }
 
