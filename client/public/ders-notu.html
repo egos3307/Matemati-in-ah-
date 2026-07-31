@@ -1704,101 +1704,168 @@ async function groqIleEtiketle(hamMetin) {
     });
     const veri = await yanit.json();
     if (!yanit.ok) throw new Error(veri.error || 'Yapay zeka servisi hata döndürdü.');
-    if (Array.isArray(veri.bloklar)) tumBloklar.push(...veri.bloklar);
+    
+    const gelenBloklar = extractBloklarList(veri);
+    if (gelenBloklar && gelenBloklar.length > 0) {
+      tumBloklar.push(...gelenBloklar);
+    }
   }
 
   return tumBloklar;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   YAPAY ZEKA JSON VE METİN ÇIKARMA YARDIMCILARI
+═══════════════════════════════════════════════════════════ */
+function extractBloklarList(veri) {
+  if (!veri) return [];
+  if (Array.isArray(veri)) return veri;
+  if (Array.isArray(veri.bloklar)) return veri.bloklar;
+  if (Array.isArray(veri.sorular)) return veri.sorular.map(s => ({
+    tip: 'soru',
+    metin: s.metin || s.question || s.text || '',
+    sikkar: s.sikkar || s.siklar || s.options || [],
+    dogruSik: s.dogruSik || s.answer || '',
+    sikDuzen: s.sikDuzen || 'inline'
+  }));
+  if (Array.isArray(veri.icerik)) return veri.icerik;
+  if (Array.isArray(veri.items)) return veri.items;
+  if (Array.isArray(veri.data)) return veri.data;
+  if (veri.fasikul && Array.isArray(veri.fasikul.bloklar)) return veri.fasikul.bloklar;
+  if (typeof veri === 'object') {
+    for (const key of Object.keys(veri)) {
+      if (Array.isArray(veri[key]) && veri[key].length > 0) {
+        return veri[key];
+      }
+    }
+  }
+  return [];
+}
+
+function extractMetinContent(blok) {
+  if (blok === null || blok === undefined) return '';
+  if (typeof blok === 'string') return blok.trim();
+  if (typeof blok === 'number') return String(blok);
+  if (typeof blok !== 'object') return '';
+
+  const candidates = [
+    blok.metin, blok.text, blok.content, blok.icerik,
+    blok.aciklama, blok.soruMetni, blok.ornekMetni,
+    blok.soru, blok.question, blok.paragraf, blok.title,
+    blok.baslik, blok.value, blok.body, blok.description, blok.raw
+  ];
+
+  for (const c of candidates) {
+    if (c !== undefined && c !== null && String(c).trim().length > 0) {
+      return String(c).trim();
+    }
+  }
+  return '';
+}
+
+function normalizeTip(blok) {
+  if (!blok || typeof blok === 'string' || typeof blok === 'number') return 'konu';
+  const t = String(blok.tip || blok.type || blok.kind || '').toLowerCase().trim();
+
+  if (['baslik', 'title', 'header', 'heading', 'banner', 'unit'].includes(t)) return 'baslik';
+  if (['ornek', 'ornek-soru', 'example', 'sample', 'ornek_soru'].includes(t)) return 'ornek';
+  if (['cozum', 'solution', 'cozum-adimi', 'answer_step'].includes(t)) return 'cozum';
+  if (['soru', 'question', 'test', 'problem', 'soru_kutusu'].includes(t)) return 'soru';
+  if (['not', 'ipucu', 'uyari', 'puf-nokta', 'note', 'tip', 'warning', 'attention', 'notice'].includes(t)) return 'not';
+  if (['tablo', 'table', 'matrix', 'grid'].includes(t)) return 'tablo';
+
+  return 'konu';
+}
+
 function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
+  const blokListesi = extractBloklarList(bloklar);
+  if (!blokListesi || blokListesi.length === 0) return '';
+
   let html = '';
   let soruSayaci = 0;
+  let renderCount = 0;
 
   const isCiftSutun = sayfaDuzeni === 'cift-sutun';
   const sutunStili = isCiftSutun
     ? 'display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;'
     : 'display:flex;flex-direction:column;gap:8px;';
 
-  html += `<div class="fasikul-duzen-wrap" style="${sutunStili}">`;
+  let innerHTML = '';
 
-  for (const blok of (bloklar || [])) {
-    if (!blok || typeof blok !== 'object') continue;
-    const tip = String(blok.tip || '').toLowerCase();
-    const stil = blok.stil || {};
-
+  for (const blok of blokListesi) {
+    if (!blok) continue;
+    const metin = extractMetinContent(blok);
+    const tip = normalizeTip(blok);
+    const stil = (typeof blok === 'object' && blok.stil) ? blok.stil : {};
     const ikon = stil.ikon ? String(stil.ikon).trim() : '';
+    const gridSpanCss = (stil.tamGenislik || !isCiftSutun) ? 'grid-column: 1 / -1; width: 100%;' : '';
 
-    const gridSpanCss = (stil.tamGenislik || !isCiftSutun)
-      ? 'grid-column: 1 / -1; width: 100%;'
-      : '';
-
-    // 1. BAŞLIK BLOKU
     if (tip === 'baslik') {
-      const baslikMetni = String(blok.metin || '').trim();
-      html += `
+      if (!metin) continue;
+      innerHTML += `
         <div class="baslik-dekoratif-wrap tam-genislik" style="${gridSpanCss}">
           <div class="baslik-dekoratif-metin">
             <span>${ikon || '📌'}</span>
-            <span>${baslikMetni}</span>
+            <span>${metin}</span>
           </div>
           <div class="baslik-dekoratif-cizgi"></div>
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 2. KONU ANLATIMI / BİLGİ NOTU
-    if (tip === 'konu' || tip === 'konu-anlatim' || tip === 'bilgi') {
-      const konuMetni = String(blok.metin || '').trim();
-      html += `
+    if (tip === 'konu') {
+      if (!metin) continue;
+      innerHTML += `
         <div class="fasikul-blok-item fasikul-konu" style="${gridSpanCss}">
           <div class="fasikul-rozet rozet-konu">
             <span>${ikon || '📌'}</span>
             <span>KONU ANLATIMI</span>
           </div>
-          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${konuMetni}</div>
+          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${metin}</div>
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 3. ÖRNEK SORU
-    if (tip === 'ornek' || tip === 'ornek-soru') {
-      const ornekMetni = String(blok.metin || '').trim();
-      html += `
+    if (tip === 'ornek') {
+      if (!metin) continue;
+      innerHTML += `
         <div class="fasikul-blok-item fasikul-ornek" style="${gridSpanCss}">
           <div class="fasikul-rozet rozet-ornek">
             <span>${ikon || '📘'}</span>
             <span>ÇÖZÜMLÜ ÖRNEK</span>
           </div>
-          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:500;">${ornekMetni}</div>
+          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:500;">${metin}</div>
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 4. ÇÖZÜM
     if (tip === 'cozum') {
-      const cozumMetni = String(blok.metin || '').trim();
-      html += `
+      if (!metin) continue;
+      innerHTML += `
         <div class="fasikul-blok-item fasikul-cozum" style="${gridSpanCss}">
           <div class="fasikul-rozet rozet-cozum">
             <span>${ikon || '✅'}</span>
             <span>ÇÖZÜM</span>
           </div>
-          <div style="font-size:12px;line-height:1.68;color:#064e3b;">${cozumMetni}</div>
+          <div style="font-size:12px;line-height:1.68;color:#064e3b;">${metin}</div>
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 5. TEST / PEKİŞTİRME SORUSU
     if (tip === 'soru') {
+      if (!metin) continue;
       soruSayaci++;
-      const soruMetni = String(blok.metin || '').trim();
-      const dogruHarf = String(blok.dogruSik || '').trim().toUpperCase().charAt(0);
-      const sikkar = Array.isArray(blok.sikkar) ? blok.sikkar : [];
+      const dogruHarf = typeof blok === 'object' ? String(blok.dogruSik || '').trim().toUpperCase().charAt(0) : '';
+      const sikkar = (typeof blok === 'object' && Array.isArray(blok.sikkar)) ? blok.sikkar : (typeof blok === 'object' && Array.isArray(blok.siklar)) ? blok.siklar : [];
 
       let sikClass = 'sik-wrap-container';
-      if (blok.sikDuzen === 'block') {
+      if (typeof blok === 'object' && blok.sikDuzen === 'block') {
         sikClass = 'sik-wrap-block';
-      } else if (blok.sikDuzen === 'grid') {
+      } else if (typeof blok === 'object' && blok.sikDuzen === 'grid') {
         sikClass = 'sik-wrap-grid';
       }
 
@@ -1806,13 +1873,12 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
       if (sikkar.length > 0) {
         siklarHTML = sikkar.map(sik => {
           const sikStr = String(sik).trim();
-          // E.g. "A) 30" or "A. 30" or "30"
           const match = sikStr.match(/^([A-Ea-e])[\)\.](.*)/);
           let harf = '';
-          let metin = sikStr;
+          let sMetin = sikStr;
           if (match) {
             harf = match[1].toUpperCase();
-            metin = match[2].trim();
+            sMetin = match[2].trim();
           } else {
             harf = sikStr.charAt(0).toUpperCase();
           }
@@ -1821,18 +1887,18 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
           return `
             <div class="sik-item-card ${isDogru ? 'dogru-sik-card' : ''}">
               <span class="sik-harf-badge">${harf}</span>
-              <span class="sik-metin-body">${metin}</span>
+              <span class="sik-metin-body">${sMetin}</span>
             </div>`;
         }).join('');
       }
 
-      html += `
+      innerHTML += `
         <div class="fasikul-blok-item fasikul-soru" style="${gridSpanCss}">
           <div class="fasikul-rozet rozet-soru">
             <span>${ikon || '❓'}</span>
             <span>SORU ${soruSayaci}</span>
           </div>
-          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:600;margin-bottom:6px;">${soruMetni}</div>
+          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:600;margin-bottom:6px;">${metin}</div>
           ${siklarHTML ? `<div class="${sikClass}">${siklarHTML}</div>` : `
             <div class="soru-workspace-area">
               <div class="soru-workspace-header">✍️ ÇÖZÜM İÇİN ALAN</div>
@@ -1843,50 +1909,45 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
               </div>
             </div>`}
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 6. ÖĞRETMEN NOTU / İPUCU / UYARI
-    if (tip === 'not' || tip === 'ipucu' || tip === 'uyari' || tip === 'puf-nokta') {
-      const notMetni = String(blok.metin || '').trim();
-      const baslikEtiket = tip === 'uyari' ? '⚠️ DİKKAT' : tip === 'ipucu' ? '⭐ PÜF NOKTA' : '💡 ÖĞRETMEN NOTU';
-      html += `
+    if (tip === 'not') {
+      if (!metin) continue;
+      const baslikEtiket = (typeof blok === 'object' && blok.tip === 'uyari') ? '⚠️ DİKKAT' : (typeof blok === 'object' && blok.tip === 'ipucu') ? '⭐ PÜF NOKTA' : '💡 ÖĞRETMEN NOTU';
+      innerHTML += `
         <div class="fasikul-blok-item fasikul-not" style="${gridSpanCss}">
           <div class="fasikul-rozet rozet-not">
             <span>${ikon || '💡'}</span>
             <span>${baslikEtiket}</span>
           </div>
-          <div style="font-size:11.8px;line-height:1.65;color:#7c2d12;font-weight:500;">${notMetni}</div>
+          <div style="font-size:11.8px;line-height:1.65;color:#7c2d12;font-weight:500;">${metin}</div>
         </div>`;
+      renderCount++;
       continue;
     }
 
-    // 7. TABLO
     if (tip === 'tablo') {
-      const basliklar = Array.isArray(blok.basliklar) ? blok.basliklar : [];
-      const satirlar = Array.isArray(blok.satirlar) ? blok.satirlar : [];
+      const basliklar = (typeof blok === 'object' && Array.isArray(blok.basliklar)) ? blok.basliklar : [];
+      const satirlar = (typeof blok === 'object' && Array.isArray(blok.satirlar)) ? blok.satirlar : [];
       let tabloIci = '';
       if (basliklar.length) tabloIci += '<tr>' + basliklar.map(b => `<th>${b}</th>`).join('') + '</tr>';
       for (const satir of satirlar) {
         const hucreler = Array.isArray(satir) ? satir : [satir];
         tabloIci += '<tr>' + hucreler.map(h => `<td>${h}</td>`).join('') + '</tr>';
       }
-      html += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:10px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
+      innerHTML += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:10px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
+      renderCount++;
       continue;
-    }
-
-    // 8. DİĞER / PARAGRAF
-    const paragrafMetni = String(blok.metin || '').trim();
-    if (paragrafMetni) {
-      html += `
-        <div class="fasikul-blok-item fasikul-konu" style="${gridSpanCss}">
-          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${paragrafMetni}</div>
-        </div>`;
     }
   }
 
-  html += `</div>`;
-  return html;
+  if (renderCount === 0 || !innerHTML.trim()) {
+    return '';
+  }
+
+  return `<div class="fasikul-duzen-wrap" style="${sutunStili}">${innerHTML}</div>`;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1968,8 +2029,11 @@ async function pdfGorselIleAiTara(dosya) {
 
     if (veri && veri.sayfaDuzeni === 'cift-sutun') algilananSayfaDuzeni = 'cift-sutun';
 
-    if (veri && Array.isArray(veri.bloklar)) {
-      tumBloklar.push(...veri.bloklar);
+    if (veri) {
+      const bloklar = extractBloklarList(veri);
+      if (bloklar && bloklar.length > 0) {
+        tumBloklar.push(...bloklar);
+      }
     }
   }
 
@@ -1990,11 +2054,27 @@ window.fasikuluBaslat = async function() {
     let sayfaHTMLIcerik = '';
 
     if (secilenPdfDosyasi) {
-      toast('⚡ PDF tasarımı ve içeriği Yapay Zeka (AI Vision) ile okunuyor…', 'inf');
-      aiDurumYaz('⚡ Yapay Zeka PDF düzenini ve kutu renklerini inceliyor…', 15);
-      const res = await pdfGorselIleAiTara(secilenPdfDosyasi);
-      sayfaHTMLIcerik = bloklarHTML(res.bloklar, res.sayfaDuzeni);
-      nihaiEtiketliMetin = JSON.stringify(res.bloklar);
+      toast('⚡ PDF tasarımı ve içeriği Yapay Zeka ile taranıyor…', 'inf');
+      aiDurumYaz('⚡ Yapay Zeka PDF düzenini ve metinleri inceliyor…', 15);
+      
+      try {
+        const res = await pdfGorselIleAiTara(secilenPdfDosyasi);
+        sayfaHTMLIcerik = bloklarHTML(res.bloklar, res.sayfaDuzeni);
+        nihaiEtiketliMetin = JSON.stringify(res.bloklar);
+      } catch (aiErr) {
+        console.warn('AI Vision hatası, metin okumaya geçiliyor:', aiErr);
+      }
+
+      // Eğer AI taraması boş geldiyse, PDF.js metin okuma yedekleme motorunu çalıştır
+      if (!sayfaHTMLIcerik || !sayfaHTMLIcerik.trim()) {
+        aiDurumYaz('📄 PDF metin içerikleri doğrudan çıkarılıyor…', 60);
+        const hamMetin = await pdfdenMetinAl(secilenPdfDosyasi);
+        if (hamMetin && hamMetin.trim()) {
+          sayfaHTMLIcerik = etiketliMetniHTML(hamMetin);
+          nihaiEtiketliMetin = hamMetin;
+          toast('PDF metin içeriği başarıyla çıkarıldı ve biçimlendirildi.', 'ok');
+        }
+      }
     } else {
       const inputEl = document.getElementById('hoca-metin-girdisi');
       const hamMetin = inputEl ? inputEl.value.trim() : '';
@@ -2007,9 +2087,25 @@ window.fasikuluBaslat = async function() {
       aiDurumYaz('Metin alındı…', 10);
       aiDurumYaz('Yapay Zeka (AI Engine) ile fasikül hazırlanıyor…', 30);
       document.getElementById('ai-parca-info').textContent = `${hamMetin.length} karakter işleniyor`;
-      const bloklar = await groqIleEtiketle(hamMetin);
-      sayfaHTMLIcerik = bloklarHTML(bloklar, 'tek-sutun');
-      nihaiEtiketliMetin = JSON.stringify(bloklar);
+      
+      try {
+        const bloklar = await groqIleEtiketle(hamMetin);
+        sayfaHTMLIcerik = bloklarHTML(bloklar, 'tek-sutun');
+        nihaiEtiketliMetin = JSON.stringify(bloklar);
+      } catch (aiErr) {
+        console.warn('Metin AI etiketleme hatası, ham metin biçimlendiriliyor:', aiErr);
+      }
+
+      if (!sayfaHTMLIcerik || !sayfaHTMLIcerik.trim()) {
+        sayfaHTMLIcerik = etiketliMetniHTML(hamMetin);
+        nihaiEtiketliMetin = hamMetin;
+      }
+    }
+
+    if (!sayfaHTMLIcerik || !sayfaHTMLIcerik.trim()) {
+      toast('İçerik çıkarılamadı. Lütfen PDF dosyasını veya metni kontrol ediniz.', 'err');
+      aiDurumYaz('❌ İçerik bulunamadı', 0);
+      return;
     }
 
     aiDurumYaz('✅ Tasarım ve metinler işlendi!', 90);
