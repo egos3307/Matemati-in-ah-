@@ -39,9 +39,10 @@ const Contact = () => {
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="İletişim"
-        description="Fullematematiği ile iletişime geçin. Sorularınız için bize WhatsApp veya e-posta ile ulaşabilirsiniz."
+        title="Canlı Matematik Ders Bilgi & İletişim Hattı"
+        description="Online matematik canlı ders ve geometri özel ders paketleri hakkında bilgi almak, ücretsiz canlı tanışma dersi oluşturmak için WhatsApp veya telefonla bize ulaşın!"
         path="/iletisim"
+        keywords="matematik canlı ders iletişim, online matematik ders kayıt, ücretsiz canlı tanışma dersi başvuru"
       />
       {/* Background Decorative Blobs */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse"></div>

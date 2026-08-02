@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Allow: /llms.txt
+Allow: /llms.md
+Allow: /geo/llms.txt
+Allow: /geo/llms.md
 
 Disallow: /ogretmen
 Disallow: /ogrenci
@@ -7,3 +11,4 @@ Disallow: /veli
 Disallow: /giris
 
 Sitemap: https://fullematematigi.com.tr/sitemap.xml
+

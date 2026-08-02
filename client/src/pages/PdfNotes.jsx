@@ -37,9 +37,10 @@ const PdfNotes = () => {
   return (
     <div className="min-h-screen bg-slate-50/60 pb-20 pt-8 font-sans text-slate-800">
       <SEO
-        title="PDF Matematik Ders Notları ve Yaprak Testler | Fullematematiği"
-        description="Öğretmenlerimizin hazırladığı LGS, YKS, KPSS ve sınıf seviyelerine özel ücretsiz PDF matematik ders notları ve soru fasiküllerini hemen indirin!"
+        title="Canlı Ders PDF Matematik Notları ve Geometri Testleri"
+        description="Online matematik canlı ders notları, geometri formül kağıtları, YKS, LGS, KPSS ve okul seviyelerine özel çözümlü PDF fasikülleri ücretsiz indirin!"
         path="/pdf-notlari"
+        keywords="matematik canlı ders pdf, online matematik pdf notları, geometri ders notları pdf, YKS matematik canlı ders notu, LGS matematik canlı ders pdf"
       />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">

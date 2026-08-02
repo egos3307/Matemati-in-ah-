@@ -216,11 +216,104 @@ const Home = () => {
 
 
 
+  const homeSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+              'name': 'Fullematematiği',
+        'url': 'https://fullematematigi.com.tr',
+        'logo': 'https://fullematematigi.com.tr/logo.png',
+        'description': 'Türkiye\'nin lider online matematik canlı ders ve geometri özel ders platformu Fullematematiği. YKS, LGS ve KPSS eğitimleri.',
+        'telephone': '+90-535-059-8950'
+      },
+      {
+        '@type': 'Service',
+        '@id': 'https://fullematematigi.com.tr/#service-math-tutoring',
+        'name': 'Fullematematiği Online Matematik ve Geometri Özel Ders',
+        'provider': {
+          '@type': 'EducationalOrganization',
+          'name': 'Fullematematiği'
+        },
+        'aggregateRating': {
+          '@type': 'AggregateRating',
+          'ratingValue': '5',
+          'reviewCount': '5',
+          'bestRating': '5'
+        },
+        'review': [
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'E** S** (KPSS Öğrencisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'Hocam cidden bana çok büyük katkınız oldu 5 netten 21 nete kadar çıkardınız beni cidden emeğiniz üzerimde çok fazla her şey için teşekkür ediyorum ki hocam ders almaya devam edicem o da deneme analizi için'
+          },
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'F** F** (9. Sınıf Öğrencisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'sağolun hocam valla emeğiniz cok üzerimde emeğinize sağlık çok teşekkür ediyorum siz olmasanız yapamazdım derslerimi yükseltip başarılarımın devam etmesi için elimden geleni yapacağım'
+          },
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'B** (Fen Lisesi Öğrencisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'Günaydın hocam. Sene boyunca derslerimizde gösterdiğiniz rehberlik ve bitmeyen enerjiniz sayesinde bu başarıya ulaştım. Üzerimdeki emeğiniz için sonsuz teşekkürler.'
+          },
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'S** (11. Sınıf Velisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'Oncelikle çok teşekkür ediyorum çünkü bu güne göndereceğini söylememişti. Dersin çok iyi geçtiğini ,senin ders anlatmanı iyi anladığını ve hatta analitik geometriyle ilgili çok zevkliymiş falan dedi. Dersten çok memnun çıkınca ben de çok takip etmiyorum. Ama seni ödev konusunda yorarsa mutlaka haber ver ki biz de hemen Şimdiye kadar anlıyorum deyip severek dinlediği ilk matematikçi sensin. Tekrardan çok teşekkür ediyorum.'
+          },
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'M** S** (11. Sınıf Öğrencisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'Hocam matematik sınavından 100 almışım.'
+          }
+        ]
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': 'https://fullematematigi.com.tr/#faq',
+        'mainEntity': [
+          {
+            '@type': 'Question',
+            'name': 'Online matematik canlı ders nasıl işlenmektedir?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'Fullematematiği canlı dersleri Zoom üzerinden interaktif biçimde işlenir. Öğrenciler anlık soru sorabilir, çözümleri canlı takip eder ve tüm ders kayıtlarına Google Drive üzerinden 7/24 erişebilir.'
+            }
+          },
+          {
+            '@type': 'Question',
+            'name': 'Matematik canlı ders için ücretsiz deneme dersi var mıdır?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'Evet! Fullematematiği platformunda ilk matematik canlı dersiniz tamamen ücretsizdir. Hiçbir taahhüt gerekmeden tanışma dersi talep edebilirsiniz.'
+            }
+          },
+          {
+            '@type': 'Question',
+            'name': 'YKS, LGS ve KPSS için matematik canlı ders paketlerinde neler bulunur?',
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': 'Detaylı konu anlatımları, derece yaptıran pratik teknikler, 35+ çözümlü PDF kaynakları, haftalık ödev takibi ve canlı soru çözümleri dahildir.'
+            }
+          }
+        ]
+      }
+    ]
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <SEO
-        description="Fullematematiği ile online matematik özel dersi alın. LGS, YKS, KPSS ve okul matematiği için uzman eğitim. Hemen kayıt olun!"
+        title="Matematik Online Özel Ders & Canlı Ders"
+        description="Matematik online özel ders ve geometri canlı ders platformu Fullematematiği ile YKS, LGS ve KPSS sınavlarına birebir hazırlanın. Ücretsiz canlı tanışma dersine hemen katılın!"
         path="/"
+        keywords="matematik online özel ders, online matematik özel ders, online matematik özel dersi, birebir online matematik özel ders, LGS online matematik özel ders, YKS online matematik özel ders, KPSS online matematik özel ders, matematik canlı ders, Fullematematiği"
+        schemaData={homeSchema}
       />
       <main className="flex-1">
         {/* Hero Section */}
@@ -229,13 +322,13 @@ const Home = () => {
             <div className="flex flex-col gap-8">
               <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary">
                 <span className="material-symbols-outlined text-sm">star</span>
-                <span>İlk Dersin Bizden: Ücretsiz Tanışma Dersi</span>
+                <span>İlk Dersin Bizden: Ücretsiz Canlı Tanışma Dersi</span>
               </div>
               <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-slate-900 lg:text-7xl">
-                Matematiği Full&apos;e, <span className="text-primary">Hedeflerine Ulaş!</span>
+                Matematik <span className="text-primary">Online Özel Ders</span> & Canlı Ders Platformu
               </h1>
               <p className="text-lg leading-relaxed text-slate-600">
-                Uzman eğitmen kadromuz, kişiye özel çalışma planı, düzenli takip sistemi ve soru çözüm desteğiyle matematiği kolaylaştırıyor, hedef puanına birlikte ulaşıyoruz.
+                Türkiye'nin 1 numaralı matematik online özel ders ve canlı ders platformu Fullematematiği ile YKS, LGS ve KPSS'de netlerini zirveye taşı. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
@@ -689,6 +782,64 @@ const Home = () => {
           </div>
         </section>
 
+        {/* FAQ Section for SEO & Search Intent */}
+        <section className="bg-slate-50 py-20 px-6 lg:px-10 border-t border-slate-100" id="sss">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary mb-3">
+                Sıkça Sorulan Sorular
+              </span>
+              <h2 className="text-3xl font-black text-slate-900 md:text-4xl">
+                Online Matematik Canlı Ders Hakkında Merak Edilenler
+              </h2>
+              <p className="mt-3 text-slate-600">
+                Canlı matematik derslerimiz, kamplarımız ve kayıt sürecimiz ile ilgili en çok sorulan soruların yanıtları.
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">live_tv</span>
+                  Online matematik canlı ders nasıl işlenir?
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Derslerimiz Zoom platformu üzerinden interaktif canlı yayınlar olarak gerçekleşir. Canlı ders esnasında mikrofonunuzu açıp hoca ile birebir konuşabilir, anında soru sorabilirsiniz. Kaçırdığınız canlı dersleri Google Drive üzerinden 7/24 tekrar izleyebilirsiniz.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">card_giftcard</span>
+                  Canlı matematik dersi ücretsiz denenebilir mi?
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Evet! Fullematematiği'nde <strong>ilk matematik canlı dersiniz tamamen ücretsizdir</strong>. Formu doldurarak herhangi bir taahhüt veya ücret ödemeden canlı tanışma dersimize katılabilir, eğitim kalitemizi kendiniz deneyimleyebilirsiniz.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">school</span>
+                  Hangi sınavlar için matematik canlı ders veriliyor?
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  <strong>YKS (TYT-AYT) Matematik & Geometri</strong>, <strong>LGS Yeni Nesil Matematik</strong>, <strong>KPSS Lisans & Ön Lisans</strong> ve okul derslerine takviye amacıyla tüm sınıf seviyelerine uygun özel ders ve canlı kamp gruplarımız mevcuttur.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">picture_as_pdf</span>
+                  Ders notları ve ödev takibi yapılıyor mu?
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Her canlı ders sonrasında çözümlü PDF ders notları, yeni nesil soru fasikülleri ve haftalık ödevlendirmeler paylaşılır. Öğrencinin gelişimi öğretmen ve veli panellerimiz üzerinden düzenli takip edilir.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
       </main>
 

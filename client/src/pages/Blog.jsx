@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
+import { FALLBACK_BLOGS } from '../data/staticBlogs';
 
 const Blog = () => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState(FALLBACK_BLOGS);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -12,9 +13,14 @@ const Blog = () => {
     const fetchPosts = async () => {
       try {
         const res = await axios.get('/api/blog');
-        setPosts(res.data);
+        if (res.data && res.data.length > 0) {
+          setPosts(res.data);
+        } else {
+          setPosts(FALLBACK_BLOGS);
+        }
       } catch (err) {
-        console.error('Error fetching blog posts:', err);
+        console.error('Error fetching blog posts, using static fallback:', err);
+        setPosts(FALLBACK_BLOGS);
       } finally {
         setLoading(false);
       }
@@ -30,9 +36,10 @@ const Blog = () => {
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="Blog"
-        description="Matematik öğrenme tüyoları, sınav stratejileri ve eğitim haberleri. Fullematematiği blogu ile matematiği keşfedin!"
+        title="Matematik Canlı Ders Rehberi & Çalışma Tüyoları"
+        description="Online matematik canlı ders çalışma teknikleri, YKS ve LGS matematik net artırma tüyoları, geometri taktikleri ve sınav rehberleri."
         path="/blog"
+        keywords="matematik canlı ders rehberi, online matematik ders tüyoları, YKS matematik net artırma, LGS matematik canlı ders tüyoları"
       />
       {/* Header Section */}
       <div className="bg-white py-16 text-center border-b border-primary/10 shadow-sm">

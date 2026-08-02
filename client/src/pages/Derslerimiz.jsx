@@ -91,9 +91,10 @@ const Derslerimiz = () => {
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="Derslerimiz"
-        description="LGS, YKS ve KPSS için online matematik kampları ve özel ders paketleri. Sınıf seviyenize uygun programı seçin, hemen başlayın!"
+        title="Online Matematik Canlı Ders Kampları & Özel Ders"
+        description="YKS, LGS ve KPSS için online matematik canlı ders paketleri ve geometri kampları. Sınıf seviyenize en uygun canlı dersi seçin, ilk ders ücretsiz!"
         path="/derslerimiz"
+        keywords="matematik canlı ders, online matematik canlı ders, geometri canlı ders, YKS matematik canlı ders, LGS matematik canlı ders, KPSS matematik canlı ders, matematik canlı kurs"
       />
       {/* Header Section */}
       <div className="bg-white py-16 text-center border-b border-primary/10 shadow-sm">

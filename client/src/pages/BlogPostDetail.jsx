@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
+import { FALLBACK_BLOGS } from '../data/staticBlogs';
 
 const BlogPostDetail = () => {
   const { slug } = useParams();
@@ -14,10 +15,22 @@ const BlogPostDetail = () => {
     const fetchPost = async () => {
       try {
         const res = await axios.get(`/api/blog/${slug}`);
-        setPost(res.data);
+        if (res.data && res.data.title) {
+          setPost(res.data);
+        } else {
+          const fallback = FALLBACK_BLOGS.find(b => b.slug === slug);
+          if (fallback) setPost(fallback);
+          else setError('Yazı bulunamadı veya bir hata oluştu.');
+        }
       } catch (err) {
-        console.error('Error fetching blog post:', err);
-        setError('Yazı bulunamadı veya bir hata oluştu.');
+        console.error('Error fetching blog post, checking static fallback:', err);
+        const fallback = FALLBACK_BLOGS.find(b => b.slug === slug);
+        if (fallback) {
+          setPost(fallback);
+          setError(null);
+        } else {
+          setError('Yazı bulunamadı veya bir hata oluştu.');
+        }
       } finally {
         setLoading(false);
       }
