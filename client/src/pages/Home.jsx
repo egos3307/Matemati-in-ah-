@@ -309,10 +309,10 @@ const Home = () => {
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <SEO
-        title="Matematik Online Özel Ders & Canlı Ders"
-        description="Matematik online özel ders ve geometri canlı ders platformu Fullematematiği ile YKS, LGS ve KPSS sınavlarına birebir hazırlanın. Ücretsiz canlı tanışma dersine hemen katılın!"
+        title="KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders"
+        description="KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Fullematematiği ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!"
         path="/"
-        keywords="matematik online özel ders, online matematik özel ders, online matematik özel dersi, birebir online matematik özel ders, LGS online matematik özel ders, YKS online matematik özel ders, KPSS online matematik özel ders, matematik canlı ders, Fullematematiği"
+        keywords="kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Fullematematiği"
         schemaData={homeSchema}
       />
       <main className="flex-1">
