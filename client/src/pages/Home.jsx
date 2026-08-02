@@ -220,20 +220,13 @@ const Home = () => {
     '@context': 'https://schema.org',
     '@graph': [
       {
-              'name': 'Fullematematiği',
+        '@type': 'EducationalOrganization',
+        '@id': 'https://fullematematigi.com.tr/#organization',
+        'name': 'Fullematematiği',
         'url': 'https://fullematematigi.com.tr',
         'logo': 'https://fullematematigi.com.tr/logo.png',
         'description': 'Türkiye\'nin lider online matematik canlı ders ve geometri özel ders platformu Fullematematiği. YKS, LGS ve KPSS eğitimleri.',
-        'telephone': '+90-535-059-8950'
-      },
-      {
-        '@type': 'Service',
-        '@id': 'https://fullematematigi.com.tr/#service-math-tutoring',
-        'name': 'Fullematematiği Online Matematik ve Geometri Özel Ders',
-        'provider': {
-          '@type': 'EducationalOrganization',
-          'name': 'Fullematematiği'
-        },
+        'telephone': '+90-535-059-8950',
         'aggregateRating': {
           '@type': 'AggregateRating',
           'ratingValue': '5',
@@ -272,6 +265,16 @@ const Home = () => {
             'reviewBody': 'Hocam matematik sınavından 100 almışım.'
           }
         ]
+      },
+      {
+        '@type': 'Service',
+        '@id': 'https://fullematematigi.com.tr/#service-math-tutoring',
+        'name': 'Fullematematiği Online Matematik ve Geometri Özel Ders',
+        'serviceType': 'Online Education & Tutoring',
+        'provider': {
+          '@type': 'EducationalOrganization',
+          'name': 'Fullematematiği'
+        }
       },
       {
         '@type': 'FAQPage',
