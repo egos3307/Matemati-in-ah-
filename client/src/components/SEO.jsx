@@ -4,11 +4,11 @@ import { Helmet } from 'react-helmet-async';
 const SITE_NAME = 'Fullematematiği';
 const BASE_URL = 'https://fullematematigi.com.tr';
 const DEFAULT_IMAGE = `${BASE_URL}/hero-image.png`;
-const DEFAULT_KEYWORDS = 'kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, online matematik özel ders, online geometri özel ders, Fullematematiği';
+const DEFAULT_KEYWORDS = 'matematik, matematik online ders, matematik özel ders, matematik canlı ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, Fullematematiği';
 
 const SEO = ({
   title,
-  description = 'KPSS online ders, LGS online ders, TYT ve AYT matematik canlı ders platformu Fullematematiği ile sınavlara birebir hazırlanın. Ücretsiz canlı tanışma dersiyle başlayın!',
+  description = 'Matematik online ders, matematik özel ders ve geometri canlı ders platformu Fullematematiği ile KPSS, LGS, TYT ve AYT sınavlarına birebir hazırlanın. Ücretsiz canlı tanışma dersiyle başlayın!',
   path = '',
   image = DEFAULT_IMAGE,
   keywords = DEFAULT_KEYWORDS,
@@ -16,7 +16,7 @@ const SEO = ({
 }) => {
   const fullTitle = title
     ? `${title} | ${SITE_NAME}`
-    : `KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders | ${SITE_NAME}`;
+    : `Matematik Online Ders & Özel Ders | KPSS, LGS, TYT, AYT – ${SITE_NAME}`;
   const url = `${BASE_URL}${path}`;
 
   // Generate automatic BreadcrumbList schema based on current path
