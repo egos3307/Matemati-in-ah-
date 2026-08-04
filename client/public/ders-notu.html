@@ -404,17 +404,32 @@
     .tur-rozet.ders { background: var(--turuncu); }
     .tur-rozet.test { background: var(--purple); }
 
-    /* ════════════ İÇERİK — DERS NOTU (tek sütun) ════════════ */
+    /* ════════════ İÇERİK — DERS NOTU (2 sütun dikey bölümlü) ════════════ */
     .sayfa-icerik {
-      padding: 5mm 10mm;
-      display: flex; flex-direction: column;
-      flex: 1; position: relative;
-      gap: 8mm; align-items: stretch; outline: none;
+      padding: 5mm 8mm;
+      column-count: 2;
+      column-gap: 6mm;
+      column-rule: 1px solid #e2e8f0; /* Sayfa dikeyden ikiye bölünsün */
+      flex: 1;
+      position: relative;
+      outline: none;
+      font-family: 'Lexend', sans-serif;
     }
     .sayfa-icerik:focus { box-shadow: inset 0 0 0 2px rgba(245,197,24,.25); }
     .sayfa-icerik .soru, .sayfa-icerik .soru-kutusu, .sayfa-icerik .soru-kutusu-beyaz,
-    .sayfa-icerik .ornek-kutusu, .sayfa-icerik .cozum-kutusu {
+    .sayfa-icerik .ornek-kutusu, .sayfa-icerik .cozum-kutusu, .sayfa-icerik .fasikul-blok-item {
       break-inside: avoid; page-break-inside: avoid;
+    }
+    .sayfa-icerik h1, .sayfa-icerik h2, .sayfa-icerik h3, .sayfa-icerik h4,
+    .sayfa-icerik .tam-genislik, .sayfa-icerik [data-tam],
+    .sayfa-icerik .baslik-dekoratif-wrap,
+    .sayfa-icerik .svg-blok, .sayfa-icerik .tablo-blok {
+      column-span: all;
+    }
+    .sayfa-icerik h1, .sayfa-icerik h2, .sayfa-icerik h3, .sayfa-icerik h4,
+    .baslik-dekoratif-metin, .konu-baslik, .fasikul-konu-baslik {
+      color: #e67e22 !important; /* Başlıklar turuncu ile yazılsın */
+      font-weight: 800;
     }
     .sayfa-icerik img { max-width: 100%; height: auto; display: block; margin: 4px 0; border-radius: 4px; }
 
@@ -439,7 +454,7 @@
     .img-resize-wrap:hover .img-move-handle,
     .img-resize-wrap:hover .img-resize-handle,
     .img-move-handle.aktif, .img-resize-handle.aktif { opacity: 1; }
-    .sayfa-icerik p, .sayfa-icerik div:not([class]) { font-size: 11px; line-height: 1.6; color: #1a1a1a; }
+    .sayfa-icerik p, .sayfa-icerik div:not([class]) { font-size: 11px; line-height: 1.65; color: #1f2937; }
     .sayfa-icerik .tam-genislik, .sayfa-icerik [data-tam], .sayfa-icerik .svg-blok, .sayfa-icerik .tablo-blok {
       display: block !important; clear: both !important; float: none !important; width: 100% !important;
     }
@@ -447,90 +462,109 @@
     .sayfa-icerik table th, .sayfa-icerik table td { border: 1px solid #d1d5db; padding: 4px 7px; text-align: left; }
     .sayfa-icerik table th { background: #f3f4f6; font-weight: 700; }
     .sayfa-icerik svg { display: block !important; max-width: 100%; height: auto; }
-    .konu-anlatim { border-left: 4px solid var(--turuncu); background: #fff8e1; border-radius: 5px; padding: 10px 12px; }
+    .konu-anlatim { border-left: 3px solid #e67e22; background: transparent; padding: 4px 0 4px 8px; }
 
     /* ═══════════════════════════════════════════════════════════
-       EL EMEĞİ / DİZGİ PUBLICATION HARİKA KUTU VE ÇİZGİ TASARIMLARI
+       TEMİZ VE SADEC DİZGİ TASARIMI (KUTUCUKSUZ, ÖRNEK ÇİZGİLİ)
     ═══════════════════════════════════════════════════════════ */
     .fasikul-blok-item {
       position: relative;
-      border-radius: 8px;
-      padding: 12px 15px;
-      margin: 9px 0;
+      border-radius: 6px;
+      padding: 3px 0;
+      margin: 6px 0;
       break-inside: avoid;
       page-break-inside: avoid;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .fasikul-rozet {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border-radius: 6px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
     
-    /* Konu Anlatımı Kutusuna Özgü Stil */
+    /* Konu Anlatımı - Kutusuz Temiz Metin */
     .fasikul-konu {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border: 1px solid #e2e8f0;
-      border-left: 5px solid #0284c7;
+      background: transparent;
+      border: none;
+      padding: 2px 0;
     }
-    .rozet-konu {
-      background: linear-gradient(135deg, #0284c7, #0369a1);
-      color: #ffffff;
+    .konu-metin {
+      font-size: 11px;
+      line-height: 1.65;
+      color: #1f2937;
     }
 
-    /* Örnek Soru Kutusuna Özgü Stil */
+    /* Örnek Soru - Etrafında çizgi ve küçükçe "Örnek" yazısı */
     .fasikul-ornek {
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-      border: 1px solid #bae6fd;
-      border-left: 5px solid #2563eb;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 7px 9px;
+      margin: 7px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
-    .rozet-ornek {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: #ffffff;
+    .ornek-etiket {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #e67e22;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+      display: block;
     }
 
-    /* Soru Kutusuna Özgü Stil */
+    /* Soru Bloğu */
     .fasikul-soru {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-left: 5px solid #e67e22;
-      box-shadow: 0 3px 10px rgba(230, 126, 34, 0.06);
+      border-left: 3px solid #e67e22;
+      border-radius: 6px;
+      padding: 7px 9px;
+      margin: 7px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
-    .rozet-soru {
-      background: linear-gradient(135deg, #e67e22, #d35400);
-      color: #ffffff;
+    .soru-etiket {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #e67e22;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+      display: block;
     }
 
-    /* Çözüm Kutusuna Özgü Stil */
+    /* Çözüm Bloğu */
     .fasikul-cozum {
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      border: 1px solid #bbf7d0;
-      border-left: 5px solid #10b981;
+      background: transparent;
+      border: none;
+      border-left: 2px solid #10b981;
+      padding: 2px 0 2px 8px;
+      margin: 6px 0;
+      break-inside: avoid;
     }
-    .rozet-cozum {
-      background: linear-gradient(135deg, #10b981, #047857);
-      color: #ffffff;
+    .cozum-etiket {
+      font-size: 9px;
+      font-weight: 800;
+      color: #10b981;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+      display: block;
     }
 
     /* Öğretmen Notu / Püf Noktası Stil */
     .fasikul-not {
-      background: #fff7ed;
-      border: 2px dashed #fdba74;
-      border-left: 5px solid #f97316;
+      background: transparent;
+      border: none;
+      border-left: 3px solid #e67e22;
+      padding: 2px 0 2px 8px;
+      margin: 6px 0;
+      break-inside: avoid;
     }
-    .rozet-not {
-      background: linear-gradient(135deg, #f97316, #c2410c);
-      color: #ffffff;
+    .not-etiket {
+      font-size: 9px;
+      font-weight: 800;
+      color: #e67e22;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+      display: block;
     }
 
     /* Şık Dizilimleri */
@@ -618,21 +652,22 @@
 
     /* Başlık ve Çizgi Stilleri */
     .baslik-dekoratif-wrap {
-      margin: 12px 0 8px;
+      margin: 10px 0 6px;
       width: 100%;
+      column-span: all;
     }
     .baslik-dekoratif-metin {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 900;
-      color: #0f172a;
+      color: #e67e22 !important;
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .baslik-dekoratif-cizgi {
-      height: 3px;
-      background: linear-gradient(90deg, #f5c518 0%, #e67e22 40%, transparent 100%);
+      height: 2px;
+      background: linear-gradient(90deg, #e67e22 0%, #f97316 40%, transparent 100%);
       border-radius: 2px;
     }
 
@@ -891,22 +926,22 @@
     <!-- ════ TEST PANELI ════ -->
     <div class="panel-test hidden" id="panel-test">
       <div class="input-section-title">
-        <span>Test Fotoğrafları Yükle</span>
-        <span class="badge-test">AI TARA</span>
+        <span>PDF veya Fotoğraf Yükle</span>
+        <span class="badge-test">PDF & FOTO AI</span>
       </div>
 
       <div class="foto-drop-zone" id="foto-drop-zone"
            ondragover="event.preventDefault();this.classList.add('dragover')"
            ondragleave="this.classList.remove('dragover')"
-           ondrop="testFotoDustu(event)"
+           ondrop="testDosyaDustu(event)"
            onclick="document.getElementById('foto-input-test').click()">
-        <input type="file" id="foto-input-test" accept="image/*" multiple onchange="testFotoSecildi(event)" />
-        <div class="drop-icon">📸</div>
-        <div class="drop-text">Fotoğraf Ekle</div>
-        <div class="drop-sub">Birden fazla fotoğraf seçebilirsiniz</div>
+        <input type="file" id="foto-input-test" accept="image/*,application/pdf,.pdf" multiple onchange="testDosyaSecildi(event)" />
+        <div class="drop-icon">📄 📸</div>
+        <div class="drop-text">PDF veya Fotoğraf Yükle</div>
+        <div class="drop-sub">Büyük PDF dosyaları ve fotoğraflar AI ile soru bazlı taranır</div>
       </div>
 
-      <!-- Yüklenen fotoğraflar -->
+      <!-- Yüklenen dosyalar önizleme -->
       <div class="fotolar-grid" id="fotolar-grid"></div>
 
       <!-- Tarama durumu -->
@@ -917,13 +952,13 @@
       </div>
 
       <div class="model-info">
-        ⚡ Motor: <strong>Google Gemini 1.5 Flash Vision AI</strong>
+        ⚡ Motor: <strong>ChatGPT / Groq Vision AI (Vercel Uyumlu)</strong>
       </div>
 
       <!-- Buton: Tara -->
       <button class="btn btn-test" id="btn-test-tara" onclick="testleriTara()" disabled>
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        Fotoğrafları Tara (AI)
+        Soruları Tara ve Test Hazırla (AI)
       </button>
 
       <!-- Taranan sorular listesi -->
@@ -1190,21 +1225,25 @@ window.gptTemizle = function() {
 /* ═══════════════════════════════════════════════════════════
    TEST MODU — FOTOĞRAF YÖNETİMİ
 ═══════════════════════════════════════════════════════════ */
-window.testFotoSecildi = function(e) {
+/* ═══════════════════════════════════════════════════════════
+   TEST MODU — DOSYA (PDF & FOTO) YÖNETİMİ
+═══════════════════════════════════════════════════════════ */
+let testDosyalari = [];
+
+window.testDosyaSecildi = function(e) {
   const files = Array.from(e.target.files);
-  files.forEach(f => testFotoEkle(f));
+  files.forEach(f => testDosyaEkle(f));
   e.target.value = '';
 };
 
-window.testFotoDustu = function(e) {
+window.testDosyaDustu = function(e) {
   e.preventDefault();
   e.stopPropagation();
   document.getElementById('foto-drop-zone').classList.remove('dragover');
-  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  files.forEach(f => testFotoEkle(f));
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.type.includes('pdf') || f.name.endsWith('.pdf'));
+  files.forEach(f => testDosyaEkle(f));
 };
 
-// Groq Vision API base64 isteklerinde 4MB sınırı var — fotoğrafı göndermeden önce küçültüyoruz.
 function resimKucult(dataUrl, maxKenar = 1600, kalite = 0.85) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1226,42 +1265,50 @@ function resimKucult(dataUrl, maxKenar = 1600, kalite = 0.85) {
   });
 }
 
-function testFotoEkle(file) {
-  const reader = new FileReader();
-  reader.onload = async ev => {
-    const dataUrl = await resimKucult(ev.target.result);
-    const obj = { file, dataUrl, tarandi: false };
-    testFotolar.push(obj);
+function testDosyaEkle(file) {
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    testDosyalari.push({ type: 'pdf', file, tarandi: false });
     testFotolariCiz();
     document.getElementById('btn-test-tara').disabled = false;
-  };
-  reader.readAsDataURL(file);
+  } else if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const dataUrl = await resimKucult(ev.target.result);
+      testDosyalari.push({ type: 'image', file, dataUrl, tarandi: false });
+      testFotolariCiz();
+      document.getElementById('btn-test-tara').disabled = false;
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 function testFotolariCiz() {
   const grid = document.getElementById('fotolar-grid');
-  grid.innerHTML = testFotolar.map((f, i) => `
-    <div class="foto-thumb ${f.tarandi ? 'tarandi' : ''}" id="foto-thumb-${i}">
-      <img src="${f.dataUrl}" alt="Foto ${i+1}" />
-      <button class="foto-sil" onclick="testFotoSil(${i})">×</button>
-    </div>
-  `).join('');
+  grid.innerHTML = testDosyalari.map((f, i) => {
+    if (f.type === 'pdf') {
+      return `
+        <div class="foto-thumb ${f.tarandi ? 'tarandi' : ''}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1e293b;color:#f39c12;padding:4px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:2px;">📄</div>
+          <div style="font-size:8.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 2px;">${f.file.name}</div>
+          <button class="foto-sil" onclick="testDosyaSil(${i})">×</button>
+        </div>`;
+    }
+    return `
+      <div class="foto-thumb ${f.tarandi ? 'tarandi' : ''}" id="foto-thumb-${i}">
+        <img src="${f.dataUrl}" alt="Foto ${i+1}" />
+        <button class="foto-sil" onclick="testDosyaSil(${i})">×</button>
+      </div>`;
+  }).join('');
 }
 
-window.testFotoSil = function(idx) {
-  testFotolar.splice(idx, 1);
+window.testDosyaSil = function(idx) {
+  testDosyalari.splice(idx, 1);
   testFotolariCiz();
-  if (testFotolar.length === 0) {
+  if (testDosyalari.length === 0) {
     document.getElementById('btn-test-tara').disabled = true;
   }
 };
 
-/* ═══════════════════════════════════════════════════════════
-   TEST MODU — GROQ VİSİON İLE TARAMA
-   Matematiksel ifadeler (kesir, üs, kök vb.) düz OCR ile sağlıklı
-   çıkmadığından, her fotoğraf Groq'un vizyon modeline gönderilip
-   LaTeX ($...$) içeren yapılandırılmış JSON olarak geri alınır.
-═══════════════════════════════════════════════════════════ */
 async function fotoGroqIleTara(dataUrl) {
   const token = localStorage.getItem('token');
   const yanit = await fetch('/api/teacher/test-tara', {
@@ -1275,8 +1322,8 @@ async function fotoGroqIleTara(dataUrl) {
 }
 
 window.testleriTara = async function() {
-  if (testFotolar.length === 0) {
-    toast('Önce fotoğraf ekleyin!', 'err');
+  if (testDosyalari.length === 0 && testFotolar.length === 0) {
+    toast('Lütfen önce PDF veya fotoğraf ekleyin!', 'err');
     return;
   }
 
@@ -1286,30 +1333,87 @@ window.testleriTara = async function() {
   panel.classList.add('active');
   testSorular = [];
 
-  for (let i = 0; i < testFotolar.length; i++) {
-    const foto = testFotolar[i];
-    const yuzde = Math.round((i / testFotolar.length) * 100);
+  const tumDosyalar = testDosyalari.length > 0 ? testDosyalari : testFotolar.map(f => ({ type: 'image', ...f }));
+
+  for (let i = 0; i < tumDosyalar.length; i++) {
+    const d = tumDosyalar[i];
+    const yuzde = Math.round((i / tumDosyalar.length) * 100);
     document.getElementById('test-ai-bar').style.width = yuzde + '%';
-    document.getElementById('test-ai-durum').textContent = `Fotoğraf ${i+1}/${testFotolar.length} taranıyor… (Groq Vision AI)`;
-    document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
 
-    try {
-      const bulunanlarHam = await fotoGroqIleTara(foto.dataUrl);
-      const bulunanlar = bulunanlarHam.map((s, idx) => ({
-        no: testSorular.length + idx + 1,
-        metin: String(s.metin || '').trim(),
-        siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
-        dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
-        gorselAciklama: String(s.gorselAciklama || '').trim(),
-        cevap: String(s.cevap || '').trim()
-      }));
-      testSorular.push(...bulunanlar);
+    if (d.type === 'pdf') {
+      document.getElementById('test-ai-durum').textContent = `📄 PDF Taranıyor (${d.file.name})…`;
+      try {
+        const hamMetin = await pdfdenMetinAl(d.file);
+        if (!hamMetin || !hamMetin.trim()) throw new Error('PDF metni çıkarılamadı.');
 
-      testFotolar[i].tarandi = true;
-      testFotolariCiz();
-      toast(`Foto ${i+1}: ${bulunanlar.length} soru bulundu`, 'inf');
-    } catch (err) {
-      toast(`Foto ${i+1} hatası: ${err.message}`, 'err');
+        const MAX_PARCA_BOYUTU = 2000;
+        let metinParcalari = [];
+        const satirlar = hamMetin.split('\n');
+        let mevcutParca = '';
+        for (const satir of satirlar) {
+          if ((mevcutParca + '\n' + satir).length > MAX_PARCA_BOYUTU && mevcutParca.trim().length > 0) {
+            metinParcalari.push(mevcutParca);
+            mevcutParca = satir;
+          } else {
+            mevcutParca += (mevcutParca ? '\n' : '') + satir;
+          }
+        }
+        if (mevcutParca.trim().length > 0) metinParcalari.push(mevcutParca);
+
+        for (let p = 0; p < metinParcalari.length; p++) {
+          const subYuzde = Math.min(99, yuzde + Math.round(((p + 1) / metinParcalari.length) * (100 / tumDosyalar.length)));
+          document.getElementById('test-ai-bar').style.width = subYuzde + '%';
+          document.getElementById('test-ai-durum').textContent = `⚡ PDF Soruları Çıkarılıyor: Bölüm ${p + 1}/${metinParcalari.length}…`;
+          document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
+
+          const token = localStorage.getItem('token');
+          const yanit = await fetch('/api/teacher/pdf-test-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ metin: metinParcalari[p] })
+          });
+          const veri = await yanit.json();
+          if (yanit.ok && Array.isArray(veri.sorular)) {
+            const bulunanlar = veri.sorular.map((s, idx) => ({
+              no: testSorular.length + idx + 1,
+              metin: String(s.metin || '').trim(),
+              siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+              dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+              gorselAciklama: String(s.gorselAciklama || '').trim(),
+              cevap: String(s.cevap || '').trim()
+            }));
+            testSorular.push(...bulunanlar);
+          }
+        }
+        d.tarandi = true;
+        testFotolariCiz();
+        toast(`PDF işlendi: ${testSorular.length} soru çıkarıldı`, 'ok');
+      } catch (err) {
+        console.error(err);
+        toast(`PDF işleme hatası: ${err.message}`, 'err');
+      }
+    } else {
+      document.getElementById('test-ai-durum').textContent = `Fotoğraf ${i+1}/${tumDosyalar.length} taranıyor… (Groq Vision AI)`;
+      document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
+
+      try {
+        const bulunanlarHam = await fotoGroqIleTara(d.dataUrl);
+        const bulunanlar = bulunanlarHam.map((s, idx) => ({
+          no: testSorular.length + idx + 1,
+          metin: String(s.metin || '').trim(),
+          siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+          dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+          gorselAciklama: String(s.gorselAciklama || '').trim(),
+          cevap: String(s.cevap || '').trim()
+        }));
+        testSorular.push(...bulunanlar);
+
+        d.tarandi = true;
+        testFotolariCiz();
+        toast(`Foto ${i+1}: ${bulunanlar.length} soru bulundu`, 'inf');
+      } catch (err) {
+        toast(`Foto ${i+1} hatası: ${err.message}`, 'err');
+      }
     }
   }
 
@@ -1324,9 +1428,9 @@ window.testleriTara = async function() {
 
   if (testSorular.length > 0) {
     document.getElementById('btn-pdf-test').style.display = 'flex';
-    toast(`${testSorular.length} soru başarıyla tarandı!`, 'ok');
+    toast(`${testSorular.length} soru başarıyla tarandı ve test hazırlandı!`, 'ok');
   } else {
-    toast('Soru bulunamadı. Fotoğraf kalitesini kontrol edin.', 'err');
+    toast('Soru bulunamadı. Lütfen yüklediğiniz dosyayı kontrol edin.', 'err');
   }
 };
 
@@ -1575,6 +1679,7 @@ window.testPdfUret = async function() {
    TEST MODU — TEMİZLE
 ═══════════════════════════════════════════════════════════ */
 window.testTemizle = function() {
+  testDosyalari = [];
   testFotolar = [];
   testSorular = [];
   testFotolariCiz();
@@ -1784,12 +1889,6 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
   let html = '';
   let soruSayaci = 0;
   let renderCount = 0;
-
-  const isCiftSutun = sayfaDuzeni === 'cift-sutun';
-  const sutunStili = isCiftSutun
-    ? 'display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;'
-    : 'display:flex;flex-direction:column;gap:8px;';
-
   let innerHTML = '';
 
   for (const blok of blokListesi) {
@@ -1797,15 +1896,12 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     const metin = extractMetinContent(blok);
     const tip = normalizeTip(blok);
     const stil = (typeof blok === 'object' && blok.stil) ? blok.stil : {};
-    const ikon = stil.ikon ? String(stil.ikon).trim() : '';
-    const gridSpanCss = (stil.tamGenislik || !isCiftSutun) ? 'grid-column: 1 / -1; width: 100%;' : '';
 
     if (tip === 'baslik') {
       if (!metin) continue;
       innerHTML += `
-        <div class="baslik-dekoratif-wrap tam-genislik" style="${gridSpanCss}">
+        <div class="baslik-dekoratif-wrap tam-genislik">
           <div class="baslik-dekoratif-metin">
-            <span>${ikon || '📌'}</span>
             <span>${metin}</span>
           </div>
           <div class="baslik-dekoratif-cizgi"></div>
@@ -1817,12 +1913,8 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     if (tip === 'konu') {
       if (!metin) continue;
       innerHTML += `
-        <div class="fasikul-blok-item fasikul-konu" style="${gridSpanCss}">
-          <div class="fasikul-rozet rozet-konu">
-            <span>${ikon || '📌'}</span>
-            <span>KONU ANLATIMI</span>
-          </div>
-          <div class="konu-metin" style="font-size:12px;line-height:1.68;color:#1e293b;">${metin}</div>
+        <div class="fasikul-blok-item fasikul-konu">
+          <div class="konu-metin">${metin}</div>
         </div>`;
       renderCount++;
       continue;
@@ -1831,12 +1923,9 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     if (tip === 'ornek') {
       if (!metin) continue;
       innerHTML += `
-        <div class="fasikul-blok-item fasikul-ornek" style="${gridSpanCss}">
-          <div class="fasikul-rozet rozet-ornek">
-            <span>${ikon || '📘'}</span>
-            <span>ÇÖZÜMLÜ ÖRNEK</span>
-          </div>
-          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:500;">${metin}</div>
+        <div class="fasikul-blok-item fasikul-ornek">
+          <span class="ornek-etiket">Örnek</span>
+          <div style="font-size:11px;line-height:1.65;color:#1f2937;">${metin}</div>
         </div>`;
       renderCount++;
       continue;
@@ -1845,12 +1934,9 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     if (tip === 'cozum') {
       if (!metin) continue;
       innerHTML += `
-        <div class="fasikul-blok-item fasikul-cozum" style="${gridSpanCss}">
-          <div class="fasikul-rozet rozet-cozum">
-            <span>${ikon || '✅'}</span>
-            <span>ÇÖZÜM</span>
-          </div>
-          <div style="font-size:12px;line-height:1.68;color:#064e3b;">${metin}</div>
+        <div class="fasikul-blok-item fasikul-cozum">
+          <span class="cozum-etiket">Çözüm</span>
+          <div style="font-size:11px;line-height:1.65;color:#1f2937;">${metin}</div>
         </div>`;
       renderCount++;
       continue;
@@ -1893,21 +1979,10 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
       }
 
       innerHTML += `
-        <div class="fasikul-blok-item fasikul-soru" style="${gridSpanCss}">
-          <div class="fasikul-rozet rozet-soru">
-            <span>${ikon || '❓'}</span>
-            <span>SORU ${soruSayaci}</span>
-          </div>
-          <div style="font-size:12px;line-height:1.68;color:#0f172a;font-weight:600;margin-bottom:6px;">${metin}</div>
-          ${siklarHTML ? `<div class="${sikClass}">${siklarHTML}</div>` : `
-            <div class="soru-workspace-area">
-              <div class="soru-workspace-header">✍️ ÇÖZÜM İÇİN ALAN</div>
-              <div class="soru-workspace-lines">
-                <div class="soru-workspace-line"></div>
-                <div class="soru-workspace-line"></div>
-                <div class="soru-workspace-line"></div>
-              </div>
-            </div>`}
+        <div class="fasikul-blok-item fasikul-soru">
+          <span class="soru-etiket">SORU ${soruSayaci}</span>
+          <div style="font-size:11px;line-height:1.65;color:#1f2937;margin-bottom:4px;font-weight:600;">${metin}</div>
+          ${siklarHTML ? `<div class="${sikClass}">${siklarHTML}</div>` : ''}
         </div>`;
       renderCount++;
       continue;
@@ -1915,14 +1990,11 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
 
     if (tip === 'not') {
       if (!metin) continue;
-      const baslikEtiket = (typeof blok === 'object' && blok.tip === 'uyari') ? '⚠️ DİKKAT' : (typeof blok === 'object' && blok.tip === 'ipucu') ? '⭐ PÜF NOKTA' : '💡 ÖĞRETMEN NOTU';
+      const baslikEtiket = (typeof blok === 'object' && blok.tip === 'uyari') ? 'DİKKAT' : (typeof blok === 'object' && blok.tip === 'ipucu') ? 'PÜF NOKTA' : 'NOT';
       innerHTML += `
-        <div class="fasikul-blok-item fasikul-not" style="${gridSpanCss}">
-          <div class="fasikul-rozet rozet-not">
-            <span>${ikon || '💡'}</span>
-            <span>${baslikEtiket}</span>
-          </div>
-          <div style="font-size:11.8px;line-height:1.65;color:#7c2d12;font-weight:500;">${metin}</div>
+        <div class="fasikul-blok-item fasikul-not">
+          <span class="not-etiket">${baslikEtiket}</span>
+          <div style="font-size:11px;line-height:1.65;color:#1f2937;">${metin}</div>
         </div>`;
       renderCount++;
       continue;
@@ -1937,7 +2009,7 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
         const hucreler = Array.isArray(satir) ? satir : [satir];
         tabloIci += '<tr>' + hucreler.map(h => `<td>${h}</td>`).join('') + '</tr>';
       }
-      innerHTML += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:10px 0;${gridSpanCss}">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
+      innerHTML += `<div class="tablo-blok tam-genislik" style="display:block!important;clear:both!important;width:100%!important;margin:8px 0;">${tabloIci ? `<table>${tabloIci}</table>` : ''}</div>`;
       renderCount++;
       continue;
     }
@@ -1947,7 +2019,7 @@ function bloklarHTML(bloklar, sayfaDuzeni = 'tek-sutun') {
     return '';
   }
 
-  return `<div class="fasikul-duzen-wrap" style="${sutunStili}">${innerHTML}</div>`;
+  return innerHTML;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2202,7 +2274,7 @@ function etiketliMetniHTML(metin) {
     if (isBaslik) {
       soruKapat();
       const baslikMetni = satir.replace(/^#{1,3}\s/, '').trim();
-      html += `<div class="konu-anlatim tam-genislik" data-tam="1" style="grid-column:1/-1!important;margin:10px 0 4px;"><h3 style="font-size:12.5px;font-weight:900;color:#1a1a1a;margin:0;">${baslikMetni}</h3></div>`;
+      html += `<div class="baslik-dekoratif-wrap tam-genislik"><div class="baslik-dekoratif-metin"><span>${baslikMetni}</span></div><div class="baslik-dekoratif-cizgi"></div></div>`;
       i++; continue;
     }
 
@@ -2398,7 +2470,7 @@ async function autoSplit(elements, maxHeightPx) {
   const grid = document.createElement('div');
   grid.style.cssText = [
     'position:relative', `width:${a4w - pad * 2}px`,
-    'display:flex', 'flex-direction:column', `gap:${gapRow}px`,
+    'column-count:2', 'column-gap:6mm', 'column-rule:1px solid #e2e8f0',
     'align-items:stretch', "font-family:'Lexend',sans-serif",
     'font-size:11px', 'box-sizing:border-box'
   ].join(';');
@@ -2415,10 +2487,11 @@ async function autoSplit(elements, maxHeightPx) {
 
   const sayfalar = [[]];
   let pageStart = 0;
+  const pageCapacity = maxHeightPx * 1.85;
 
   for (let i = 0; i < klonlar.length; i++) {
     const elTop = klonlar[i].offsetTop;
-    if (sayfalar[sayfalar.length - 1].length > 0 && (elTop - pageStart) >= maxHeightPx) {
+    if (sayfalar[sayfalar.length - 1].length > 0 && (elTop - pageStart) >= pageCapacity) {
       pageStart = elTop;
       sayfalar.push([]);
     }

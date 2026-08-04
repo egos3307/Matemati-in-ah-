@@ -337,9 +337,9 @@ const Home = () => {
                 <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
                   Ücretsiz İlk Dersine Katıl
                 </button>
-                <Link to="/derslerimiz" className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-300 bg-white px-8 text-lg font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all">
+                <a href="https://www.instagram.com/reel/DbichaZswkL/?igsh=N2NyY2NzOXh2NWR1" target="_blank" rel="noopener noreferrer" className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-300 bg-white px-8 text-lg font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all">
                   Eğitim Sistemimizi Keşfet
-                </Link>
+                </a>
               </div>
               <div className="mt-4 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <span className="material-symbols-outlined text-primary mt-0.5">info</span>

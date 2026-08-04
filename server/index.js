@@ -3544,6 +3544,41 @@ KURALLAR:
 
     res.json(ayristirilmis);
   } catch (err) {
+    console.error('gpt-uret error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PDF Metninden Test Sorusu Çıkarıcı (Vercel & ChatGPT Uyumlu)
+app.post('/api/teacher/pdf-test-ai', auth, checkRole('TEACHER'), async (req, res) => {
+  const { metin } = req.body;
+  if (!metin || !metin.trim()) return res.status(400).json({ error: 'İşlenecek metin gönderilmedi.' });
+
+  const sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Sana verilen metin parçası veya PDF sayfasındaki tüm matematik sorularını tespit edip tam ve eksiksiz olarak JSON formatında çıkarıyorsun.
+
+KURALLAR:
+1. Metindeki tüm soruları eksiksiz tara (çoktan seçmeli veya açık uçlu).
+2. Çoktan seçmeli sorular için şıkları ("A) ...", "B) ...", "C) ...", "D) ...") siklar dizisine ekle ve dogruSik alanını (varsa A, B, C, D harfi) belirle.
+3. Açık uçlu sorular için siklar dizisini [] boş bırak, cevap alanına çözüm/cevap ekle.
+4. Tüm matematiksel ifadeleri $...$ içinde LaTeX olarak yaz.
+5. Yalnızca aşağıdaki JSON formatını döndür:
+
+{"sorular":[
+  {"no":1,"metin":"Soru metni...","siklar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A","gorselAciklama":"","cevap":""}
+]}`;
+
+  try {
+    const rawContent = await executeAI({
+      systemPrompt: sistemTalimati,
+      userText: 'Aşağıdaki metindeki matematik sorularını eksiksiz olarak çıkar:\n\n' + metin,
+      jsonFormat: true
+    });
+    const ayristirilmis = parseAIJSON(rawContent);
+    const sorular = Array.isArray(ayristirilmis.sorular) ? ayristirilmis.sorular : [];
+    res.json({ sorular });
+  } catch (err) {
+    console.error('pdf-test-ai error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
