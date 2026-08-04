@@ -3557,11 +3557,12 @@ app.post('/api/teacher/pdf-test-ai', auth, checkRole('TEACHER'), async (req, res
   const sistemTalimati = `Sen 20 yıllık deneyimli bir Türk matematik öğretmenisin. Sana verilen metin parçası veya PDF sayfasındaki tüm matematik sorularını tespit edip tam ve eksiksiz olarak JSON formatında çıkarıyorsun.
 
 KURALLAR:
-1. Metindeki tüm soruları eksiksiz tara (çoktan seçmeli veya açık uçlu).
-2. Çoktan seçmeli sorular için şıkları ("A) ...", "B) ...", "C) ...", "D) ...") siklar dizisine ekle ve dogruSik alanını (varsa A, B, C, D harfi) belirle.
-3. Açık uçlu sorular için siklar dizisini [] boş bırak, cevap alanına çözüm/cevap ekle.
-4. Tüm matematiksel ifadeleri $...$ içinde LaTeX olarak yaz.
-5. Yalnızca aşağıdaki JSON formatını döndür:
+1. Metinde soru kalıpları, problemler veya alıştırmalar varsa bunları eksiksiz olarak soru formatında çıkar.
+2. Eğer metin düz konu anlatımı veya bilgi metni ise, o metindeki bilgileri kullanarak öğretmen için özgün çoktan seçmeli veya açık uçlu matematik soruları türet.
+3. Çoktan seçmeli sorular için şıkları ("A) ...", "B) ...", "C) ...", "D) ...") siklar dizisine ekle ve dogruSik alanını (A, B, C, D harfi) belirle.
+4. Açık uçlu sorular için siklar dizisini [] boş bırak, cevap alanına çözüm/cevap ekle.
+5. Tüm matematiksel ifadeleri $...$ içinde LaTeX olarak yaz.
+6. Yalnızca aşağıdaki JSON formatını döndür:
 
 {"sorular":[
   {"no":1,"metin":"Soru metni...","siklar":["A) ...","B) ...","C) ...","D) ..."],"dogruSik":"A","gorselAciklama":"","cevap":""}
@@ -3570,11 +3571,24 @@ KURALLAR:
   try {
     const rawContent = await executeAI({
       systemPrompt: sistemTalimati,
-      userText: 'Aşağıdaki metindeki matematik sorularını eksiksiz olarak çıkar:\n\n' + metin,
+      userText: 'Aşağıdaki metindeki matematik sorularını eksiksiz olarak çıkar veya sorular oluştur:\n\n' + metin,
       jsonFormat: true
     });
     const ayristirilmis = parseAIJSON(rawContent);
-    const sorular = Array.isArray(ayristirilmis.sorular) ? ayristirilmis.sorular : [];
+    let sorular = [];
+    if (Array.isArray(ayristirilmis.sorular)) {
+      sorular = ayristirilmis.sorular;
+    } else if (Array.isArray(ayristirilmis)) {
+      sorular = ayristirilmis;
+    } else if (ayristirilmis && typeof ayristirilmis === 'object') {
+      const keys = Object.keys(ayristirilmis);
+      for (const k of keys) {
+        if (Array.isArray(ayristirilmis[k])) {
+          sorular = ayristirilmis[k];
+          break;
+        }
+      }
+    }
     res.json({ sorular });
   } catch (err) {
     console.error('pdf-test-ai error:', err);

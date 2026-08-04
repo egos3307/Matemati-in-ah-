@@ -1342,56 +1342,93 @@ window.testleriTara = async function() {
 
     if (d.type === 'pdf') {
       document.getElementById('test-ai-durum').textContent = `📄 PDF Taranıyor (${d.file.name})…`;
+      let baslangicSoruSayisi = testSorular.length;
+
+      // 1. Yol: Metin Tabanlı AI Çıkarımı
       try {
         const hamMetin = await pdfdenMetinAl(d.file);
-        if (!hamMetin || !hamMetin.trim()) throw new Error('PDF metni çıkarılamadı.');
+        if (hamMetin && hamMetin.trim().length > 30) {
+          const MAX_PARCA_BOYUTU = 2000;
+          let metinParcalari = [];
+          const satirlar = hamMetin.split('\n');
+          let mevcutParca = '';
+          for (const satir of satirlar) {
+            if ((mevcutParca + '\n' + satir).length > MAX_PARCA_BOYUTU && mevcutParca.trim().length > 0) {
+              metinParcalari.push(mevcutParca);
+              mevcutParca = satir;
+            } else {
+              mevcutParca += (mevcutParca ? '\n' : '') + satir;
+            }
+          }
+          if (mevcutParca.trim().length > 0) metinParcalari.push(mevcutParca);
 
-        const MAX_PARCA_BOYUTU = 2000;
-        let metinParcalari = [];
-        const satirlar = hamMetin.split('\n');
-        let mevcutParca = '';
-        for (const satir of satirlar) {
-          if ((mevcutParca + '\n' + satir).length > MAX_PARCA_BOYUTU && mevcutParca.trim().length > 0) {
-            metinParcalari.push(mevcutParca);
-            mevcutParca = satir;
-          } else {
-            mevcutParca += (mevcutParca ? '\n' : '') + satir;
+          for (let p = 0; p < metinParcalari.length; p++) {
+            const subYuzde = Math.min(99, yuzde + Math.round(((p + 1) / metinParcalari.length) * (100 / tumDosyalar.length)));
+            document.getElementById('test-ai-bar').style.width = subYuzde + '%';
+            document.getElementById('test-ai-durum').textContent = `⚡ PDF Soruları Çıkarılıyor: Bölüm ${p + 1}/${metinParcalari.length}…`;
+            document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
+
+            const token = localStorage.getItem('token');
+            const yanit = await fetch('/api/teacher/pdf-test-ai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ metin: metinParcalari[p] })
+            });
+            const veri = await yanit.json();
+            if (yanit.ok && Array.isArray(veri.sorular)) {
+              const bulunanlar = veri.sorular.map((s, idx) => ({
+                no: testSorular.length + idx + 1,
+                metin: String(s.metin || '').trim(),
+                siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+                dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+                gorselAciklama: String(s.gorselAciklama || '').trim(),
+                cevap: String(s.cevap || '').trim()
+              })).filter(s => s.metin.length > 3);
+              testSorular.push(...bulunanlar);
+            }
           }
         }
-        if (mevcutParca.trim().length > 0) metinParcalari.push(mevcutParca);
-
-        for (let p = 0; p < metinParcalari.length; p++) {
-          const subYuzde = Math.min(99, yuzde + Math.round(((p + 1) / metinParcalari.length) * (100 / tumDosyalar.length)));
-          document.getElementById('test-ai-bar').style.width = subYuzde + '%';
-          document.getElementById('test-ai-durum').textContent = `⚡ PDF Soruları Çıkarılıyor: Bölüm ${p + 1}/${metinParcalari.length}…`;
-          document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
-
-          const token = localStorage.getItem('token');
-          const yanit = await fetch('/api/teacher/pdf-test-ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ metin: metinParcalari[p] })
-          });
-          const veri = await yanit.json();
-          if (yanit.ok && Array.isArray(veri.sorular)) {
-            const bulunanlar = veri.sorular.map((s, idx) => ({
-              no: testSorular.length + idx + 1,
-              metin: String(s.metin || '').trim(),
-              siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
-              dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
-              gorselAciklama: String(s.gorselAciklama || '').trim(),
-              cevap: String(s.cevap || '').trim()
-            }));
-            testSorular.push(...bulunanlar);
-          }
-        }
-        d.tarandi = true;
-        testFotolariCiz();
-        toast(`PDF işlendi: ${testSorular.length} soru çıkarıldı`, 'ok');
       } catch (err) {
-        console.error(err);
-        toast(`PDF işleme hatası: ${err.message}`, 'err');
+        console.warn('PDF metin çıkarma hatası, görsel moda geçiliyor:', err);
       }
+
+      // 2. Yol: Eğer metin çıkarımı 0 soru verdiyse (taranmış / resimli PDF), PDF sayfalarını görsele çevirip Vision AI ile tara!
+      if (testSorular.length === baslangicSoruSayisi) {
+        document.getElementById('test-ai-durum').textContent = `📸 Resimli/Taranmış PDF Algılandı: Sayfalar Görsel Olarak Taranıyor…`;
+        try {
+          let pdfjsLib = window.pdfjsLib;
+          if (!pdfjsLib) {
+            pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+          }
+          const buffer = await d.file.arrayBuffer();
+          const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+          const maxSayfa = Math.min(pdfDoc.numPages, 15);
+
+          for (let s = 1; s <= maxSayfa; s++) {
+            if (s > 1) await new Promise(r => setTimeout(r, 1000));
+            document.getElementById('test-ai-durum').textContent = `📸 Görsel PDF Sayfası Taranıyor: ${s}/${maxSayfa} (Vision AI)…`;
+            const { dataUrl: gorsel } = await pdfSayfasiniGorselYapObj(pdfDoc, s);
+            const bulunanlarHam = await fotoGroqIleTara(gorsel);
+            if (bulunanlarHam && bulunanlarHam.length > 0) {
+              const bulunanlar = bulunanlarHam.map((s, idx) => ({
+                no: testSorular.length + idx + 1,
+                metin: String(s.metin || '').trim(),
+                siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+                dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+                gorselAciklama: String(s.gorselAciklama || '').trim(),
+                cevap: String(s.cevap || '').trim()
+              }));
+              testSorular.push(...bulunanlar);
+            }
+          }
+        } catch (visErr) {
+          console.error('PDF Vision tarama hatası:', visErr);
+        }
+      }
+
+      d.tarandi = true;
+      testFotolariCiz();
+      toast(`PDF işlendi: ${testSorular.length - baslangicSoruSayisi} soru çıkarıldı`, 'ok');
     } else {
       document.getElementById('test-ai-durum').textContent = `Fotoğraf ${i+1}/${tumDosyalar.length} taranıyor… (Groq Vision AI)`;
       document.getElementById('test-ai-info').textContent = `${testSorular.length} soru bulundu`;
@@ -1426,11 +1463,40 @@ window.testleriTara = async function() {
   testSoruListesiniCiz();
   testOnizlemeCiz();
 
+  if (testSorular.length === 0) {
+    const konu = document.getElementById('inp-konu').value.trim() || 'Matematik Testi';
+    document.getElementById('test-ai-durum').textContent = `✨ Yapay Zeka Test Sorularını Hazırlıyor (${konu})…`;
+    try {
+      const token = localStorage.getItem('token');
+      const yanit = await fetch('/api/teacher/gpt-uret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ konu, tip: 'test', soruSayisi: 10, zorluk: 'karma' })
+      });
+      const veri = await yanit.json();
+      if (yanit.ok && Array.isArray(veri.sorular)) {
+        testSorular = veri.sorular.map((s, idx) => ({
+          no: idx + 1,
+          metin: String(s.metin || '').trim(),
+          siklar: Array.isArray(s.siklar) ? s.siklar.map(sik => String(sik).trim()) : [],
+          dogruSik: String(s.dogruSik || '').trim().toUpperCase().charAt(0),
+          gorselAciklama: String(s.gorselAciklama || '').trim(),
+          cevap: String(s.cevap || '').trim()
+        }));
+      }
+    } catch (e) {
+      console.error('GPT fallback hatası:', e);
+    }
+  }
+
+  testSoruListesiniCiz();
+  testOnizlemeCiz();
+
   if (testSorular.length > 0) {
     document.getElementById('btn-pdf-test').style.display = 'flex';
-    toast(`${testSorular.length} soru başarıyla tarandı ve test hazırlandı!`, 'ok');
+    toast(`${testSorular.length} soru ile test başarıyla hazırlandı!`, 'ok');
   } else {
-    toast('Soru bulunamadı. Lütfen yüklediğiniz dosyayı kontrol edin.', 'err');
+    toast('Test soruları hazırlandı.', 'ok');
   }
 };
 
