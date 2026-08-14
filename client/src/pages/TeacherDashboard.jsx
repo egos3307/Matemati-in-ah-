@@ -119,6 +119,64 @@ const TeacherDashboard = () => {
   const [assignType, setAssignType] = useState('HOMEWORK'); // 'HOMEWORK' | 'QUESTION'
   const [assignText, setAssignText] = useState('');
 
+  // Access Code Generation states (Baş Öğretmen Yetkisi)
+  const [accessCodes, setAccessCodes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fulle_access_codes');
+      return saved ? JSON.parse(saved) : [
+        {
+          id: 'code-1',
+          code: 'SHOP-8A92K',
+          personName: 'Ahmet Yılmaz',
+          packageName: 'Shopier LGS Matematik Kayıtları',
+          driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+          createdAt: new Date().toLocaleDateString('tr-TR')
+        }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  const [newCodePersonName, setNewCodePersonName] = useState('');
+  const [newCodePackageName, setNewCodePackageName] = useState('Shopier Özel Ders Kayıt Paketi');
+  const [newCodeDriveUrl, setNewCodeDriveUrl] = useState('https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-');
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
+
+  const handleCreateAccessCode = (e) => {
+    e?.preventDefault();
+    if (!newCodePersonName.trim()) return;
+
+    const randStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const generatedCode = `SHOP-${randStr}`;
+
+    const newEntry = {
+      id: Date.now().toString(),
+      code: generatedCode,
+      personName: newCodePersonName.trim(),
+      packageName: newCodePackageName.trim() || 'Ders Kayıt Paketi',
+      driveUrl: newCodeDriveUrl.trim() || 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+      createdAt: new Date().toLocaleDateString('tr-TR')
+    };
+
+    const updated = [newEntry, ...accessCodes];
+    setAccessCodes(updated);
+    localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
+    setNewCodePersonName('');
+  };
+
+  const handleDeleteAccessCode = (id) => {
+    const updated = accessCodes.filter(c => c.id !== id);
+    setAccessCodes(updated);
+    localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
+  };
+
+  const handleCopyCode = (code, id) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
   // PDF Notes States
   const [pdfNotesList, setPdfNotesList] = useState([]);
   const [showAddPdfModal, setShowAddPdfModal] = useState(false);
@@ -1389,6 +1447,143 @@ const TeacherDashboard = () => {
                 </div>
 
               </div>
+
+              {/* BAŞ ÖĞRETMEN ÖZEL - KOD OLUŞTURMA & DERS KAYIT YÖNETİMİ */}
+              {user?.role === 'HEAD_TEACHER' && (
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl border border-slate-700 shadow-xl p-6 md:p-8 text-white space-y-6 animate-in fade-in duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
+                        <span className="material-symbols-outlined text-2xl">vpn_key</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-black tracking-wide">Kod Oluştur (Ders Kayıtları)</h3>
+                          <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                            Baş Öğretmen Yetkisi
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 font-bold mt-0.5">
+                          Shopier veya özel satış sonrası öğrencilerin sitede indirmeden izleyeceği erişim kodlarını buradan oluşturun.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Kod Oluşturma Formu */}
+                  <form onSubmit={handleCreateAccessCode} className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-slate-800/80 p-5 rounded-2xl border border-slate-700">
+                    <div className="md:col-span-4 space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+                        Kişinin / Öğrencinin Adı *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newCodePersonName}
+                        onChange={(e) => setNewCodePersonName(e.target.value)}
+                        placeholder="Örn: Ahmet Yılmaz"
+                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 font-bold"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4 space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+                        Paket / Ders Adı
+                      </label>
+                      <input
+                        type="text"
+                        value={newCodePackageName}
+                        onChange={(e) => setNewCodePackageName(e.target.value)}
+                        placeholder="Örn: Shopier LGS Matematik Kayıtları"
+                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 font-bold"
+                      />
+                    </div>
+
+                    <div className="md:col-span-4 space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-300">
+                        Google Drive Klasör / Video Linki
+                      </label>
+                      <input
+                        type="text"
+                        value={newCodeDriveUrl}
+                        onChange={(e) => setNewCodeDriveUrl(e.target.value)}
+                        placeholder="https://drive.google.com/drive/u/0/folders/..."
+                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 font-medium"
+                      />
+                    </div>
+
+                    <div className="md:col-span-12 flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-lg">add_circle</span>
+                        <span>Kod Oluştur</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Oluşturulan Kodlar Listesi */}
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-400 text-base">format_list_bulleted</span>
+                      Oluşturulan Kodlar ({accessCodes.length})
+                    </h4>
+
+                    {accessCodes.length === 0 ? (
+                      <div className="p-6 text-center text-slate-400 font-bold text-xs bg-slate-800/40 rounded-2xl border border-slate-700">
+                        Henüz oluşturulmuş erişim kodu bulunmuyor.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-300 border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-700 bg-slate-800/60 text-slate-400 font-black uppercase tracking-wider">
+                              <th className="p-3.5 rounded-l-xl">Kişi Adı</th>
+                              <th className="p-3.5">Erişim Kodu</th>
+                              <th className="p-3.5">Paket / Ders</th>
+                              <th className="p-3.5">Tarih</th>
+                              <th className="p-3.5 text-right rounded-r-xl">İşlem</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800 font-medium">
+                            {accessCodes.map((item) => (
+                              <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
+                                <td className="p-3.5 font-bold text-white">{item.personName}</td>
+                                <td className="p-3.5">
+                                  <span className="px-2.5 py-1 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-lg font-black uppercase tracking-widest text-xs font-mono">
+                                    {item.code}
+                                  </span>
+                                </td>
+                                <td className="p-3.5 text-slate-400">{item.packageName}</td>
+                                <td className="p-3.5 text-slate-400">{item.createdAt}</td>
+                                <td className="p-3.5 text-right flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyCode(item.code, item.id)}
+                                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer border border-slate-700"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                                    <span>{copiedCodeId === item.id ? 'Kopyalandı!' : 'Kopyala'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteAccessCode(item.id)}
+                                    className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-all cursor-pointer border border-red-500/20"
+                                    title="Kodu Sil"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Middle Section: Upcoming Lessons & Quick Links */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

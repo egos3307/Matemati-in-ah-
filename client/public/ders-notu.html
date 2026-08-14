@@ -1402,12 +1402,15 @@ window.testleriTara = async function() {
           }
           const buffer = await d.file.arrayBuffer();
           const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
-          const maxSayfa = Math.min(pdfDoc.numPages, 15);
+          const numPages = pdfDoc.numPages;
+          const maxSayfa = Math.min(numPages, 12);
+          const adim = Math.max(1, Math.floor(numPages / maxSayfa));
+          let vSayfaNo = 1;
 
-          for (let s = 1; s <= maxSayfa; s++) {
-            if (s > 1) await new Promise(r => setTimeout(r, 1000));
-            document.getElementById('test-ai-durum').textContent = `📸 Görsel PDF Sayfası Taranıyor: ${s}/${maxSayfa} (Vision AI)…`;
-            const { dataUrl: gorsel } = await pdfSayfasiniGorselYapObj(pdfDoc, s);
+          for (let sIdx = 0; sIdx < maxSayfa && vSayfaNo <= numPages; sIdx++) {
+            if (sIdx > 0) await new Promise(r => setTimeout(r, 1000));
+            document.getElementById('test-ai-durum').textContent = `📸 Görsel PDF Sayfası Taranıyor: ${vSayfaNo}/${numPages} (Sayfa ${sIdx+1}/${maxSayfa})…`;
+            const { dataUrl: gorsel } = await pdfSayfasiniGorselYapObj(pdfDoc, vSayfaNo);
             const bulunanlarHam = await fotoGroqIleTara(gorsel);
             if (bulunanlarHam && bulunanlarHam.length > 0) {
               const bulunanlar = bulunanlarHam.map((s, idx) => ({
@@ -1420,6 +1423,7 @@ window.testleriTara = async function() {
               }));
               testSorular.push(...bulunanlar);
             }
+            vSayfaNo += adim;
           }
         } catch (visErr) {
           console.error('PDF Vision tarama hatası:', visErr);
@@ -1763,7 +1767,7 @@ window.testTemizle = function() {
 /* ═══════════════════════════════════════════════════════════
    DERS NOTU MODU — PDF.JS İLE PDF OKUMA
 ═══════════════════════════════════════════════════════════ */
-async function pdfdenMetinAl(dosya) {
+async function pdfdenMetinAl(dosya, maxSayfaSiniri = 25) {
   aiDurumYaz('PDF okunuyor…', 5);
   let pdfjsLib;
   try {
@@ -1778,55 +1782,73 @@ async function pdfdenMetinAl(dosya) {
   const toplamSayfa = pdfDoc.numPages;
   let hamMetin = '';
 
-  for (let s = 1; s <= toplamSayfa; s++) {
-    aiDurumYaz(`PDF sayfa ${s}/${toplamSayfa} okunuyor…`, 5 + Math.round((s / toplamSayfa) * 15));
-    const sayfa = await pdfDoc.getPage(s);
-    const icerik = await sayfa.getTextContent({ includeMarkedContent: false });
-    const items = icerik.items.filter(it => it.str && it.str.trim());
-
-    if (!items.length) { hamMetin += '\n'; continue; }
-
-    const heights = items.map(it => Math.abs(it.height || (it.transform && it.transform[3]) || 0)).filter(h => h > 0);
-    const avgH = heights.length ? heights.reduce((a, b) => a + b, 0) / heights.length : 12;
-    const headingEsigi = avgH * 1.25;
-    const ESIKOLCEGI = avgH * 0.35;
-
-    const satirMap = new Map();
-    for (const it of items) {
-      const str = it.str;
-      const y = it.transform ? it.transform[5] : 0;
-      const x = it.transform ? it.transform[4] : 0;
-      const fontH = Math.abs(it.height || (it.transform && it.transform[3]) || 0);
-      const isBold = it.fontName ? /bold|heavy|black|demi/i.test(it.fontName) : false;
-      let anahtarY = y;
-      for (const k of satirMap.keys()) {
-        if (Math.abs(k - y) < ESIKOLCEGI) { anahtarY = k; break; }
-      }
-      if (!satirMap.has(anahtarY)) satirMap.set(anahtarY, []);
-      satirMap.get(anahtarY).push({ str, x, fontH, isBold });
+  // 300 sayfa gibi devasa PDF kitaplarında performans ve Vercel sınırları için sayfaları örnekle:
+  let taranacakSayfalar = [];
+  if (toplamSayfa <= maxSayfaSiniri) {
+    for (let i = 1; i <= toplamSayfa; i++) taranacakSayfalar.push(i);
+  } else {
+    const adim = Math.max(1, Math.floor(toplamSayfa / maxSayfaSiniri));
+    for (let i = 1; i <= toplamSayfa && taranacakSayfalar.length < maxSayfaSiniri; i += adim) {
+      taranacakSayfalar.push(i);
     }
+  }
 
-    const siraliYler = [...satirMap.keys()].sort((a, b) => b - a);
-    let sayfaMetin = '';
-    let oncekiY = null;
+  const tSayfaAdet = taranacakSayfalar.length;
 
-    for (const y of siraliYler) {
-      const satirElemanlari = satirMap.get(y).sort((a, b) => a.x - b.x);
-      const satirMetin = satirElemanlari.map(e => e.str).join(' ').replace(/\s+/g, ' ').trim();
-      if (!satirMetin) continue;
-      if (oncekiY !== null) {
-        const aralik = oncekiY - y;
-        if (aralik > avgH * 1.8) sayfaMetin += '\n';
+  for (let idx = 0; idx < tSayfaAdet; idx++) {
+    const s = taranacakSayfalar[idx];
+    aiDurumYaz(`PDF sayfa ${s}/${toplamSayfa} inceleniyor… (${idx+1}/${tSayfaAdet})`, 5 + Math.round(((idx + 1) / tSayfaAdet) * 20));
+    try {
+      const sayfa = await pdfDoc.getPage(s);
+      const icerik = await sayfa.getTextContent({ includeMarkedContent: false });
+      const items = icerik.items.filter(it => it.str && it.str.trim());
+
+      if (!items.length) { hamMetin += '\n'; continue; }
+
+      const heights = items.map(it => Math.abs(it.height || (it.transform && it.transform[3]) || 0)).filter(h => h > 0);
+      const avgH = heights.length ? heights.reduce((a, b) => a + b, 0) / heights.length : 12;
+      const headingEsigi = avgH * 1.25;
+      const ESIKOLCEGI = avgH * 0.35;
+
+      const satirMap = new Map();
+      for (const it of items) {
+        const str = it.str;
+        const y = it.transform ? it.transform[5] : 0;
+        const x = it.transform ? it.transform[4] : 0;
+        const fontH = Math.abs(it.height || (it.transform && it.transform[3]) || 0);
+        const isBold = it.fontName ? /bold|heavy|black|demi/i.test(it.fontName) : false;
+        let anahtarY = y;
+        for (const k of satirMap.keys()) {
+          if (Math.abs(k - y) < ESIKOLCEGI) { anahtarY = k; break; }
+        }
+        if (!satirMap.has(anahtarY)) satirMap.set(anahtarY, []);
+        satirMap.get(anahtarY).push({ str, x, fontH, isBold });
       }
-      const isBaslik = satirElemanlari.some(e => (e.fontH >= headingEsigi && satirMetin.length > 1) || e.isBold);
-      if (isBaslik && !/^##/.test(satirMetin)) {
-        sayfaMetin += '## ' + satirMetin + '\n';
-      } else {
-        sayfaMetin += satirMetin + '\n';
+
+      const siraliYler = [...satirMap.keys()].sort((a, b) => b - a);
+      let sayfaMetin = '';
+      let oncekiY = null;
+
+      for (const y of siraliYler) {
+        const satirElemanlari = satirMap.get(y).sort((a, b) => a.x - b.x);
+        const satirMetin = satirElemanlari.map(e => e.str).join(' ').replace(/\s+/g, ' ').trim();
+        if (!satirMetin) continue;
+        if (oncekiY !== null) {
+          const aralik = oncekiY - y;
+          if (aralik > avgH * 1.8) sayfaMetin += '\n';
+        }
+        const isBaslik = satirElemanlari.some(e => (e.fontH >= headingEsigi && satirMetin.length > 1) || e.isBold);
+        if (isBaslik && !/^##/.test(satirMetin)) {
+          sayfaMetin += '## ' + satirMetin + '\n';
+        } else {
+          sayfaMetin += satirMetin + '\n';
+        }
+        oncekiY = y;
       }
-      oncekiY = y;
+      hamMetin += sayfaMetin + '\n';
+    } catch(err) {
+      console.warn(`Sayfa ${s} okunamadı:`, err);
     }
-    hamMetin += sayfaMetin + '\n';
   }
   return hamMetin.trim();
 }
