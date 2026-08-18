@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://fullematematigi.com.tr/</loc>
-    <changefreq>weekly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
@@ -11,9 +11,19 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://fullematematigi.com.tr/kontenjan-dersleri</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/pdf-notlari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://fullematematigi.com.tr/blog</loc>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://fullematematigi.com.tr/iletisim</loc>
@@ -21,15 +31,22 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://fullematematigi.com.tr/kvkk</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://fullematematigi.com.tr/llms.txt</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://fullematematigi.com.tr/geo/llms.txt</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
+
+  <!-- Mevcut Blog Yazıları -->
   <url>
     <loc>https://fullematematigi.com.tr/blog/online-matematik-ozel-ders-rehberi</loc>
     <changefreq>weekly</changefreq>
@@ -42,6 +59,110 @@
   </url>
   <url>
     <loc>https://fullematematigi.com.tr/blog/tyt-ayt-matematik-geometri-net-artirma-taktikleri</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Öncelikli SEO Pillar İçerikleri -->
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/9-sinif-matematik-konulari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-matematik-konulari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-matematik-soru-dagilimi</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/lgs-matematik-konulari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/lgs-matematik-soru-dagilimi</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Konu Kümesi (Topic Cluster) İçerikleri -->
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/uslu-sayilar-konu-anlatimi</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/koklu-sayilar-konu-anlatimi</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-temel-kavramlar</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-problemler</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/sayi-basamaklari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/bolme-bolunebilme</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/mutlak-deger</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/rasyonel-sayilar</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/carpanlara-ayirma</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/denklem-cozme</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/oran-oranti</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/yas-problemleri</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/yuzde-problemleri</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-fonksiyonlar</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://fullematematigi.com.tr/blog/tyt-matematik-calisma-programi</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

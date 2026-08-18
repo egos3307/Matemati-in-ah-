@@ -1,4 +1,3 @@
-import React from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,12 +14,9 @@ import BlogPostDetail from './pages/BlogPostDetail';
 import Contact from './pages/Contact';
 import PdfNotes from './pages/PdfNotes';
 import QuotaCourseSelection from './pages/QuotaCourseSelection';
-
 import WatchRecording from './pages/WatchRecording';
 import KVKK from './pages/KVKK';
-
-// Placeholder components for other pages
-const About = () => <div className="p-8 text-center mt-20 text-gray-700">Fullematematiği, öğrencilerin matematik başarısını artırmak için kurulmuş bir online platformdur.</div>;
+import NotFound from './pages/NotFound';
 
 const WhatsAppButton = () => {
   const { user } = useAuth();
@@ -31,7 +27,7 @@ const WhatsAppButton = () => {
 
   return (
     <a
-      href="https://wa.me/905350598950?text=Merhaba,%20Fullematematiği%20hakkında%20bilgi%20almak%20istiyorum."
+      href="https://wa.me/905350598950?text=Merhaba,%20Fullematemati%C4%9Fi%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
       target="_blank"
       rel="noopener noreferrer"
       title="WhatsApp'tan ulaşın"
@@ -84,9 +80,6 @@ const AppContent = () => {
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/iletisim" element={<Contact />} />
         <Route path="/kvkk" element={<KVKK />} />
-        <Route path="/blog/:slug" element={<BlogPostDetail />} />
-        <Route path="/iletisim" element={<Contact />} />
-        <Route path="/kvkk" element={<KVKK />} />
         <Route path="/giris" element={<Login />} />
         <Route 
           path="/ogretmen" 
@@ -128,6 +121,8 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
+        {/* Catch-all 404 Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <WhatsAppButton />
     </div>
@@ -147,4 +142,3 @@ function App() {
 }
 
 export default App;
-

@@ -844,6 +844,107 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Matematik Rehberleri Section */}
+        <section className="bg-slate-50 py-16 px-6 lg:px-10 border-t border-slate-200/60" id="matematik-rehberleri">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary mb-3">
+                  <span className="material-symbols-outlined text-sm">library_books</span>
+                  <span>Öne Çıkan İçerikler</span>
+                </span>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                  Matematik & Sınav <span className="text-primary">Rehberleri</span>
+                </h2>
+                <p className="text-slate-600 text-sm mt-2 max-w-xl">
+                  YKS, LGS ve okul sınavlarında netlerinizi yükseltecek güncel müfredat rehberleri, konu listeleri ve çalışma taktikleri.
+                </p>
+              </div>
+              <Link
+                to="/blog"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:gap-2.5 transition-all"
+              >
+                <span>Tüm Rehberleri İncele</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </Link>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Link
+                to="/blog/tyt-matematik-konulari"
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
+              >
+                <div className="h-10 w-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">format_list_bulleted</span>
+                </div>
+                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
+                  TYT Matematik Konuları 2026
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
+                  2026 YKS TYT matematik müfredatındaki tüm üniteler, alt başlıklar ve çalışma stratejileri.
+                </p>
+                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
+                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+              </Link>
+
+              <Link
+                to="/blog/lgs-matematik-konulari"
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
+              >
+                <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">menu_book</span>
+                </div>
+                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
+                  LGS Matematik Konuları 2026
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
+                  8. Sınıf MEB LGS matematik üniteleri ve yeni nesil soru taktikleri.
+                </p>
+                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
+                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+              </Link>
+
+              <Link
+                to="/blog/9-sinif-matematik-konulari"
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
+              >
+                <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">school</span>
+                </div>
+                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
+                  9. Sınıf Matematik Konuları
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
+                  2026-2027 MEB müfredatı, ünite dağılımları ve lise 1 matematik ders rehberi.
+                </p>
+                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
+                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+              </Link>
+
+              <Link
+                to="/blog/geometride-sekilleri-gormek-ve-geometri-taktikleri"
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
+              >
+                <div className="h-10 w-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-xl">square_foot</span>
+                </div>
+                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
+                  Geometride Şekilleri Görmek
+                </h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
+                  Geometri sorularında ek çizim yapma mantığı, özel üçgenler ve harflendirme yöntemleri.
+                </p>
+                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
+                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </span>
+              </Link>
+            </div>
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}
@@ -855,7 +956,7 @@ const Home = () => {
                 <img src="/logo.png" alt="Fullematematiği Logo" className="h-10 w-10 object-contain" />
                 <h2 className="text-xl font-bold tracking-tight">Fullematematiği</h2>
               </div>
-              <p className="max-w-md leading-relaxed">
+              <p className="max-w-md leading-relaxed text-sm">
                 Türkiye'nin en interaktif matematik platformu olarak, öğrencilerin hedeflerine ulaşmasında en büyük destekçisiyiz. Kaliteli içerik ve uzman kadromuzla yanınızdayız.
               </p>
               <div className="flex gap-4">
@@ -865,31 +966,33 @@ const Home = () => {
               </div>
             </div>
             <div>
-              <h4 className="mb-6 font-bold text-slate-900">Hızlı Linkler</h4>
-              <ul className="flex flex-col gap-4">
+              <h3 className="mb-6 font-bold text-slate-900">Hızlı Linkler</h3>
+              <ul className="flex flex-col gap-3 text-sm">
                 <li><Link className="hover:text-primary transition-colors" to="/">Ana Sayfa</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/derslerimiz">Derslerimiz</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/blog">Blog</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/kontenjan-dersleri">Kontenjan Dersleri</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/pdf-notlari">PDF Ders Notları</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog">Matematik Rehberi</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link></li>
-                <li><a className="hover:text-primary transition-colors" href="#">SSS</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="mb-6 font-bold text-slate-900">Kurumsal</h4>
-              <ul className="flex flex-col gap-4">
-                <li><Link className="hover:text-primary transition-colors" to="/derslerimiz">Derslerimiz</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/blog">Blog</Link></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Kariyer</a></li>
-                <li><Link className="hover:text-primary transition-colors" to="/kvkk">KVKK</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link></li>
+              <h3 className="mb-6 font-bold text-slate-900">Matematik Rehberleri</h3>
+              <ul className="flex flex-col gap-3 text-sm">
+                <li><Link className="hover:text-primary transition-colors" to="/blog/tyt-matematik-konulari">TYT Matematik Konuları</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog/lgs-matematik-konulari">LGS Matematik Konuları</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog/9-sinif-matematik-konulari">9. Sınıf Matematik Konuları</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog/tyt-matematik-soru-dagilimi">TYT Soru Dağılımı</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog/geometride-sekilleri-gormek-ve-geometri-taktikleri">Geometri Taktikleri</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/kvkk">KVKK Aydınlatma Metni</Link></li>
               </ul>
             </div>
           </div>
           <div className="flex flex-col items-center justify-between gap-6 pt-12 md:flex-row">
-            <p className="text-sm">© 2024 Fullematematiği. Tüm hakları saklıdır.</p>
+            <p className="text-sm">© 2026 Fullematematiği. Tüm hakları saklıdır.</p>
             <div className="flex gap-8 text-sm">
-              <a className="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
-              <a className="hover:text-primary transition-colors" href="#">Kullanım Şartları</a>
+              <Link className="hover:text-primary transition-colors" to="/kvkk">Gizlilik & KVKK</Link>
+              <Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link>
             </div>
           </div>
         </div>
