@@ -281,14 +281,21 @@ const WatchRecording = () => {
             )}
           </div>
         ) : player.type === 'iframe' ? (
-          <iframe
-            src={player.url}
-            className="w-full border-0 z-10"
-            style={{ height: '100%', minHeight: '100%' }}
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            onError={() => setVideoError(true)}
-          />
+          <div className="relative w-full h-full">
+            <iframe
+              src={player.url}
+              className="w-full h-full border-0 z-10"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+              allowFullScreen
+              onError={() => setVideoError(true)}
+            />
+            {/* Top-Right Shield: Blocks Drive pop-out icon without obstructing play/pause controls */}
+            <div 
+              className="absolute top-0 right-0 w-24 h-14 bg-transparent z-30 pointer-events-auto cursor-default" 
+              title="Sitede Korumalı Yayın"
+            />
+          </div>
         ) : (
           <video
             src={player.url}

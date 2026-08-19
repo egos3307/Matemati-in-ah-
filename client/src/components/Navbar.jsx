@@ -540,13 +540,21 @@ const Navbar = () => {
                       }
 
                       return (
-                        <iframe
-                          src={player.src}
-                          className="w-full h-full border-0"
-                          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                          allowFullScreen
-                          title="Ders Kaydı"
-                        />
+                        <>
+                          <iframe
+                            src={player.src}
+                            className="w-full h-full border-0"
+                            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                            allowFullScreen
+                            title="Ders Kaydı"
+                          />
+                          {/* Top-Right Shield: Blocks Drive pop-out icon without obstructing play/pause controls */}
+                          <div 
+                            className="absolute top-0 right-0 w-24 h-14 bg-transparent z-30 pointer-events-auto cursor-default" 
+                            title="Sitede Korumalı Yayın"
+                          />
+                        </>
                       );
                     })()}
                   </div>
