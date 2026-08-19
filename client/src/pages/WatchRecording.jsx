@@ -24,7 +24,7 @@ const WatchRecording = () => {
   const getPlayerTypeAndUrl = (url) => {
     if (!url) return { type: 'native', url: '' };
     
-    const decodedUrl = decodeURIComponent(url);
+    const decodedUrl = decodeURIComponent(url).trim();
     
     // 1. Güvenli Drive stream (drive:FILEID formatı)
     if (decodedUrl.startsWith('drive:')) {
@@ -37,16 +37,32 @@ const WatchRecording = () => {
       };
     }
     
-    // 2. Google Drive Link Detector (eski kayıtlar için)
+    // 2. Pixeldrain -> Site içi HTML5 Video Oynatıcı
+    if (decodedUrl.includes('pixeldrain.com')) {
+      const match = decodedUrl.match(/\/u\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return {
+          type: 'native',
+          url: `https://pixeldrain.com/api/file/${match[1]}`
+        };
+      }
+    }
+
+    // 3. Google Drive Link Detector
     if (decodedUrl.includes('drive.google.com')) {
       let fileId = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (fileDMatch) {
         fileId = fileDMatch[1];
       } else {
-        const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if (idParamMatch) {
-          fileId = idParamMatch[1];
+        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+        if (folderMatch) {
+          fileId = folderMatch[1];
+        } else {
+          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (idParamMatch) {
+            fileId = idParamMatch[1];
+          }
         }
       }
       
@@ -58,12 +74,12 @@ const WatchRecording = () => {
       }
     }
     
-    // 3. GoFile Link Detector (iframe'i blokluyor, yeni sekme açılacak)
+    // 4. GoFile Link Detector
     if (decodedUrl.includes('gofile.io')) {
       return { type: 'gofile', url: decodedUrl };
     }
 
-    // 3. YouTube Link Detector
+    // 5. YouTube Link Detector
     if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
       let videoId = '';
       const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
@@ -84,7 +100,7 @@ const WatchRecording = () => {
       if (videoId) {
         return {
           type: 'iframe',
-          url: `https://www.youtube.com/embed/${videoId}`
+          url: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
         };
       }
     }

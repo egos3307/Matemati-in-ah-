@@ -128,21 +128,73 @@ const Navbar = () => {
     }
   };
 
-  const getEmbedUrl = (url) => {
-    if (!url) return '';
-    if (url.includes('folders/')) {
-      const match = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  const getInSitePlayerInfo = (url) => {
+    if (!url) return { type: 'none', src: '' };
+    const decodedUrl = decodeURIComponent(url).trim();
+
+    // 1. Pixeldrain -> Direct HTML5 Video Stream
+    if (decodedUrl.includes('pixeldrain.com')) {
+      const match = decodedUrl.match(/\/u\/([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
-        return `https://drive.google.com/embeddedfolderview?id=${match[1]}#list`;
+        return { type: 'video', src: `https://pixeldrain.com/api/file/${match[1]}` };
       }
     }
-    if (url.includes('/file/d/')) {
-      const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return `https://drive.google.com/file/d/${match[1]}/preview`;
+
+    // 2. Native Video Files (Uploads, MP4, WebM, Stream, Catbox)
+    if (
+      decodedUrl.startsWith('/uploads/') ||
+      decodedUrl.endsWith('.mp4') ||
+      decodedUrl.endsWith('.webm') ||
+      decodedUrl.endsWith('.mov') ||
+      decodedUrl.includes('/api/drive/stream/') ||
+      decodedUrl.includes('catbox.moe')
+    ) {
+      return { type: 'video', src: decodedUrl };
+    }
+
+    // 3. YouTube Links -> Embedded Player
+    if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
+      let videoId = '';
+      const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+      if (watchMatch) {
+        videoId = watchMatch[1];
+      } else {
+        const shortMatch = decodedUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+        if (shortMatch) videoId = shortMatch[1];
+        else {
+          const embedMatch = decodedUrl.match(/\/embed\/([a-zA-Z0-9_-]+)/);
+          if (embedMatch) videoId = embedMatch[1];
+        }
+      }
+      if (videoId) {
+        return { type: 'iframe', src: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` };
       }
     }
-    return url;
+
+    // 4. Google Drive Links -> Embedded Preview Player
+    if (decodedUrl.includes('drive.google.com')) {
+      let fileId = '';
+      const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileDMatch) {
+        fileId = fileDMatch[1];
+      } else {
+        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+        if (folderMatch) {
+          fileId = folderMatch[1];
+        } else {
+          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (idParamMatch) {
+            fileId = idParamMatch[1];
+          }
+        }
+      }
+
+      if (fileId) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileId}/preview` };
+      }
+    }
+
+    return { type: 'iframe', src: decodedUrl };
   };
 
   return (
@@ -381,15 +433,30 @@ const Navbar = () => {
 
                   {/* Embedded Protected Player Container */}
                   <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-xl" style={{ height: '480px' }}>
-                    
-                    {/* Non-downloadable Google Drive Embed */}
-                    <iframe
-                      src={getEmbedUrl(activeVideoData.driveUrl)}
-                      className="w-full h-full border-0"
-                      allow="autoplay; encrypted-media; fullscreen"
-                      allowFullScreen
-                      title="Google Drive Ders Kaydı"
-                    />
+                    {(() => {
+                      const player = getInSitePlayerInfo(activeVideoData.driveUrl);
+                      if (player.type === 'video') {
+                        return (
+                          <video
+                            src={player.src}
+                            controls
+                            autoPlay
+                            playsInline
+                            controlsList="nodownload"
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        );
+                      }
+                      return (
+                        <iframe
+                          src={player.src}
+                          className="w-full h-full border-0"
+                          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                          allowFullScreen
+                          title="Ders Kaydı"
+                        />
+                      );
+                    })()}
 
                     {/* Top Right Transparent Pointer Overlay to prevent pop-out click siphoning */}
                     <div 
