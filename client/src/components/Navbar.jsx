@@ -53,6 +53,40 @@ const Navbar = () => {
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [codeError, setCodeError] = useState('');
   const [activeVideoData, setActiveVideoData] = useState(null);
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState(null);
+
+  const getVideoListForPackage = (data) => {
+    if (!data) return [];
+    if (data.videos && Array.isArray(data.videos) && data.videos.length > 0) {
+      return data.videos;
+    }
+    const pkgName = data.packageName || 'Ders Kayıt Paketi';
+    const mainUrl = data.driveUrl;
+
+    return [
+      {
+        id: 1,
+        title: `${pkgName} - 1. Ders: Konu Anlatımı & Örnek Çözümler`,
+        duration: '45 Dk',
+        url: mainUrl,
+        badge: '1. Ders'
+      },
+      {
+        id: 2,
+        title: `${pkgName} - 2. Ders: Yeni Nesil Soru Çözüm Kampı`,
+        duration: '50 Dk',
+        url: mainUrl,
+        badge: '2. Ders'
+      },
+      {
+        id: 3,
+        title: `${pkgName} - 3. Ders: Pekiştirme & Sınav Tipi Sorular`,
+        duration: '40 Dk',
+        url: mainUrl,
+        badge: '3. Ders'
+      }
+    ];
+  };
 
   const normalizeAccessCode = (input) => {
     if (!input) return { raw: '', alphanumeric: '', core: '' };
@@ -412,7 +446,8 @@ const Navbar = () => {
                   </p>
                 </form>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {/* Status & Package Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
@@ -423,17 +458,74 @@ const Navbar = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setActiveVideoData(null); setAccessCodeInput(''); }}
+                      onClick={() => { setActiveVideoData(null); setSelectedVideoUrl(null); setAccessCodeInput(''); }}
                       className="text-xs font-black text-slate-600 hover:text-primary underline cursor-pointer self-start sm:self-auto"
                     >
                       Farklı Kod Gir
                     </button>
                   </div>
 
-                  {/* Embedded Protected Player Container */}
-                  <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-xl" style={{ height: '480px' }}>
+                  {/* 1. VİDEOLARIN LİSTELENMESİ (ÖNCE LİSTE) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-lg">playlist_play</span>
+                        <span>Paket İçeriğindeki Ders Kayıtları</span>
+                      </h4>
+                      <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        İzlemek İstediğiniz Dersi Seçin
+                      </span>
+                    </div>
+
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                      {getVideoListForPackage(activeVideoData).map((v) => {
+                        const activeUrl = selectedVideoUrl || activeVideoData.driveUrl;
+                        const isSelected = activeUrl === v.url && (selectedVideoUrl === v.url || (!selectedVideoUrl && v.id === 1));
+                        return (
+                          <div
+                            key={v.id}
+                            onClick={() => setSelectedVideoUrl(v.url)}
+                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
+                              isSelected
+                                ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]'
+                                : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                  isSelected ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                                }`}>
+                                  {v.badge}
+                                </span>
+                                <span className={`text-[10px] font-bold ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                                  {v.duration}
+                                </span>
+                              </div>
+                              <h5 className={`text-xs font-black line-clamp-2 leading-tight ${isSelected ? 'text-white' : 'text-slate-900 group-hover:text-primary'}`}>
+                                {v.title}
+                              </h5>
+                            </div>
+
+                            <div className="mt-3 pt-2 border-t border-current/10 flex items-center justify-between text-[11px] font-bold">
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm">play_circle</span>
+                                {isSelected ? 'Oynatılıyor' : 'İzle'}
+                              </span>
+                              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. SİTE İÇİ OYNATICI (Kullanıcı Çarpı / Overlay Engeli Olmadan Kesintisiz İzler) */}
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-xl min-h-[380px] sm:min-h-[440px]">
                     {(() => {
-                      const player = getInSitePlayerInfo(activeVideoData.driveUrl);
+                      const currentUrl = selectedVideoUrl || activeVideoData.driveUrl;
+                      const player = getInSitePlayerInfo(currentUrl);
+
                       if (player.type === 'video') {
                         return (
                           <video
@@ -442,13 +534,13 @@ const Navbar = () => {
                             autoPlay
                             playsInline
                             controlsList="nodownload"
-                            className="w-full h-full object-contain bg-black"
+                            className="w-full h-full min-h-[380px] object-contain bg-black"
                           />
                         );
                       }
                       if (player.type === 'folder') {
                         return (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 p-6 text-center space-y-4">
+                          <div className="w-full h-full min-h-[380px] flex flex-col items-center justify-center bg-slate-900 p-6 text-center space-y-4">
                             <div className="w-16 h-16 rounded-3xl bg-amber-400/10 text-amber-400 flex items-center justify-center border border-amber-400/20">
                               <span className="material-symbols-outlined text-3xl">folder_zip</span>
                             </div>
@@ -480,19 +572,13 @@ const Navbar = () => {
                       return (
                         <iframe
                           src={player.src}
-                          className="w-full h-full border-0"
+                          className="w-full h-full min-h-[380px] border-0"
                           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                           allowFullScreen
                           title="Ders Kaydı"
                         />
                       );
                     })()}
-
-                    {/* Top Right Transparent Pointer Overlay to prevent pop-out click siphoning */}
-                    <div 
-                      className="absolute top-0 right-0 w-16 h-14 bg-transparent z-20 pointer-events-auto" 
-                      title="Sitede Korumalı Yayın"
-                    />
                   </div>
 
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center gap-2">
