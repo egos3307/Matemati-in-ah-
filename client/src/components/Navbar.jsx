@@ -105,14 +105,14 @@ const Navbar = () => {
       },
       {
         personName: 'Örnek Öğrenci',
-        packageName: 'Shopier Özel Matematik Ders Kayıtları',
-        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+        packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+        driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
         code: 'DEMO123'
       },
       {
         personName: 'Örnek Öğrenci',
-        packageName: 'Shopier Özel Matematik Ders Kayıtları',
-        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+        packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+        driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
         code: '1234'
       }
     ];
@@ -171,26 +171,25 @@ const Navbar = () => {
       }
     }
 
-    // 4. Google Drive Links -> Embedded Preview Player
+    // 4. Google Drive Links -> Embedded Preview Player or Folder View
     if (decodedUrl.includes('drive.google.com')) {
-      let fileId = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch) {
-        fileId = fileDMatch[1];
-      } else {
-        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-        if (folderMatch) {
-          fileId = folderMatch[1];
-        } else {
-          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-          if (idParamMatch) {
-            fileId = idParamMatch[1];
-          }
-        }
+      if (fileDMatch && fileDMatch[1]) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileDMatch[1]}/preview` };
       }
 
-      if (fileId) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileId}/preview` };
+      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+      if (folderMatch && folderMatch[1]) {
+        return {
+          type: 'folder',
+          src: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#list`,
+          folderUrl: decodedUrl
+        };
+      }
+
+      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idParamMatch && idParamMatch[1]) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${idParamMatch[1]}/preview` };
       }
     }
 
@@ -445,6 +444,37 @@ const Navbar = () => {
                             controlsList="nodownload"
                             className="w-full h-full object-contain bg-black"
                           />
+                        );
+                      }
+                      if (player.type === 'folder') {
+                        return (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 p-6 text-center space-y-4">
+                            <div className="w-16 h-16 rounded-3xl bg-amber-400/10 text-amber-400 flex items-center justify-center border border-amber-400/20">
+                              <span className="material-symbols-outlined text-3xl">folder_zip</span>
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-black text-white">Ders Kayıtları Klasörü</h4>
+                              <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                                Bu erişim kodu tüm ders videolarını içeren Google Drive klasörüne tanımlanmıştır.
+                              </p>
+                            </div>
+                            <a
+                              href={player.folderUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-sm">open_in_new</span>
+                              <span>Klasördeki Tüm Videoları Gör / İzle</span>
+                            </a>
+                            <div className="w-full flex-1 max-h-52 mt-2 rounded-xl overflow-hidden border border-slate-800">
+                              <iframe
+                                src={player.src}
+                                className="w-full h-full border-0"
+                                title="Google Drive Klasör Kayıtları"
+                              />
+                            </div>
+                          </div>
                         );
                       }
                       return (

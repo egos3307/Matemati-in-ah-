@@ -2995,15 +2995,15 @@ const DEFAULT_ACCESS_CODES = [
     id: 2,
     code: 'DEMO123',
     personName: 'Örnek Öğrenci',
-    packageName: 'Shopier Özel Matematik Ders Kayıtları',
-    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+    packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+    driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
   },
   {
     id: 3,
     code: '1234',
     personName: 'Örnek Öğrenci',
-    packageName: 'Shopier Özel Matematik Ders Kayıtları',
-    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+    packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+    driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
   }
 ];
 
