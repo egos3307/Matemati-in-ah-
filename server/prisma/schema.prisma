@@ -243,3 +243,14 @@ model QuotaApplication {
   updatedAt     DateTime     @updatedAt
 }
 
+model AccessCode {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  personName  String
+  packageName String
+  driveUrl    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+

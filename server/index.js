@@ -2981,17 +2981,140 @@ app.put('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), async
   }
 });
 
-app.delete('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), async (req, res) => {
-  const id = parseInt(req.params.id);
+
+// Access Code Routes (Shopier / Özel Erişim Kodları)
+const DEFAULT_ACCESS_CODES = [
+  {
+    id: 1,
+    code: 'SHOP-8A92K',
+    personName: 'Ahmet Yılmaz',
+    packageName: 'Shopier LGS Matematik Kayıtları',
+    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+  },
+  {
+    id: 2,
+    code: 'DEMO123',
+    personName: 'Örnek Öğrenci',
+    packageName: 'Shopier Özel Matematik Ders Kayıtları',
+    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+  },
+  {
+    id: 3,
+    code: '1234',
+    personName: 'Örnek Öğrenci',
+    packageName: 'Shopier Özel Matematik Ders Kayıtları',
+    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+  }
+];
+
+const normalizeAccessCode = (input) => {
+  if (!input) return { raw: '', alphanumeric: '', core: '' };
+  const raw = input.toString().trim().toUpperCase();
+  const alphanumeric = raw.replace(/[^A-Z0-9]/g, '');
+  const core = alphanumeric.replace(/^SHOP/, '');
+  return { raw, alphanumeric, core: core || alphanumeric };
+};
+
+const matchAccessCode = (inputCode, targetCode) => {
+  if (!inputCode || !targetCode) return false;
+  const normInput = normalizeAccessCode(inputCode);
+  const normTarget = normalizeAccessCode(targetCode);
+
+  return (
+    normInput.raw === normTarget.raw ||
+    normInput.alphanumeric === normTarget.alphanumeric ||
+    (normInput.core !== '' && normTarget.core !== '' && normInput.core === normTarget.core)
+  );
+};
+
+app.get('/api/access-codes', async (req, res) => {
   try {
-    await prisma.quotaApplication.delete({ where: { id } });
-    DEFAULT_QUOTA_APPLICATIONS = DEFAULT_QUOTA_APPLICATIONS.filter(a => a.id !== id);
-    res.json({ success: true });
+    let codes = await prisma.accessCode.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    if (!codes || codes.length === 0) {
+      const defaultCode = await prisma.accessCode.create({
+        data: {
+          code: 'SHOP-8A92K',
+          personName: 'Ahmet Yılmaz',
+          packageName: 'Shopier LGS Matematik Kayıtları',
+          driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+        }
+      }).catch(() => null);
+      codes = defaultCode ? [defaultCode] : DEFAULT_ACCESS_CODES;
+    }
+    res.json(codes);
   } catch (err) {
-    DEFAULT_QUOTA_APPLICATIONS = DEFAULT_QUOTA_APPLICATIONS.filter(a => a.id !== id);
-    res.json({ success: true });
+    console.error('Error fetching access codes:', err);
+    res.json(DEFAULT_ACCESS_CODES);
   }
 });
+
+app.post('/api/access-codes', async (req, res) => {
+  const { code, personName, packageName, driveUrl } = req.body;
+  try {
+    const rawCode = (code || `SHOP-${Math.random().toString(36).substring(2, 7).toUpperCase()}`).trim().toUpperCase();
+    const newCode = await prisma.accessCode.create({
+      data: {
+        code: rawCode,
+        personName: personName?.trim() || 'Öğrenci',
+        packageName: packageName?.trim() || 'Ders Kayıt Paketi',
+        driveUrl: driveUrl?.trim() || 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+      }
+    });
+    res.json(newCode);
+  } catch (err) {
+    console.error('Error creating access code:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/access-codes/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.accessCode.delete({
+      where: { id: parseInt(id) }
+    }).catch(() => null);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting access code:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/access-codes/verify', async (req, res) => {
+  const { code } = req.body;
+  if (!code || typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ success: false, message: 'Lütfen bir erişim kodu girin.' });
+  }
+
+  try {
+    let dbCodes = await prisma.accessCode.findMany().catch(() => []);
+    const allCodes = [...dbCodes, ...DEFAULT_ACCESS_CODES];
+
+    const found = allCodes.find(c => matchAccessCode(code, c.code));
+
+    if (found) {
+      return res.json({ success: true, data: found });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'Geçersiz veya süresi dolmuş erişim kodu. Lütfen öğretmeninizle iletişime geçin.'
+    });
+  } catch (err) {
+    console.error('Error verifying access code:', err);
+    const fallbackMatch = DEFAULT_ACCESS_CODES.find(c => matchAccessCode(code, c.code));
+    if (fallbackMatch) {
+      return res.json({ success: true, data: fallbackMatch });
+    }
+    return res.status(404).json({
+      success: false,
+      message: 'Geçersiz veya süresi dolmuş erişim kodu. Lütfen öğretmeninizle iletişime geçin.'
+    });
+  }
+});
+
 
 // Zoom SDK Signature Endpoint
 app.post('/api/zoom/signature', auth, async (req, res) => {

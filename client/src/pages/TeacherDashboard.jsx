@@ -143,30 +143,64 @@ const TeacherDashboard = () => {
   const [newCodeDriveUrl, setNewCodeDriveUrl] = useState('https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-');
   const [copiedCodeId, setCopiedCodeId] = useState(null);
 
-  const handleCreateAccessCode = (e) => {
+  const fetchAccessCodes = async () => {
+    try {
+      const res = await axios.get('/api/access-codes');
+      if (res.data && Array.isArray(res.data)) {
+        setAccessCodes(res.data);
+        localStorage.setItem('fulle_access_codes', JSON.stringify(res.data));
+      }
+    } catch (err) {
+      console.error('Error fetching access codes:', err);
+      const saved = localStorage.getItem('fulle_access_codes');
+      if (saved) setAccessCodes(JSON.parse(saved));
+    }
+  };
+
+  const handleCreateAccessCode = async (e) => {
     e?.preventDefault();
     if (!newCodePersonName.trim()) return;
 
     const randStr = Math.random().toString(36).substring(2, 7).toUpperCase();
     const generatedCode = `SHOP-${randStr}`;
 
-    const newEntry = {
-      id: Date.now().toString(),
+    const payload = {
       code: generatedCode,
       personName: newCodePersonName.trim(),
       packageName: newCodePackageName.trim() || 'Ders Kayıt Paketi',
-      driveUrl: newCodeDriveUrl.trim() || 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
-      createdAt: new Date().toLocaleDateString('tr-TR')
+      driveUrl: newCodeDriveUrl.trim() || 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
     };
 
-    const updated = [newEntry, ...accessCodes];
-    setAccessCodes(updated);
-    localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
+    try {
+      const res = await axios.post('/api/access-codes', payload);
+      const created = res.data;
+      const updated = [created, ...accessCodes];
+      setAccessCodes(updated);
+      localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Error creating access code on server:', err);
+      const newEntry = {
+        id: Date.now().toString(),
+        code: generatedCode,
+        personName: payload.personName,
+        packageName: payload.packageName,
+        driveUrl: payload.driveUrl,
+        createdAt: new Date().toLocaleDateString('tr-TR')
+      };
+      const updated = [newEntry, ...accessCodes];
+      setAccessCodes(updated);
+      localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
+    }
     setNewCodePersonName('');
   };
 
-  const handleDeleteAccessCode = (id) => {
-    const updated = accessCodes.filter(c => c.id !== id);
+  const handleDeleteAccessCode = async (id) => {
+    try {
+      await axios.delete(`/api/access-codes/${id}`);
+    } catch (err) {
+      console.error('Error deleting access code from server:', err);
+    }
+    const updated = accessCodes.filter(c => c.id !== id && c.id !== parseInt(id));
     setAccessCodes(updated);
     localStorage.setItem('fulle_access_codes', JSON.stringify(updated));
   };
@@ -176,6 +210,7 @@ const TeacherDashboard = () => {
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
+
 
   // PDF Notes States
   const [pdfNotesList, setPdfNotesList] = useState([]);
@@ -461,10 +496,12 @@ const TeacherDashboard = () => {
     fetchTrialRequests();
     fetchContactMessages();
     fetchCamps();
+    fetchAccessCodes();
     if (user?.role === 'HEAD_TEACHER') {
       fetchTeachers();
     }
   }, [user]);
+
 
   const fetchClassrooms = async () => {
     try {

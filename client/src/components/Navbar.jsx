@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -23,9 +24,10 @@ const Navbar = () => {
         setIsSubBannerOpen(true);
         setManualToggle(false);
       } else if (!manualToggle) {
-        // Kullanıcı elle oka basmadıysa kaydırmaya göre otomatik kapanır
-        if (currentScrollY > 60 && currentScrollY > lastScrollY) {
+        if (currentScrollY > lastScrollY && currentScrollY > 80) {
           setIsSubBannerOpen(false);
+        } else if (currentScrollY < lastScrollY) {
+          setIsSubBannerOpen(true);
         }
       }
       lastScrollY = currentScrollY;
@@ -38,8 +40,8 @@ const Navbar = () => {
   const toggleSubBanner = (e) => {
     e?.preventDefault();
     e?.stopPropagation();
-    setManualToggle(true);
     setIsSubBannerOpen(prev => !prev);
+    setManualToggle(true);
   };
 
   const handleLogout = () => {
@@ -52,28 +54,72 @@ const Navbar = () => {
   const [codeError, setCodeError] = useState('');
   const [activeVideoData, setActiveVideoData] = useState(null);
 
-  const handleVerifyAccessCode = (e) => {
+  const normalizeAccessCode = (input) => {
+    if (!input) return { raw: '', alphanumeric: '', core: '' };
+    const raw = input.toString().trim().toUpperCase();
+    const alphanumeric = raw.replace(/[^A-Z0-9]/g, '');
+    const core = alphanumeric.replace(/^SHOP/, '');
+    return { raw, alphanumeric, core: core || alphanumeric };
+  };
+
+  const matchAccessCode = (inputCode, targetCode) => {
+    if (!inputCode || !targetCode) return false;
+    const normInput = normalizeAccessCode(inputCode);
+    const normTarget = normalizeAccessCode(targetCode);
+
+    return (
+      normInput.raw === normTarget.raw ||
+      normInput.alphanumeric === normTarget.alphanumeric ||
+      (normInput.core !== '' && normTarget.core !== '' && normInput.core === normTarget.core)
+    );
+  };
+
+  const handleVerifyAccessCode = async (e) => {
     e?.preventDefault();
     setCodeError('');
-    const trimmed = accessCodeInput.trim().toUpperCase();
+    const trimmed = accessCodeInput.trim();
     if (!trimmed) {
       setCodeError('Lütfen bir erişim kodu girin.');
       return;
     }
 
-    // Demo code fallback
-    if (trimmed === 'DEMO123' || trimmed === '1234') {
-      setActiveVideoData({
-        personName: 'Örnek Öğrenci',
-        packageName: 'Shopier Özel Matematik Ders Kayıtları',
-        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
-      });
-      return;
+    try {
+      // 1. Backend API verification
+      const res = await axios.post('/api/access-codes/verify', { code: trimmed });
+      if (res.data && res.data.success && res.data.data) {
+        setActiveVideoData(res.data.data);
+        return;
+      }
+    } catch (err) {
+      // Log error internally and proceed to local fallback check
+      console.warn('Backend access code verify fallback:', err?.response?.data || err.message);
     }
 
-    // Check stored codes
+    // 2. Local storage & default fallback codes
+    const DEFAULT_CODES = [
+      {
+        personName: 'Ahmet Yılmaz',
+        packageName: 'Shopier LGS Matematik Kayıtları',
+        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+        code: 'SHOP-8A92K'
+      },
+      {
+        personName: 'Örnek Öğrenci',
+        packageName: 'Shopier Özel Matematik Ders Kayıtları',
+        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+        code: 'DEMO123'
+      },
+      {
+        personName: 'Örnek Öğrenci',
+        packageName: 'Shopier Özel Matematik Ders Kayıtları',
+        driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-',
+        code: '1234'
+      }
+    ];
+
     const saved = JSON.parse(localStorage.getItem('fulle_access_codes') || '[]');
-    const found = saved.find(c => c.code.toUpperCase() === trimmed);
+    const candidates = [...saved, ...DEFAULT_CODES];
+    const found = candidates.find(c => matchAccessCode(trimmed, c.code));
 
     if (found) {
       setActiveVideoData(found);
