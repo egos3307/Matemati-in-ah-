@@ -205,25 +205,26 @@ const Navbar = () => {
       }
     }
 
-    // 4. Google Drive Links -> Embedded Preview Player or Folder View
+    // 4. Google Drive Links -> Embedded In-Site Player
     if (decodedUrl.includes('drive.google.com')) {
+      let id = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch && fileDMatch[1]) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileDMatch[1]}/preview` };
+      if (fileDMatch) {
+        id = fileDMatch[1];
+      } else {
+        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+        if (folderMatch) {
+          id = folderMatch[1];
+        } else {
+          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (idParamMatch) {
+            id = idParamMatch[1];
+          }
+        }
       }
 
-      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-      if (folderMatch && folderMatch[1]) {
-        return {
-          type: 'folder',
-          src: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#list`,
-          folderUrl: decodedUrl
-        };
-      }
-
-      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (idParamMatch && idParamMatch[1]) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${idParamMatch[1]}/preview` };
+      if (id) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${id}/preview` };
       }
     }
 
@@ -520,8 +521,8 @@ const Navbar = () => {
                     </div>
                   </div>
 
-                  {/* 2. SİTE İÇİ OYNATICI (Kullanıcı Çarpı / Overlay Engeli Olmadan Kesintisiz İzler) */}
-                  <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-xl min-h-[380px] sm:min-h-[440px]">
+                  {/* 2. SİTE İÇİ OYNATICI (Siteden Ayrılmadan Doğrudan Oynatma) */}
+                  <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-xl h-[420px] sm:h-[480px]">
                     {(() => {
                       const currentUrl = selectedVideoUrl || activeVideoData.driveUrl;
                       const player = getInSitePlayerInfo(currentUrl);
@@ -534,45 +535,15 @@ const Navbar = () => {
                             autoPlay
                             playsInline
                             controlsList="nodownload"
-                            className="w-full h-full min-h-[380px] object-contain bg-black"
+                            className="w-full h-full object-contain bg-black"
                           />
                         );
                       }
-                      if (player.type === 'folder') {
-                        return (
-                          <div className="w-full h-full min-h-[380px] flex flex-col items-center justify-center bg-slate-900 p-6 text-center space-y-4">
-                            <div className="w-16 h-16 rounded-3xl bg-amber-400/10 text-amber-400 flex items-center justify-center border border-amber-400/20">
-                              <span className="material-symbols-outlined text-3xl">folder_zip</span>
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-black text-white">Ders Kayıtları Klasörü</h4>
-                              <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                                Bu erişim kodu tüm ders videolarını içeren Google Drive klasörüne tanımlanmıştır.
-                              </p>
-                            </div>
-                            <a
-                              href={player.folderUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2"
-                            >
-                              <span className="material-symbols-outlined text-sm">open_in_new</span>
-                              <span>Klasördeki Tüm Videoları Gör / İzle</span>
-                            </a>
-                            <div className="w-full flex-1 max-h-52 mt-2 rounded-xl overflow-hidden border border-slate-800">
-                              <iframe
-                                src={player.src}
-                                className="w-full h-full border-0"
-                                title="Google Drive Klasör Kayıtları"
-                              />
-                            </div>
-                          </div>
-                        );
-                      }
+
                       return (
                         <iframe
                           src={player.src}
-                          className="w-full h-full min-h-[380px] border-0"
+                          className="w-full h-full border-0"
                           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                           allowFullScreen
                           title="Ders Kaydı"
