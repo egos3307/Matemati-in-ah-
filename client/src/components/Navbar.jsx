@@ -207,24 +207,23 @@ const Navbar = () => {
 
     // 4. Google Drive Links -> Embedded In-Site Player
     if (decodedUrl.includes('drive.google.com')) {
-      let id = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch) {
-        id = fileDMatch[1];
-      } else {
-        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-        if (folderMatch) {
-          id = folderMatch[1];
-        } else {
-          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-          if (idParamMatch) {
-            id = idParamMatch[1];
-          }
-        }
+      if (fileDMatch && fileDMatch[1]) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileDMatch[1]}/preview` };
       }
 
-      if (id) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${id}/preview` };
+      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+      if (folderMatch && folderMatch[1]) {
+        return { type: 'iframe', src: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid` };
+      }
+
+      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idParamMatch && idParamMatch[1]) {
+        return { type: 'iframe', src: `https://drive.google.com/file/d/${idParamMatch[1]}/preview` };
+      }
+
+      if (decodedUrl.includes('/preview')) {
+        return { type: 'iframe', src: decodedUrl };
       }
     }
 

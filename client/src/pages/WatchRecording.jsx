@@ -50,27 +50,32 @@ const WatchRecording = () => {
 
     // 3. Google Drive Link Detector
     if (decodedUrl.includes('drive.google.com')) {
-      let fileId = '';
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch) {
-        fileId = fileDMatch[1];
-      } else {
-        const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-        if (folderMatch) {
-          fileId = folderMatch[1];
-        } else {
-          const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-          if (idParamMatch) {
-            fileId = idParamMatch[1];
-          }
-        }
-      }
-      
-      if (fileId) {
+      if (fileDMatch && fileDMatch[1]) {
         return {
           type: 'iframe',
-          url: `https://drive.google.com/file/d/${fileId}/preview`
+          url: `https://drive.google.com/file/d/${fileDMatch[1]}/preview`
         };
+      }
+
+      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+      if (folderMatch && folderMatch[1]) {
+        return {
+          type: 'iframe',
+          url: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid`
+        };
+      }
+
+      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idParamMatch && idParamMatch[1]) {
+        return {
+          type: 'iframe',
+          url: `https://drive.google.com/file/d/${idParamMatch[1]}/preview`
+        };
+      }
+
+      if (decodedUrl.includes('/preview')) {
+        return { type: 'iframe', url: decodedUrl };
       }
     }
     
