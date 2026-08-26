@@ -184,7 +184,7 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
             Hedef Başarı 🎯 🚀
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Fullematematik Öğrenci Kayıt Formu
+            Fullematematiği Öğrenci Kayıt Formu
           </h1>
           <p className="text-slate-500 text-sm mt-2 font-medium">
             Lütfen aşağıdaki bilgileri eksiksiz ve doğru şekilde doldurunuz.
