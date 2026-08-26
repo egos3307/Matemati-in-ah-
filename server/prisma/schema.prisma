@@ -33,6 +33,17 @@ model User {
   paymentNote     String?  // Ödeme notları
   paymentType     String?  @default("MONTHLY") // MONTHLY, LESSON
   totalLessons    Int?     @default(0) // Toplam ders sayısı (derslik ödeme tipi için)
+
+  // Öğrenci Kayıt Formu Ek Alanları
+  birthDate         String?  // Doğum Tarihi
+  schoolName        String?  // Okul Adı
+  address           String?  // Adres
+  preferredSchedule String?  // Tercih Edilen Gün ve Saat
+  educationType     String?  // Online / Yüz yüze
+  mathLevel         String?  // Matematik Seviyesi (Başlangıç / Orta / İleri)
+  goalsNotes        String?  // Hedefler / Not Edilecek Özel Durumlar
+  formDate          String?  // Form Kayıt Tarihi
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?

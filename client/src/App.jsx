@@ -15,6 +15,7 @@ import Contact from './pages/Contact';
 import PdfNotes from './pages/PdfNotes';
 import QuotaCourseSelection from './pages/QuotaCourseSelection';
 import WatchRecording from './pages/WatchRecording';
+import StudentRegistrationForm from './pages/StudentRegistrationForm';
 import KVKK from './pages/KVKK';
 import NotFound from './pages/NotFound';
 
@@ -81,6 +82,8 @@ const AppContent = () => {
         <Route path="/iletisim" element={<Contact />} />
         <Route path="/kvkk" element={<KVKK />} />
         <Route path="/giris" element={<Login />} />
+        <Route path="/ogrenci-kayit" element={<StudentRegistrationForm />} />
+        <Route path="/kayit-formu" element={<StudentRegistrationForm />} />
         <Route 
           path="/ogretmen" 
           element={

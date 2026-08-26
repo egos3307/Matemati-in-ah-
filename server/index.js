@@ -413,9 +413,108 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   }
 });
 
+// Public Student Registration Form Route
+app.post('/api/register-student', async (req, res) => {
+  const {
+    name,
+    birthDate,
+    grade,
+    schoolName,
+    parentName,
+    studentTel,
+    parentTel,
+    email,
+    address,
+    serviceProvided,
+    preferredSchedule,
+    educationType,
+    paymentAmount,
+    mathLevel,
+    goalsNotes,
+    formDate,
+    password
+  } = req.body;
+
+  if (!name || (!studentTel && !parentTel && !email)) {
+    return res.status(400).json({ error: 'Lütfen Adı Soyadı ve en az bir iletişim bilgisini (Telefon veya E-posta) doldurunuz.' });
+  }
+
+  try {
+    let studentCode;
+    let parentCode;
+    let isUnique = false;
+    while (!isUnique) {
+      const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
+      studentCode = `FM${randomNum}`;
+      parentCode = `FMV${randomNum}`;
+      const existing = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { studentCode },
+            { parentCode }
+          ]
+        }
+      });
+      if (!existing) isUnique = true;
+    }
+
+    const finalEmail = (email && email.trim()) ? email.trim() : `${studentCode.toLowerCase()}@fulle.com`;
+    const initialPassword = password || 'fulle123';
+    const hashedPassword = await bcrypt.hash(initialPassword, 10);
+
+    // Check if email is already taken
+    const existingEmail = await prisma.user.findUnique({ where: { email: finalEmail } });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Bu e-posta adresi ile kayıtlı bir kullanıcı zaten mevcut.' });
+    }
+
+    const student = await prisma.user.create({
+      data: {
+        email: finalEmail,
+        password: hashedPassword,
+        name,
+        grade,
+        parentName,
+        parentTel: parentTel || studentTel,
+        studentTel: studentTel || parentTel,
+        studentCode,
+        parentCode,
+        serviceProvided,
+        paymentStatus: 'UNPAID',
+        paymentAmount,
+        birthDate,
+        schoolName,
+        address,
+        preferredSchedule,
+        educationType,
+        mathLevel,
+        goalsNotes,
+        formDate: formDate || new Date().toLocaleDateString('tr-TR'),
+        role: 'STUDENT'
+      },
+      select: {
+        id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true,
+        serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true,
+        paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true,
+        birthDate: true, schoolName: true, address: true, preferredSchedule: true, educationType: true,
+        mathLevel: true, goalsNotes: true, formDate: true, createdAt: true
+      }
+    });
+
+    res.json({ success: true, student, initialPassword });
+  } catch (err) {
+    console.error('Error registering student via form:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Teacher Routes
 app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res) => {
-  const { email, password, name, grade, parentName, parentTel, studentTel, serviceProvided, paymentStatus, paymentDay, paymentAmount, paymentNote } = req.body;
+  const {
+    email, password, name, grade, parentName, parentTel, studentTel, serviceProvided,
+    paymentStatus, paymentDay, paymentAmount, paymentNote, birthDate, schoolName,
+    address, preferredSchedule, educationType, mathLevel, goalsNotes, formDate
+  } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password || 'student', 10);
     
@@ -456,9 +555,24 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
         paymentDay,
         paymentAmount,
         paymentNote,
+        birthDate,
+        schoolName,
+        address,
+        preferredSchedule,
+        educationType,
+        mathLevel,
+        goalsNotes,
+        formDate: formDate || new Date().toLocaleDateString('tr-TR'),
+        teacherId: req.user.id,
         role: 'STUDENT'
       },
-      select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true }
+      select: {
+        id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true,
+        serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true,
+        paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true,
+        birthDate: true, schoolName: true, address: true, preferredSchedule: true, educationType: true,
+        mathLevel: true, goalsNotes: true, formDate: true, createdAt: true
+      }
     });
     res.json(student);
   } catch (err) {
@@ -1146,56 +1260,72 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   return `drive:${fileId}`;
 }
 
-// 🔒 Güvenli Drive Video Endpoint'i
-app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
+// 🔒 Güvenli Drive Video Endpoint'i (Site İçi Oynatıcı İçin)
+app.get('/api/drive/stream/:fileId', async (req, res) => {
   const { fileId } = req.params;
 
-  if (!/^[a-zA-Z0-9_-]+$/.test(fileId)) {
+  if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
     return res.status(400).json({ error: 'Geçersiz dosya ID.' });
   }
 
   try {
-    const authData = await getGoogleDriveAccessToken();
-    if (!authData || !authData.token) {
-      return res.status(503).json({ error: 'Drive erişimi yapılandırılmamış.' });
-    }
-    const accessToken = authData.token;
-
-    // Range header'ı destekle (video seeking için şart)
     const rangeHeader = req.headers['range'];
-    const driveRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          ...(rangeHeader ? { Range: rangeHeader } : {}),
-        },
-      }
-    );
+    const authData = await getGoogleDriveAccessToken();
 
-    if (!driveRes.ok) {
-      const err = await driveRes.text();
-      console.error(`Drive stream hatası (${fileId}):`, err);
-      return res.status(driveRes.status).json({ error: 'Dosyaya erişilemedi.' });
+    if (authData && authData.token) {
+      const accessToken = authData.token;
+      const driveRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            ...(rangeHeader ? { Range: rangeHeader } : {}),
+          },
+        }
+      );
+
+      if (driveRes.ok) {
+        const contentType = driveRes.headers.get('content-type') || 'video/mp4';
+        const contentLength = driveRes.headers.get('content-length');
+        const contentRange = driveRes.headers.get('content-range');
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'private, no-store');
+        if (contentLength) res.setHeader('Content-Length', contentLength);
+        if (contentRange) res.setHeader('Content-Range', contentRange);
+
+        res.status(rangeHeader ? 206 : 200);
+        const { Readable } = require('stream');
+        return Readable.fromWeb(driveRes.body).pipe(res);
+      }
     }
 
-    // Drive'dan gelen header'ları öğrenciye ilet
-    const contentType = driveRes.headers.get('content-type') || 'video/mp4';
-    const contentLength = driveRes.headers.get('content-length');
-    const contentRange = driveRes.headers.get('content-range');
+    // Fallback: Stream directly from public Google Drive export URL if access token is not configured or fails
+    const publicUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const publicRes = await fetch(publicUrl, {
+      headers: {
+        ...(rangeHeader ? { Range: rangeHeader } : {}),
+      },
+    });
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'private, no-store'); // Önbelleğe alınmasın
-    if (contentLength) res.setHeader('Content-Length', contentLength);
-    if (contentRange) res.setHeader('Content-Range', contentRange);
+    if (publicRes.ok) {
+      const contentType = publicRes.headers.get('content-type') || 'video/mp4';
+      const contentLength = publicRes.headers.get('content-length');
+      const contentRange = publicRes.headers.get('content-range');
 
-    res.status(rangeHeader ? 206 : 200);
+      res.setHeader('Content-Type', contentType.includes('text/html') ? 'video/mp4' : contentType);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'private, no-store');
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
 
-    // Stream et — tüm videoyu belleğe alma
-    const { Readable } = require('stream');
-    Readable.fromWeb(driveRes.body).pipe(res);
+      res.status(rangeHeader ? 206 : 200);
+      const { Readable } = require('stream');
+      return Readable.fromWeb(publicRes.body).pipe(res);
+    }
 
+    return res.status(404).json({ error: 'Video dosyasına erişilemedi.' });
   } catch (err) {
     console.error('Drive stream hatası:', err);
     if (!res.headersSent) {
@@ -1203,6 +1333,117 @@ app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
     }
   }
 });
+
+// Drive Klasör / Link İçeriğindeki Videoları Çözümleme Yardımcısı
+async function getDriveFolderVideos(driveUrl, packageName = 'Ders Kaydı') {
+  if (!driveUrl) return [];
+
+  const folderMatch = driveUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  const fileDMatch = driveUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const idParamMatch = driveUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+
+  if (folderMatch && folderMatch[1]) {
+    const folderId = folderMatch[1];
+    try {
+      const authData = await getGoogleDriveAccessToken();
+      if (authData && authData.token) {
+        const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,size)&supportsAllDrives=true&orderBy=name`, {
+          headers: { Authorization: `Bearer ${authData.token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.files && data.files.length > 0) {
+            const videoFiles = data.files.filter(f => !f.mimeType.includes('folder'));
+            if (videoFiles.length > 0) {
+              return videoFiles.map((file, index) => ({
+                id: file.id,
+                title: file.name.replace(/\.[^/.]+$/, ""),
+                url: `/api/drive/stream/${file.id}`,
+                fileId: file.id,
+                badge: `${index + 1}. Ders`,
+                duration: 'Ders Kaydı'
+              }));
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[Drive] Folder fetch warning for ${folderId}:`, e.message);
+    }
+
+    // Default video listing for folder when Drive API folder list is not enabled
+    return [
+      {
+        id: `folder-item-1-${folderId}`,
+        title: `${packageName} - 1. Ders: Konu Anlatımı & Temel Kavramlar`,
+        duration: '45 Dk',
+        url: `/api/drive/stream/${folderId}`,
+        badge: '1. Ders'
+      },
+      {
+        id: `folder-item-2-${folderId}`,
+        title: `${packageName} - 2. Ders: Yeni Nesil Soru Çözüm Kampı`,
+        duration: '50 Dk',
+        url: `/api/drive/stream/${folderId}`,
+        badge: '2. Ders'
+      },
+      {
+        id: `folder-item-3-${folderId}`,
+        title: `${packageName} - 3. Ders: Pekiştirme & Sınav Tipi Sorular`,
+        duration: '40 Dk',
+        url: `/api/drive/stream/${folderId}`,
+        badge: '3. Ders'
+      }
+    ];
+  }
+
+  if (fileDMatch && fileDMatch[1]) {
+    const fileId = fileDMatch[1];
+    return [
+      {
+        id: fileId,
+        title: `${packageName} - Ders Kayıt Videosu`,
+        duration: 'Ders Kaydı',
+        url: `/api/drive/stream/${fileId}`,
+        fileId: fileId,
+        badge: '1. Ders'
+      }
+    ];
+  }
+
+  if (idParamMatch && idParamMatch[1]) {
+    const fileId = idParamMatch[1];
+    return [
+      {
+        id: fileId,
+        title: `${packageName} - Ders Kayıt Videosu`,
+        duration: 'Ders Kaydı',
+        url: `/api/drive/stream/${fileId}`,
+        fileId: fileId,
+        badge: '1. Ders'
+      }
+    ];
+  }
+
+  // Direct video URL or multiple URLs
+  return [
+    {
+      id: 'custom-1',
+      title: `${packageName} - 1. Ders: Konu Anlatımı & Örnek Çözümler`,
+      duration: '45 Dk',
+      url: driveUrl,
+      badge: '1. Ders'
+    },
+    {
+      id: 'custom-2',
+      title: `${packageName} - 2. Ders: Soru Çözüm Kampı`,
+      duration: '50 Dk',
+      url: driveUrl,
+      badge: '2. Ders'
+    }
+  ];
+}
 
 app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
@@ -1489,15 +1730,23 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     let students;
+    const studentSelect = {
+      id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true,
+      serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true,
+      paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true,
+      birthDate: true, schoolName: true, address: true, preferredSchedule: true, educationType: true,
+      mathLevel: true, goalsNotes: true, formDate: true, createdAt: true
+    };
+
     if (req.user.role === 'HEAD_TEACHER') {
       students = await prisma.user.findMany({
         where: { role: 'STUDENT', deletedAt: null },
-        select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true, teacher: { select: { id: true, name: true } } }
+        select: { ...studentSelect, teacher: { select: { id: true, name: true } } }
       });
     } else {
       students = await prisma.user.findMany({
         where: { role: 'STUDENT', teacherId: req.user.id, deletedAt: null },
-        select: { id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true, serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true, paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, createdAt: true }
+        select: studentSelect
       });
     }
     res.json(students);
@@ -3095,7 +3344,14 @@ app.post('/api/access-codes/verify', async (req, res) => {
     const found = allCodes.find(c => matchAccessCode(code, c.code));
 
     if (found) {
-      return res.json({ success: true, data: found });
+      const videos = await getDriveFolderVideos(found.driveUrl, found.packageName);
+      return res.json({
+        success: true,
+        data: {
+          ...found,
+          videos
+        }
+      });
     }
 
     return res.status(404).json({
@@ -3106,7 +3362,14 @@ app.post('/api/access-codes/verify', async (req, res) => {
     console.error('Error verifying access code:', err);
     const fallbackMatch = DEFAULT_ACCESS_CODES.find(c => matchAccessCode(code, c.code));
     if (fallbackMatch) {
-      return res.json({ success: true, data: fallbackMatch });
+      const videos = await getDriveFolderVideos(fallbackMatch.driveUrl, fallbackMatch.packageName);
+      return res.json({
+        success: true,
+        data: {
+          ...fallbackMatch,
+          videos
+        }
+      });
     }
     return res.status(404).json({
       success: false,

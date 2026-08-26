@@ -48,34 +48,30 @@ const WatchRecording = () => {
       }
     }
 
-    // 3. Google Drive Link Detector
+    // 3. Google Drive Link Detector -> Stream native video via server proxy
     if (decodedUrl.includes('drive.google.com')) {
       const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (fileDMatch && fileDMatch[1]) {
         return {
-          type: 'iframe',
-          url: `https://drive.google.com/file/d/${fileDMatch[1]}/preview`
+          type: 'native',
+          url: `/api/drive/stream/${fileDMatch[1]}`
         };
       }
 
       const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
       if (folderMatch && folderMatch[1]) {
         return {
-          type: 'iframe',
-          url: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid`
+          type: 'native',
+          url: `/api/drive/stream/${folderMatch[1]}`
         };
       }
 
       const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
       if (idParamMatch && idParamMatch[1]) {
         return {
-          type: 'iframe',
-          url: `https://drive.google.com/file/d/${idParamMatch[1]}/preview`
+          type: 'native',
+          url: `/api/drive/stream/${idParamMatch[1]}`
         };
-      }
-
-      if (decodedUrl.includes('/preview')) {
-        return { type: 'iframe', url: decodedUrl };
       }
     }
     
@@ -162,36 +158,8 @@ const WatchRecording = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {player.type === 'native' ? (
-            <a
-              href={player.url}
-              download="ders_kaydi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md shadow-emerald-950/20"
-              title="Donma problemi yaşarsanız indirip izleyebilirsiniz"
-            >
-              <span className="material-symbols-outlined text-sm">download</span>
-              Donuyorsa İndir
-            </a>
-          ) : (
-            <a
-              href={decodeURIComponent(videoUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-xs font-black transition-all hover:scale-[1.02] shadow-md ${
-                isSafari
-                  ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-950/20 animate-pulse'
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-950/20'
-              }`}
-              title={isSafari ? "Safari'de iframe çalışmıyorsa buraya tıklayın" : "Kaydı yeni sekmede aç"}
-            >
-              <span className="material-symbols-outlined text-sm">open_in_new</span>
-              {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da Aç" : "Dış Kaynakta Aç"}
-            </a>
-          )}
           <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm hidden md:block">
-            Fullematematiği
+            Fullematematiği Korumalı Oynatıcı
           </div>
         </div>
       </div>
@@ -199,86 +167,22 @@ const WatchRecording = () => {
       {/* Video Viewport */}
       <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
 
-        {/* GoFile: iframe desteklemiyor, yeni sekmede aç */}
-        {player.type === 'gofile' ? (
-          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
-            <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-2">
-              <span className="material-symbols-outlined text-5xl text-indigo-400">play_circle</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-white mb-2">Ders Kaydını İzleyin</h2>
-              <p className="text-slate-400 text-sm max-w-md leading-relaxed">
-                Bu kayıt harici bir platformda barındırılmaktadır. Aşağıdaki butona tıklayarak videoyu yeni sekmede izleyebilirsiniz.
-              </p>
-            </div>
-            <a
-              href={player.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20 hover:scale-[1.02]"
-            >
-              <span className="material-symbols-outlined text-lg">open_in_new</span>
-              Kaydı Yeni Sekmede İzle
-            </a>
-          </div>
-        ) : isSafari && player.type === 'iframe' ? (
-          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
-            <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
-              <span className="material-symbols-outlined text-5xl text-amber-400">play_circle</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-white mb-2">Ders Kaydını Açın</h2>
-              <p className="text-slate-400 text-sm max-w-md leading-relaxed">
-                Safari tarayıcısı güvenlik politikaları nedeniyle video oynatıcıyı doğrudan gösteremiyor.
-                Kaydı izlemek için aşağıdaki butona tıklayın.
-              </p>
-            </div>
-            <a
-              href={decodeURIComponent(videoUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-2xl text-sm font-black transition-all shadow-lg shadow-amber-500/20 hover:scale-[1.02]"
-            >
-              <span className="material-symbols-outlined text-lg">open_in_new</span>
-              {decodeURIComponent(videoUrl).includes('drive.google.com') ? "Google Drive'da İzle" : "Yeni Sekmede Aç"}
-            </a>
-            <p className="text-slate-600 text-xs max-w-xs">
-              Chrome veya Firefox tarayıcıyla açarsanız video doğrudan burada oynar.
-            </p>
-          </div>
-        ) : videoError ? (
+        {videoError ? (
           <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
             <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
             <div>
               <h2 className="text-xl font-black text-white mb-2">Video Oynatılamıyor</h2>
               <p className="text-slate-400 text-sm max-w-md">
-                Ders kaydı bu cihazda oynatılamıyor. Kaydı yeni sekmede açmayı veya indirmeyi deneyebilirsiniz.
+                Ders kaydı yüklenirken bir sorun oluştu. Lütfen bağlantınızı kontrol edip sayfayı yenileyin.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href={player.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all"
-              >
-                <span className="material-symbols-outlined text-sm">open_in_new</span>
-                {player.type === 'iframe' ? "Google Drive'da Aç" : "Yeni Sekmede Aç"}
-              </a>
-              <a
-                href={player.url}
-                download
-                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black transition-all"
-              >
-                <span className="material-symbols-outlined text-sm">download</span>
-                İndir
-              </a>
-            </div>
-            {isSafari && (
-              <p className="text-slate-600 text-xs max-w-xs">
-                İpucu: Yeni kaydedilen dersler otomatik olarak Safari uyumlu MP4 formatında kaydedilecektir.
-              </p>
-            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">refresh</span>
+              Yeniden Dene
+            </button>
           </div>
         ) : player.type === 'iframe' ? (
           <div className="relative w-full h-full">

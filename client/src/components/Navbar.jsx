@@ -166,7 +166,20 @@ const Navbar = () => {
     if (!url) return { type: 'none', src: '' };
     const decodedUrl = decodeURIComponent(url).trim();
 
-    // 1. Pixeldrain -> Direct HTML5 Video Stream
+    // 1. Backend Drive stream URL or uploaded file
+    if (
+      decodedUrl.includes('/api/drive/stream/') ||
+      decodedUrl.startsWith('/uploads/') ||
+      decodedUrl.endsWith('.mp4') ||
+      decodedUrl.endsWith('.webm') ||
+      decodedUrl.endsWith('.mov') ||
+      decodedUrl.includes('catbox.moe') ||
+      decodedUrl.includes('gtv-videos-bucket')
+    ) {
+      return { type: 'video', src: decodedUrl };
+    }
+
+    // 2. Pixeldrain -> Direct HTML5 Video Stream
     if (decodedUrl.includes('pixeldrain.com')) {
       const match = decodedUrl.match(/\/u\/([a-zA-Z0-9_-]+)/);
       if (match && match[1]) {
@@ -174,19 +187,31 @@ const Navbar = () => {
       }
     }
 
-    // 2. Native Video Files (Uploads, MP4, WebM, Stream, Catbox)
-    if (
-      decodedUrl.startsWith('/uploads/') ||
-      decodedUrl.endsWith('.mp4') ||
-      decodedUrl.endsWith('.webm') ||
-      decodedUrl.endsWith('.mov') ||
-      decodedUrl.includes('/api/drive/stream/') ||
-      decodedUrl.includes('catbox.moe')
-    ) {
-      return { type: 'video', src: decodedUrl };
+    // 3. Drive stream format (drive:FILEID)
+    if (decodedUrl.startsWith('drive:')) {
+      const fileId = decodedUrl.replace('drive:', '');
+      return { type: 'video', src: `/api/drive/stream/${fileId}` };
     }
 
-    // 3. YouTube Links -> Embedded Player
+    // 4. Google Drive Link Detector -> Native Backend Stream (/api/drive/stream/:fileId)
+    if (decodedUrl.includes('drive.google.com')) {
+      const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileDMatch && fileDMatch[1]) {
+        return { type: 'video', src: `/api/drive/stream/${fileDMatch[1]}` };
+      }
+
+      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idParamMatch && idParamMatch[1]) {
+        return { type: 'video', src: `/api/drive/stream/${idParamMatch[1]}` };
+      }
+
+      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+      if (folderMatch && folderMatch[1]) {
+        return { type: 'video', src: `/api/drive/stream/${folderMatch[1]}` };
+      }
+    }
+
+    // 5. YouTube Links -> Embedded Player
     if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
       let videoId = '';
       const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
@@ -205,29 +230,7 @@ const Navbar = () => {
       }
     }
 
-    // 4. Google Drive Links -> Embedded In-Site Player
-    if (decodedUrl.includes('drive.google.com')) {
-      const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch && fileDMatch[1]) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${fileDMatch[1]}/preview` };
-      }
-
-      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-      if (folderMatch && folderMatch[1]) {
-        return { type: 'iframe', src: `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid` };
-      }
-
-      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (idParamMatch && idParamMatch[1]) {
-        return { type: 'iframe', src: `https://drive.google.com/file/d/${idParamMatch[1]}/preview` };
-      }
-
-      if (decodedUrl.includes('/preview')) {
-        return { type: 'iframe', src: decodedUrl };
-      }
-    }
-
-    return { type: 'iframe', src: decodedUrl };
+    return { type: 'video', src: decodedUrl };
   };
 
   return (
@@ -242,6 +245,9 @@ const Navbar = () => {
           <nav className="flex flex-1 justify-center gap-2 sm:gap-6 md:gap-10 text-[11px] sm:text-xs md:text-sm px-2">
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/">Ana Sayfa</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/derslerimiz">Derslerimiz</Link>
+            <Link className="font-semibold text-amber-600 font-bold transition-colors hover:text-amber-700 whitespace-nowrap flex items-center gap-1" to="/ogrenci-kayit">
+              <span>🎯 Kayıt Formu</span>
+            </Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/blog">Blog</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/iletisim">İletişim</Link>
           </nav>

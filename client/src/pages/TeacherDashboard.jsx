@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import LiveMeeting from '../components/LiveMeeting';
 import ZoomMeeting from '../components/ZoomMeeting';
+import StudentRegistrationForm from './StudentRegistrationForm';
 
 const parseZoomUrl = (url) => {
   if (!url) return { meetingNumber: '', password: '' };
@@ -2392,6 +2393,84 @@ const TeacherDashboard = () => {
                             )
                           )}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ÖĞRENCİ KAYIT FORMU BİLGİLERİ (HEDEF BAŞARI 🎯) */}
+                <div className="mt-8 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-orange-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                        🎯
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 text-sm">Fullematematik Öğrenci Kayıt Formu Bilgileri</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Kayıt esnasında doldurulan tüm bilgiler (Hedef Başarı 🎯🚀)</p>
+                      </div>
+                    </div>
+                    {selectedStudent.formDate && (
+                      <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+                        Form Tarihi: {selectedStudent.formDate}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* 1. Öğrenci Bilgileri */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary border-b border-slate-200/60 pb-2">
+                        <span className="material-symbols-outlined text-base">person</span>
+                        <span>1. Öğrenci Bilgileri</span>
+                      </div>
+                      <div className="text-xs space-y-1.5 pt-1">
+                        <p><span className="text-slate-400 font-medium">Adı Soyadı:</span> <strong className="text-slate-800 block">{selectedStudent.name}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Doğum Tarihi:</span> <strong className="text-slate-800 block">{selectedStudent.birthDate || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Sınıf / Düzey:</span> <strong className="text-slate-800 block">{selectedStudent.grade}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Okul Adı:</span> <strong className="text-slate-800 block">{selectedStudent.schoolName || '-'}</strong></p>
+                      </div>
+                    </div>
+
+                    {/* 2. İletişim Bilgileri */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary border-b border-slate-200/60 pb-2">
+                        <span className="material-symbols-outlined text-base">call</span>
+                        <span>2. İletişim Bilgileri</span>
+                      </div>
+                      <div className="text-xs space-y-1.5 pt-1">
+                        <p><span className="text-slate-400 font-medium">Veli Adı Soyadı:</span> <strong className="text-slate-800 block">{selectedStudent.parentName || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Telefon:</span> <strong className="text-slate-800 block">{selectedStudent.studentTel || selectedStudent.parentTel || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">E-posta:</span> <strong className="text-slate-800 block truncate" title={selectedStudent.email}>{selectedStudent.email}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Adres:</span> <strong className="text-slate-800 block">{selectedStudent.address || '-'}</strong></p>
+                      </div>
+                    </div>
+
+                    {/* 3. Ders Bilgileri */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary border-b border-slate-200/60 pb-2">
+                        <span className="material-symbols-outlined text-base">menu_book</span>
+                        <span>3. Ders Bilgileri</span>
+                      </div>
+                      <div className="text-xs space-y-1.5 pt-1">
+                        <p><span className="text-slate-400 font-medium">Ders Seçimi:</span> <strong className="text-slate-800 block">{selectedStudent.serviceProvided || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Tercih Edilen Gün/Saat:</span> <strong className="text-slate-800 block">{selectedStudent.preferredSchedule || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Online / Yüz Yüze:</span> <strong className="text-slate-800 block">{selectedStudent.educationType || 'Online'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Ders Ücreti:</span> <strong className="text-slate-800 block">{selectedStudent.paymentAmount || '-'}</strong></p>
+                      </div>
+                    </div>
+
+                    {/* 4. Ek Bilgiler & Onay */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary border-b border-slate-200/60 pb-2">
+                        <span className="material-symbols-outlined text-base">verified</span>
+                        <span>4. Ek Bilgiler & Onay</span>
+                      </div>
+                      <div className="text-xs space-y-1.5 pt-1">
+                        <p><span className="text-slate-400 font-medium">Matematik Seviyesi:</span> <strong className="text-slate-800 block">{selectedStudent.mathLevel || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Hedefler / Özel Durumlar:</span> <strong className="text-slate-800 block" title={selectedStudent.goalsNotes}>{selectedStudent.goalsNotes || '-'}</strong></p>
+                        <p><span className="text-slate-400 font-medium">Onay & İletişim İzni:</span> <span className="inline-block bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[10px]">Onaylandı ✔</span></p>
+                        <p><span className="text-slate-400 font-medium">İmza Beyanı:</span> <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Onaylıyorum (İmzalı)</span></p>
                       </div>
                     </div>
                   </div>
@@ -4850,65 +4929,21 @@ const TeacherDashboard = () => {
 
       {/* Add Student Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
-            <button onClick={() => setShowAddModal(false)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900 transition-colors">
-              <span className="material-symbols-outlined text-3xl">close</span>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl p-6 sm:p-10 relative animate-in zoom-in-95 duration-300 my-8 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="absolute right-6 top-6 z-10 text-slate-400 hover:text-slate-900 transition-colors p-2 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
             </button>
-            <h3 className="text-3xl font-black text-slate-900 mb-2">Yeni Öğrenci Kaydı</h3>
-            <p className="text-slate-400 font-bold text-sm mb-10 uppercase tracking-widest">Eksiksiz doldurunuz</p>
-            
-            <form onSubmit={handleAddStudent} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Ad Soyad</label>
-                  <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} required/>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Sınıf</label>
-                  <select className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" value={newStudent.grade} onChange={(e) => setNewStudent({...newStudent, grade: e.target.value})} required>
-                    <option value="">Seçiniz</option>
-                    {[5,6,7].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
-                    <option value="LGS">LGS (8. Sınıf)</option>
-                    {[9,10,11,12].map(g => <option key={g} value={g}>{g}. Sınıf</option>)}
-                    <option value="Mezun">Mezun</option>
-                    <option value="AGS">AGS</option>
-                    <option value="ALES">ALES</option>
-                    <option value="DGS">DGS</option>
-                    <option value="KPSS">KPSS</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">E-posta (Opsiyonel)</label>
-                  <input type="email" className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none" value={newStudent.email} onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}/>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Öğrenci Tel (Opsiyonel)</label>
-                  <input type="tel" className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none" value={newStudent.studentTel || ''} onChange={(e) => setNewStudent({...newStudent, studentTel: e.target.value})}/>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Veli Adı</label>
-                  <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none" value={newStudent.parentName} onChange={(e) => setNewStudent({...newStudent, parentName: e.target.value})}/>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1">Veli Tel</label>
-                  <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none" value={newStudent.parentTel} onChange={(e) => setNewStudent({...newStudent, parentTel: e.target.value})}/>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-4 border-t border-slate-100">
-                <label className="text-xs font-black text-slate-400 uppercase ml-1">Verilen Hizmet (Opsiyonel)</label>
-                <input className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold outline-none focus:ring-2 focus:ring-primary/20" placeholder="Örn: Haftalık 2 Ders Matematik Özel Ders, LGS Hazırlık Paketi vb." value={newStudent.serviceProvided || ''} onChange={(e) => setNewStudent({...newStudent, serviceProvided: e.target.value})}/>
-              </div>
-
-              <button type="submit" className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-all text-lg mt-4">Kaydı Tamamla</button>
-            </form>
+            <StudentRegistrationForm
+              isModal={true}
+              onClose={() => setShowAddModal(false)}
+              onSuccess={(newStd) => {
+                fetchStudents();
+              }}
+            />
           </div>
         </div>
       )}
