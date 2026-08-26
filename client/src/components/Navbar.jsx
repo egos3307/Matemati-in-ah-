@@ -245,9 +245,6 @@ const Navbar = () => {
           <nav className="flex flex-1 justify-center gap-2 sm:gap-6 md:gap-10 text-[11px] sm:text-xs md:text-sm px-2">
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/">Ana Sayfa</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/derslerimiz">Derslerimiz</Link>
-            <Link className="font-semibold text-amber-600 font-bold transition-colors hover:text-amber-700 whitespace-nowrap flex items-center gap-1" to="/ogrenci-kayit">
-              <span>🎯 Kayıt Formu</span>
-            </Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/blog">Blog</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/iletisim">İletişim</Link>
           </nav>
