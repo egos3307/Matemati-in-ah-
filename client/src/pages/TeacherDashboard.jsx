@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LiveMeeting from '../components/LiveMeeting';
 import ZoomMeeting from '../components/ZoomMeeting';
 import StudentRegistrationForm from './StudentRegistrationForm';
+import SeoAiManager from '../components/SeoAiManager';
 
 const parseZoomUrl = (url) => {
   if (!url) return { meetingNumber: '', password: '' };
@@ -1349,6 +1350,13 @@ const TeacherDashboard = () => {
                 >
                   <span className="material-symbols-outlined">edit_note</span>
                   <span>Blog Yönetimi</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('seo-ai'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'seo-ai' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">auto_awesome</span>
+                  <span>SEO & AI Blog</span>
                 </button>
                 <button 
                   onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
@@ -3254,6 +3262,12 @@ const TeacherDashboard = () => {
                 </button>
               </form>
             </div>
+            </div>
+          )}
+
+          {activeTab === 'seo-ai' && user?.role === 'HEAD_TEACHER' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <SeoAiManager />
             </div>
           )}
 

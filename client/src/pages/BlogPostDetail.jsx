@@ -65,13 +65,32 @@ const BlogPostDetail = () => {
     );
   }
 
+  // Parse FAQ and Internal Links safely
+  let parsedFaq = [];
+  if (post?.faq) {
+    if (typeof post.faq === 'string') {
+      try { parsedFaq = JSON.parse(post.faq); } catch { parsedFaq = []; }
+    } else if (Array.isArray(post.faq)) {
+      parsedFaq = post.faq;
+    }
+  }
+
+  let parsedInternalLinks = [];
+  if (post?.internalLinks) {
+    if (typeof post.internalLinks === 'string') {
+      try { parsedInternalLinks = JSON.parse(post.internalLinks); } catch { parsedInternalLinks = []; }
+    } else if (Array.isArray(post.internalLinks)) {
+      parsedInternalLinks = post.internalLinks;
+    }
+  }
+
   // FAQ Schema if available
   let faqSchema = null;
-  if (post.faq && post.faq.length > 0) {
+  if (parsedFaq && parsedFaq.length > 0) {
     faqSchema = {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
-      mainEntity: post.faq.map(item => ({
+      mainEntity: parsedFaq.map(item => ({
         '@type': 'Question',
         name: item.question,
         acceptedAnswer: {
@@ -173,18 +192,40 @@ const BlogPostDetail = () => {
           />
 
           {/* FAQ Section if available */}
-          {post.faq && post.faq.length > 0 && (
+          {parsedFaq && parsedFaq.length > 0 && (
             <section className="mt-12 rounded-2xl bg-slate-50 p-6 md:p-8 border border-slate-200/80">
               <h2 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">help</span>
                 <span>Sıkça Sorulan Sorular</span>
               </h2>
               <div className="space-y-4">
-                {post.faq.map((item, idx) => (
+                {parsedFaq.map((item, idx) => (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs">
                     <h3 className="font-bold text-slate-900 text-sm mb-1">{item.question}</h3>
                     <p className="text-xs text-slate-600 leading-relaxed">{item.answer}</p>
                   </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Internal Links Suggestions */}
+          {parsedInternalLinks && parsedInternalLinks.length > 0 && (
+            <section className="mt-8 rounded-2xl bg-primary/5 p-6 border border-primary/10">
+              <h3 className="font-extrabold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-base">link</span>
+                <span>İlgili Matematik Rehberleri & Konular</span>
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {parsedInternalLinks.map((link, idx) => (
+                  <Link
+                    key={idx}
+                    to={link.targetUrl || link.url || '/blog'}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary hover:border-primary transition-all shadow-2xs"
+                  >
+                    <span>{link.anchorText || link.anchor || 'İlgili İçerik'}</span>
+                    <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                  </Link>
                 ))}
               </div>
             </section>

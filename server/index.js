@@ -264,6 +264,11 @@ const clearLoginAttempts = async (identifier, ip) => {
 // Serve static recorded lessons
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// SEO & AI Blog Routes
+const seoRoutes = require('./routes/seoRoutes');
+app.use('/api/teacher/seo', seoRoutes);
+app.use('/api', seoRoutes);
+
 app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });

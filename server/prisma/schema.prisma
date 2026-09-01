@@ -130,16 +130,24 @@ model StudentHomework {
 }
 
 model BlogPost {
-  id         Int      @id @default(autoincrement())
-  title      String
-  slug       String   @unique
-  content    String
-  excerpt    String
-  coverImage String?
-  authorId   Int
-  author     User     @relation(fields: [authorId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  title             String
+  slug              String   @unique
+  content           String
+  excerpt           String
+  coverImage        String?
+  metaTitle         String?
+  metaDescription   String?
+  targetKeyword     String?
+  secondaryKeywords String?
+  faq               String?
+  grade             String?
+  topic             String?
+  internalLinks     String?
+  authorId          Int
+  author            User     @relation(fields: [authorId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Camp {
@@ -263,5 +271,68 @@ model AccessCode {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model SeoOpportunity {
+  id            Int      @id @default(autoincrement())
+  keyword       String   @unique
+  source        String   // "GOOGLE_SEARCH_CONSOLE", "GOOGLE_AUTOCOMPLETE", "GOOGLE_TRENDS", "INTERNAL_PERFORMANCE"
+  score         Float    @default(0)
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  ctr           Float    @default(0)
+  position      Float    @default(0)
+  trendData     String?  // JSON string
+  reason        String?
+  status        String   @default("NEW") // "NEW", "DRAFT_CREATED", "UPDATING_SUGGESTED", "IGNORED"
+  targetDraftId Int?
+  targetPostId  Int?
+  discoveredAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AiBlogDraft {
+  id                   Int      @id @default(autoincrement())
+  opportunityId        Int?
+  title                String
+  slug                 String
+  metaTitle            String?
+  metaDescription      String?
+  excerpt              String?
+  targetKeyword        String
+  secondaryKeywords    String?  // JSON string array
+  grade                String?
+  topic                String?
+  content              String
+  faq                  String?  // JSON string array of {question, answer}
+  internalLinks        String?  // JSON string array of {anchor, url}
+  verificationRequired Boolean  @default(false)
+  aiProvider           String?  // "gemini" or "openrouter"
+  aiModel              String?
+  status               String   @default("DRAFT") // "DRAFT", "PUBLISHED", "ARCHIVED"
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model SeoLog {
+  id                   Int      @id @default(autoincrement())
+  action               String
+  queriesFound         Int      @default(0)
+  opportunitiesCreated Int      @default(0)
+  aiProvider           String?
+  usageTokens          Int?
+  status               String   @default("SUCCESS") // "SUCCESS", "ERROR", "WARNING"
+  details              String?
+  fallbackUsed         Boolean  @default(false)
+  createdAt            DateTime @default(now())
+}
+
+model SeoSettings {
+  id                     Int      @id @default(1)
+  autoDraftHighScores    Boolean  @default(false)
+  maxOpportunitiesPerRun Int      @default(20)
+  maxAutoDraftsPerRun    Int      @default(2)
+  updatedAt              DateTime @updatedAt
+}
+
 
 
