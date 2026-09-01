@@ -212,9 +212,80 @@ Yalnızca ve yalnızca yukarıdaki JSON nesnesini döndür.
   return draft;
 }
 
+/**
+ * Step 3: Refine Existing Blog Draft based on Teacher's Prompt Instruction
+ */
+async function refineBlogDraftWithInstruction({ existingDraft, instruction }) {
+  const prompt = `
+Sen Fullematematiği'nin Baş Öğretmenisin. Mevcut bir blog taslağını, diğer Baş Öğretmen'in verdiği özel talimata göre yeniden düzenleyeceksin.
+
+MEVCUT DRAFT:
+- Başlık: "${existingDraft.title}"
+- Anahtar Kelime: "${existingDraft.targetKeyword}"
+- Seviye: "${existingDraft.grade || 'Genel'}"
+- Özet: "${existingDraft.excerpt || ''}"
+- Mevcut HTML İçeriği: ${JSON.stringify(existingDraft.content || '')}
+- Mevcut FAQ: ${JSON.stringify(existingDraft.faq || [])}
+
+ÖĞRETMENİN ÖZEL DÜZENLEME TALİMATI:
+"${instruction}"
+
+GÖREV:
+Mevcut taslağı öğretmenin talimatına göre GÜNCELLE VE YENİDEN YAZ.
+Öğretmenin istediği eklemeleri yap, tonlamayı ayarla veya soru/içerik ekle.
+
+ÇIKTI FORMATI (Aşağıdaki JSON formatında döndür):
+{
+  "title": "Güncellenmiş Başlık",
+  "slug": "${existingDraft.slug}",
+  "metaTitle": "Güncellenmiş Meta Title",
+  "metaDescription": "Güncellenmiş Meta Description",
+  "excerpt": "Güncellenmiş Özet",
+  "targetKeyword": "${existingDraft.targetKeyword}",
+  "secondaryKeywords": [],
+  "grade": "${existingDraft.grade || 'Genel'}",
+  "topic": "${existingDraft.topic || existingDraft.targetKeyword}",
+  "content": "<h2>HTML İçerik...</h2>",
+  "faq": [
+    { "question": "...", "answer": "..." }
+  ],
+  "internalLinkSuggestions": [],
+  "verificationRequired": false
+}
+Sadece ve sadece yukarıdaki JSON nesnesini döndür.
+`;
+
+  const result = await callAiWithFallback(prompt, { jsonMode: true, maxTokens: 8192 });
+  const parsed = cleanAndParseJson(result.rawResponse);
+
+  if (!parsed || !parsed.title || !parsed.content) {
+    throw new Error('AI taslağı düzenlerken geçerli JSON çıktısı üretemedi.');
+  }
+
+  return {
+    title: parsed.title || existingDraft.title,
+    slug: parsed.slug || existingDraft.slug,
+    metaTitle: parsed.metaTitle || existingDraft.metaTitle,
+    metaDescription: parsed.metaDescription || existingDraft.metaDescription,
+    excerpt: parsed.excerpt || existingDraft.excerpt,
+    targetKeyword: parsed.targetKeyword || existingDraft.targetKeyword,
+    secondaryKeywords: Array.isArray(parsed.secondaryKeywords) ? parsed.secondaryKeywords : (existingDraft.secondaryKeywords || []),
+    grade: parsed.grade || existingDraft.grade,
+    topic: parsed.topic || existingDraft.topic,
+    content: parsed.content,
+    faq: Array.isArray(parsed.faq) ? parsed.faq : (existingDraft.faq || []),
+    internalLinks: Array.isArray(parsed.internalLinkSuggestions) ? parsed.internalLinkSuggestions : (existingDraft.internalLinks || []),
+    verificationRequired: Boolean(parsed.verificationRequired),
+    aiProvider: result.provider,
+    aiModel: result.modelUsed,
+    fallbackUsed: result.fallbackUsed
+  };
+}
+
 module.exports = {
   callAiWithFallback,
   analyzeSearchQuery,
   generateBlogDraftContent,
+  refineBlogDraftWithInstruction,
   cleanAndParseJson
 };

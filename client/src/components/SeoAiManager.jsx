@@ -24,6 +24,12 @@ const SeoAiManager = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [publishingDraft, setPublishingDraft] = useState(false);
 
+  // AI Refine Modal State
+  const [aiRefineModalOpen, setAiRefineModalOpen] = useState(false);
+  const [refiningDraftTarget, setRefiningDraftTarget] = useState(null);
+  const [refineInstruction, setRefineInstruction] = useState('');
+  const [refiningDraft, setRefiningDraft] = useState(false);
+
   // Settings State
   const [settingsForm, setSettingsForm] = useState({
     autoDraftHighScores: false,
@@ -245,9 +251,48 @@ const SeoAiManager = () => {
     }
   };
 
-  const handleRegenerateDraft = async (draft) => {
-    if (!window.confirm('Bu taslak AI ile yeniden oluşturulacaktır. Yapılan manuel değişiklikler kaybolabilir. Devam edilsin mi?')) return;
-    handleGenerateDraft({ id: draft.opportunityId, keyword: draft.targetKeyword });
+  const handleOpenRefineModal = (draft) => {
+    setRefiningDraftTarget(draft);
+    setRefineInstruction('');
+    setAiRefineModalOpen(true);
+  };
+
+  const handleRefineDraftSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!refiningDraftTarget || !refineInstruction.trim()) return;
+
+    setRefiningDraft(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await axios.post(`/api/teacher/seo/drafts/${refiningDraftTarget.id}/refine-ai`, {
+        customInstruction: refineInstruction.trim()
+      });
+      setSuccessMsg(`"${refiningDraftTarget.title}" taslağı AI tarafından başarıyla yeniden düzenlendi!`);
+      setAiRefineModalOpen(false);
+      await fetchDrafts();
+      if (res.data) {
+        setEditingDraft({
+          ...res.data,
+          secondaryKeywords: typeof res.data.secondaryKeywords === 'string' ? JSON.parse(res.data.secondaryKeywords || '[]') : (res.data.secondaryKeywords || []),
+          faq: typeof res.data.faq === 'string' ? JSON.parse(res.data.faq || '[]') : (res.data.faq || []),
+          internalLinks: typeof res.data.internalLinks === 'string' ? JSON.parse(res.data.internalLinks || '[]') : (res.data.internalLinks || [])
+        });
+      }
+    } catch (err) {
+      console.error('[Refine Draft Error]', err);
+      if (err.response?.status === 401 || err.response?.data?.message?.includes('Token')) {
+        setErrorMsg('Oturum süreniz dolmuş veya token geçersiz. Lütfen siteden ÇIKIŞ YAPIP tekrar giriş yapın.');
+      } else {
+        setErrorMsg(err.response?.data?.error || err.response?.data?.message || 'AI ile düzenleme başarısız oldu.');
+      }
+    } finally {
+      setRefiningDraft(false);
+    }
+  };
+
+  const handleRegenerateDraft = (draft) => {
+    handleOpenRefineModal(draft);
   };
 
   const handleSaveSettings = async (e) => {
@@ -976,6 +1021,63 @@ const SeoAiManager = () => {
                 Yayınla
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Refine / Re-generate Modal */}
+      {aiRefineModalOpen && refiningDraftTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-purple-600">auto_awesome</span>
+                <h3 className="font-black text-lg text-slate-900">AI ile Taslağı Düzenle / Yeniden Yaz</h3>
+              </div>
+              <button
+                onClick={() => setAiRefineModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              <strong>"{refiningDraftTarget.title}"</strong> başlıklı taslak üzerinde AI'nın yapmasını istediğiniz özel düzeltmeleri veya eklemeleri belirtin.
+            </p>
+
+            <form onSubmit={handleRefineDraftSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">AI Düzenleme Talimatınız / Prompt</label>
+                <textarea
+                  rows={4}
+                  value={refineInstruction}
+                  onChange={(e) => setRefineInstruction(e.target.value)}
+                  placeholder="Örn: 8. sınıf LGS tarzı 2 adet yeni soru ve çözümü ekle, anlatımı daha sade ve öğrenci dostu yap, alt başlıkları güçlendir."
+                  disabled={refiningDraft}
+                  className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-medium outline-none focus:border-purple-500 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAiRefineModalOpen(false)}
+                  disabled={refiningDraft}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-all disabled:opacity-50"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={refiningDraft || !refineInstruction.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md shadow-purple-600/20 transition-all disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-sm">{refiningDraft ? 'sync' : 'auto_awesome'}</span>
+                  <span>{refiningDraft ? 'AI Düzenliyor...' : 'AI ile Güncelle & Düzenle'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

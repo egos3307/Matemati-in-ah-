@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const { auth, checkRole } = require('../middleware/auth');
 const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi } = require('../services/seoEngine');
-const { analyzeSearchQuery, generateBlogDraftContent } = require('../lib/ai');
+const { analyzeSearchQuery, generateBlogDraftContent, refineBlogDraftWithInstruction } = require('../lib/ai');
 
 // Rate Limiter for AI generation endpoints (max 10 calls per 15 minutes per IP)
 const aiLimiter = rateLimit({
@@ -275,6 +275,68 @@ router.put('/drafts/:id', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/teacher/seo/drafts/:id/refine-ai
+ * Refines existing blog draft based on custom prompt instruction from teacher
+ */
+router.post('/drafts/:id/refine-ai', auth, checkRole('HEAD_TEACHER'), aiLimiter, async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { customInstruction } = req.body;
+
+  if (!customInstruction || typeof customInstruction !== 'string' || !customInstruction.trim()) {
+    return res.status(400).json({ error: 'Düzenleme talimatı zorunludur.' });
+  }
+
+  try {
+    const existingDraft = await prisma.aiBlogDraft.findUnique({ where: { id } });
+    if (!existingDraft) {
+      return res.status(404).json({ error: 'Taslak bulunamadı.' });
+    }
+
+    const refined = await refineBlogDraftWithInstruction({
+      existingDraft,
+      instruction: customInstruction.trim()
+    });
+
+    const updatedDraft = await prisma.aiBlogDraft.update({
+      where: { id },
+      data: {
+        title: refined.title,
+        slug: refined.slug,
+        metaTitle: refined.metaTitle,
+        metaDescription: refined.metaDescription,
+        excerpt: refined.excerpt,
+        targetKeyword: refined.targetKeyword,
+        secondaryKeywords: JSON.stringify(refined.secondaryKeywords),
+        grade: refined.grade,
+        topic: refined.topic,
+        content: refined.content,
+        faq: JSON.stringify(refined.faq),
+        internalLinks: JSON.stringify(refined.internalLinks),
+        verificationRequired: refined.verificationRequired,
+        aiProvider: refined.aiProvider,
+        aiModel: refined.aiModel,
+        updatedAt: new Date()
+      }
+    });
+
+    await prisma.seoLog.create({
+      data: {
+        action: 'AI_BLOG_DRAFT_REFINE',
+        aiProvider: refined.aiProvider,
+        status: 'SUCCESS',
+        fallbackUsed: refined.fallbackUsed,
+        details: `Draft ID ${id} refined with prompt: "${customInstruction}"`
+      }
+    });
+
+    res.json(updatedDraft);
+  } catch (err) {
+    console.error('[AI Refine Error]', err);
+    res.status(500).json({ error: 'AI ile taslak düzenlenirken hata oluştu: ' + err.message });
   }
 });
 
