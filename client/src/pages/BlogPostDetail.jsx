@@ -163,7 +163,7 @@ const BlogPostDetail = () => {
             <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-tighter">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-xs">person</span>
-                {post.author?.name || 'Fullematematiği Kadrosu'}
+                {(!post.author?.name || post.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : post.author.name}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">

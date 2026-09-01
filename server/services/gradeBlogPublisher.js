@@ -307,6 +307,21 @@ async function publishAllGradeBlogs() {
   let skippedCount = 0;
   const results = [];
 
+  // Update any test teacher user name in DB to "Burak Çelik"
+  try {
+    await db.user.updateMany({
+      where: {
+        OR: [
+          { name: { contains: 'Test', mode: 'insensitive' } },
+          { email: { contains: 'test' } }
+        ]
+      },
+      data: { name: 'Burak Çelik' }
+    });
+  } catch (uErr) {
+    console.warn('[Grade Blog Publisher] User update warning:', uErr.message);
+  }
+
   // Find head teacher user to assign as author
   let author = await db.user.findFirst({ where: { role: 'HEAD_TEACHER' } });
   if (!author) {

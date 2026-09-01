@@ -2450,7 +2450,13 @@ app.get('/api/blog', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: { select: { name: true } } }
     });
-    res.json(posts);
+    const formatted = posts.map(p => ({
+      ...p,
+      author: {
+        name: (!p.author?.name || p.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : p.author.name
+      }
+    }));
+    res.json(formatted);
   } catch (err) {
     console.error('Error fetching blogs:', err);
     res.status(500).json({ error: err.message });
@@ -2467,7 +2473,13 @@ app.get('/api/blog/:slug', async (req, res) => {
     if (!post) {
       return res.status(404).json({ message: 'Yazı bulunamadı' });
     }
-    res.json(post);
+    const formatted = {
+      ...post,
+      author: {
+        name: (!post.author?.name || post.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : post.author.name
+      }
+    };
+    res.json(formatted);
   } catch (err) {
     console.error('Error fetching blog post:', err);
     res.status(500).json({ error: err.message });
