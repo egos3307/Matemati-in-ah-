@@ -93,19 +93,26 @@ router.get('/opportunities', auth, checkRole('HEAD_TEACHER'), async (req, res) =
  * POST /api/teacher/seo/scan
  */
 router.post('/scan', auth, checkRole('HEAD_TEACHER'), scanLimiter, async (req, res) => {
+  console.log('[VERCEL LOG] SEO Scan initiated by user:', req.user?.email || req.user?.id);
   try {
     const result = await runSeoDiscoveryScan();
+    console.log('[VERCEL LOG] SEO Scan completed successfully. Items count:', result.items?.length);
     res.json(result);
   } catch (err) {
-    console.error('[SEO Scan Error]', err);
-    await prisma.seoLog.create({
-      data: {
-        action: 'SEO_DISCOVERY_SCAN',
-        status: 'ERROR',
-        details: err.message
-      }
-    });
-    res.status(500).json({ error: 'SEO taraması gerçekleştirilemedi: ' + err.message });
+    console.error('[VERCEL LOG ERROR] SEO Scan failed:', err.message);
+    console.error('[VERCEL LOG STACK]:', err.stack);
+    try {
+      const db = getOrInitSettings ? await prisma.seoLog.create({
+        data: {
+          action: 'SEO_DISCOVERY_SCAN',
+          status: 'ERROR',
+          details: err.stack || err.message
+        }
+      }) : null;
+    } catch (logErr) {
+      console.error('[VERCEL LOG ERROR] Failed to write DB log:', logErr.message);
+    }
+    res.status(500).json({ error: 'SEO taraması gerçekleştirilemedi: ' + (err.message || 'Bilinmeyen hata') });
   }
 });
 

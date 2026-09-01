@@ -234,7 +234,7 @@ function calculateOpportunityScore({ keyword, impressions = 0, clicks = 0, ctr =
  */
 async function runSeoDiscoveryScan() {
   const startTime = Date.now();
-  console.log('[SEO Engine] Starting SEO Discovery Scan...');
+  console.log('[VERCEL LOG] [SEO Engine] Step 1: Starting SEO Discovery Scan...');
 
   // 1. Get existing content to perform duplicate/cannibalization checks
   let existingPosts = [];
@@ -243,11 +243,14 @@ async function runSeoDiscoveryScan() {
     const db = getPrisma();
     existingPosts = await db.blogPost.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
     existingDrafts = await db.aiBlogDraft.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
+    console.log(`[VERCEL LOG] [SEO Engine] Loaded ${existingPosts.length} existing posts and ${existingDrafts.length} drafts.`);
   } catch (dbErr) {
-    console.warn('[SEO Engine] DB read warning:', dbErr.message);
+    console.warn('[VERCEL LOG] [SEO Engine] DB read warning:', dbErr.message);
   }
 
+  console.log('[VERCEL LOG] [SEO Engine] Step 2: Querying Google Search Console...');
   const gscResult = await fetchGoogleSearchConsoleData();
+  console.log(`[VERCEL LOG] [SEO Engine] GSC Connected: ${gscResult.connected}, Note: ${gscResult.note}`);
   const collectedQueries = new Map();
 
   // Process GSC Queries if available
