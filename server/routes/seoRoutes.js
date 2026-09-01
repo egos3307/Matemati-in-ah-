@@ -5,7 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const { auth, checkRole } = require('../middleware/auth');
-const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi } = require('../services/seoEngine');
+const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('../services/seoEngine');
 const { analyzeSearchQuery, generateBlogDraftContent, refineBlogDraftWithInstruction } = require('../lib/ai');
 
 // Rate Limiter for AI generation endpoints (max 10 calls per 15 minutes per IP)
@@ -392,10 +392,13 @@ router.post('/drafts/:id/publish', auth, checkRole('HEAD_TEACHER'), async (req, 
       });
     }
 
-    // Automatically submit published URL to Google Indexing API for instant indexing
+    // Automatically submit published URL to Google Indexing API & update Google Sitemap
     const publishedUrl = `https://fullematematigi.com.tr/blog/${blogPost.slug}`;
     submitUrlToGoogleIndexingApi(publishedUrl).catch(idxErr => {
       console.warn('[Auto Indexing API Warning]:', idxErr.message);
+    });
+    submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(smErr => {
+      console.warn('[Auto Sitemap API Warning]:', smErr.message);
     });
 
     await prisma.seoLog.create({

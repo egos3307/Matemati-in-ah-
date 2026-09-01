@@ -240,6 +240,81 @@ async function submitUrlToGoogleIndexingApi(targetUrl) {
 }
 
 /**
+ * Automatically submit updated sitemap XML URL to Google Search Console API & Ping Service
+ */
+async function submitSitemapToGoogleSearchConsole(sitemapUrl = 'https://fullematematigi.com.tr/sitemap.xml') {
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  const siteUrl = process.env.GSC_SITE_URL || 'https://fullematematigi.com.tr';
+
+  if (!serviceAccountEmail || !privateKey) {
+    return { success: false, note: 'Service Account credentials missing' };
+  }
+
+  try {
+    // 1. Send public ping to Google Sitemap crawler
+    fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`).catch(() => null);
+
+    // 2. Submit sitemap via Google Search Console API
+    const jwtAssertion = generateGoogleAccessToken(
+      serviceAccountEmail,
+      privateKey,
+      'https://www.googleapis.com/auth/webmasters'
+    );
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwtAssertion
+      })
+    });
+
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.warn('[GSC Sitemap API] Token request failed:', errText);
+      return { success: false, note: errText };
+    }
+
+    const { access_token } = await tokenRes.json();
+
+    const siteCandidates = Array.from(new Set([
+      siteUrl,
+      'https://fullematematigi.com.tr',
+      'https://fullematematigi.com.tr/',
+      'sc-domain:fullematematigi.com.tr',
+      'https://www.fullematematigi.com.tr/',
+      'https://www.fullematematigi.com.tr'
+    ]));
+
+    let submitted = false;
+    for (const candidate of siteCandidates) {
+      const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(candidate)}/sitemaps/${encodeURIComponent(sitemapUrl)}`;
+      const res = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${access_token}` }
+      });
+      if (res.ok) {
+        submitted = true;
+        break;
+      }
+    }
+
+    if (submitted) {
+      console.log(`[GSC Sitemap API] Successfully submitted updated sitemap to Google Search Console: ${sitemapUrl}`);
+      return { success: true };
+    } else {
+      console.warn('[GSC Sitemap API] Could not submit sitemap to candidates.');
+      return { success: false, note: 'Sitemap submission API call failed for candidates' };
+    }
+  } catch (err) {
+    console.warn('[GSC Sitemap API] Exception:', err.message);
+    return { success: false, note: err.message };
+  }
+}
+
+/**
  * Fetch Google Autocomplete / Suggestion Signals
  */
 async function fetchGoogleSuggestions(seedKeyword) {
@@ -504,6 +579,7 @@ module.exports = {
   runSeoDiscoveryScan,
   fetchGoogleSearchConsoleData,
   submitUrlToGoogleIndexingApi,
+  submitSitemapToGoogleSearchConsole,
   calculateOpportunityScore,
   calculateTextSimilarity
 };

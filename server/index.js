@@ -281,6 +281,60 @@ app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
 
+// 🗺️ Dynamic Sitemap XML Generator Route
+app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
+  try {
+    const baseUrl = 'https://fullematematigi.com.tr';
+    const staticPages = [
+      { url: '/', priority: '1.0', changefreq: 'daily' },
+      { url: '/blog', priority: '0.9', changefreq: 'daily' },
+      { url: '/derslerimiz', priority: '0.8', changefreq: 'weekly' },
+      { url: '/pdf-notlar', priority: '0.8', changefreq: 'weekly' },
+      { url: '/camps', priority: '0.7', changefreq: 'weekly' },
+      { url: '/kontenjan-kurslari', priority: '0.7', changefreq: 'weekly' }
+    ];
+
+    let blogPosts = [];
+    try {
+      blogPosts = await prisma.blogPost.findMany({
+        select: { slug: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' }
+      });
+    } catch (e) {
+      console.warn('[Sitemap] DB fetch warning:', e.message);
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    for (const page of staticPages) {
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}${page.url}</loc>\n`;
+      xml += `    <changefreq>${page.changefreq}</changefreq>\n`;
+      xml += `    <priority>${page.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    for (const post of blogPosts) {
+      const lastMod = post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/blog/${post.slug}</loc>\n`;
+      xml += `    <lastmod>${lastMod}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.8</priority>\n`;
+      xml += `  </url>\n`;
+    }
+
+    xml += `</urlset>`;
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err) {
+    console.error('[Sitemap XML Error]', err);
+    res.status(500).send('Error generating sitemap XML');
+  }
+});
+
 // Auth Routes
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { email, password, studentCode, loginType } = req.body;
@@ -2456,10 +2510,11 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
       }
     });
 
-    // Automatically submit to Google Indexing API for rapid indexing
+    // Automatically submit to Google Indexing API & Google Search Console Sitemap
     try {
-      const { submitUrlToGoogleIndexingApi } = require('./services/seoEngine');
+      const { submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('./services/seoEngine');
       submitUrlToGoogleIndexingApi(`https://fullematematigi.com.tr/blog/${post.slug}`).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
+      submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
     } catch (e) {
       console.warn('[Auto Indexing Import Warning]:', e.message);
     }
