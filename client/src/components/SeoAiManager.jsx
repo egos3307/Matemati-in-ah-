@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import SeoOptimizer from './SeoOptimizer';
 
 const SeoAiManager = () => {
-  const [activeSubTab, setActiveSubTab] = useState('opportunities'); // 'opportunities' | 'drafts' | 'logs' | 'settings'
+  const [activeSubTab, setActiveSubTab] = useState('optimizer'); // 'optimizer' | 'opportunities' | 'drafts' | 'logs' | 'settings'
   const [overview, setOverview] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
   const [drafts, setDrafts] = useState([]);
@@ -464,7 +465,17 @@ const SeoAiManager = () => {
       )}
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex border-b border-slate-200 gap-6">
+      <div className="flex flex-wrap border-b border-slate-200 gap-4 md:gap-6">
+        <button
+          onClick={() => setActiveSubTab('optimizer')}
+          className={`pb-3 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+            activeSubTab === 'optimizer' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">trending_up</span>
+          <span>SEO Optimizer & Performans</span>
+        </button>
+
         <button
           onClick={() => setActiveSubTab('opportunities')}
           className={`pb-3 font-bold text-sm transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
@@ -505,6 +516,9 @@ const SeoAiManager = () => {
           <span>Ayarlar</span>
         </button>
       </div>
+
+      {/* TAB 0: SEO OPTIMIZER */}
+      {activeSubTab === 'optimizer' && <SeoOptimizer />}
 
       {/* TAB 1: OPPORTUNITIES */}
       {activeSubTab === 'opportunities' && (

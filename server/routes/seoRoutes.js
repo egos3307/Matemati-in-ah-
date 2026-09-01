@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const { auth, checkRole } = require('../middleware/auth');
 const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('../services/seoEngine');
 const { analyzeSearchQuery, generateBlogDraftContent, refineBlogDraftWithInstruction } = require('../lib/ai');
+const { runSeoOptimizerScan, analyzePageOptimizationWithAi } = require('../services/seoOptimizerEngine');
 
 // Rate Limiter for AI generation endpoints (max 10 calls per 15 minutes per IP)
 const aiLimiter = rateLimit({
@@ -554,14 +555,274 @@ router.get('/cron/scan', async (req, res) => {
       }
     }
 
+    // Run SEO Optimizer Scan alongside Discovery Scan
+    let optimizerResult = null;
+    try {
+      optimizerResult = await runSeoOptimizerScan();
+    } catch (optErr) {
+      console.error('[CRON Optimizer Error]', optErr.message);
+    }
+
     res.json({
       success: true,
       scanResult,
+      optimizerResult,
       autoDraftsCreated
     });
   } catch (err) {
     console.error('[CRON Error]', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/teacher/seo/optimizer/overview
+ */
+router.get('/optimizer/overview', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
+  try {
+    const [pages, histories] = await Promise.all([
+      prisma.seoPageOptimization.findMany({ orderBy: { optimizationScore: 'desc' } }),
+      prisma.seoOptimizationHistory.findMany({ orderBy: { dateApplied: 'desc' }, take: 10 })
+    ]);
+
+    let totalClicks = 0;
+    let totalImpressions = 0;
+    let posSum = 0;
+    let ctrSum = 0;
+    let risingCount = 0;
+    let fallingCount = 0;
+    let firstPageCount = 0;
+    let top3Count = 0;
+    let lowCtrCount = 0;
+    let cannibalizationCount = 0;
+
+    for (const p of pages) {
+      totalClicks += p.clicks || 0;
+      totalImpressions += p.impressions || 0;
+      posSum += p.position || 0;
+      ctrSum += p.ctr || 0;
+
+      if (p.opportunityType === 'RISING_CONTENT') risingCount++;
+      if (p.opportunityType === 'RANKING_DROP') fallingCount++;
+      if (p.opportunityType === 'FIRST_PAGE_OPPORTUNITY') firstPageCount++;
+      if (p.opportunityType === 'TOP_3_OPPORTUNITY') top3Count++;
+      if (p.opportunityType === 'HIGH_IMP_LOW_CTR') lowCtrCount++;
+      if (p.opportunityType === 'CANNIBALIZATION_RISK') cannibalizationCount++;
+    }
+
+    const count = pages.length || 1;
+    const avgPosition = Number((posSum / count).toFixed(1));
+    const avgCtr = Number(((ctrSum / count) * 100).toFixed(2));
+
+    // Top 5 Weekly Important SEO Actions Card
+    const topActions = pages
+      .slice(0, 5)
+      .map(p => ({
+        id: p.id,
+        pageUrl: p.pageUrl,
+        title: p.pageTitle,
+        topQuery: p.topQuery,
+        position: p.position,
+        positionChange: p.positionChange,
+        impressions: p.impressions,
+        clicks: p.clicks,
+        ctr: p.ctr,
+        opportunityType: p.opportunityType,
+        score: p.optimizationScore
+      }));
+
+    res.json({
+      stats: {
+        totalPages: pages.length,
+        totalClicks,
+        totalImpressions,
+        avgCtr,
+        avgPosition,
+        risingCount,
+        fallingCount,
+        firstPageCount,
+        top3Count,
+        lowCtrCount,
+        cannibalizationCount
+      },
+      topActions,
+      recentHistories: histories
+    });
+  } catch (err) {
+    console.error('[SEO Optimizer Overview Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/teacher/seo/optimizer/pages
+ */
+router.get('/optimizer/pages', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
+  const { filter } = req.query;
+  try {
+    let whereClause = {};
+
+    if (filter === 'TOP_3') whereClause = { opportunityType: 'TOP_3_OPPORTUNITY' };
+    else if (filter === 'FIRST_PAGE') whereClause = { opportunityType: 'FIRST_PAGE_OPPORTUNITY' };
+    else if (filter === 'RISING') whereClause = { opportunityType: 'RISING_CONTENT' };
+    else if (filter === 'DROPPING') whereClause = { opportunityType: 'RANKING_DROP' };
+    else if (filter === 'LOW_CTR') whereClause = { opportunityType: 'HIGH_IMP_LOW_CTR' };
+    else if (filter === 'CANNIBALIZATION') whereClause = { opportunityType: 'CANNIBALIZATION_RISK' };
+    else if (filter === 'NEEDS_REFRESH') whereClause = { opportunityType: 'CONTENT_REFRESH' };
+
+    const pages = await prisma.seoPageOptimization.findMany({
+      where: whereClause,
+      orderBy: { optimizationScore: 'desc' }
+    });
+
+    res.json(pages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/teacher/seo/optimizer/scan
+ */
+router.post('/optimizer/scan', auth, checkRole('HEAD_TEACHER'), scanLimiter, async (req, res) => {
+  try {
+    const result = await runSeoOptimizerScan();
+    res.json(result);
+  } catch (err) {
+    console.error('[SEO Optimizer Scan Error]', err);
+    res.status(500).json({ error: 'SEO Optimizer taraması başlatılamadı: ' + err.message });
+  }
+});
+
+/**
+ * POST /api/teacher/seo/optimizer/pages/:id/analyze
+ */
+router.post('/optimizer/pages/:id/analyze', auth, checkRole('HEAD_TEACHER'), aiLimiter, async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const pageOpt = await prisma.seoPageOptimization.findUnique({ where: { id } });
+    if (!pageOpt) return res.status(404).json({ error: 'Sayfa kaydı bulunamadı.' });
+
+    const slugMatch = pageOpt.pageUrl.split('/blog/')[1] || '';
+    const blogPost = slugMatch ? await prisma.blogPost.findUnique({ where: { slug: slugMatch } }) : null;
+
+    const allBlogs = await prisma.blogPost.findMany({ select: { title: true, slug: true } });
+    const sitePages = [
+      { title: 'Ana Sayfa', url: '/' },
+      { title: 'Blog', url: '/blog' },
+      { title: 'Derslerimiz', url: '/derslerimiz' },
+      { title: 'PDF Notlar', url: '/pdf-notlar' },
+      { title: 'Kamp Programları', url: '/camps' },
+      { title: 'Kontenjan Kursları', url: '/kontenjan-kurslari' },
+      ...allBlogs.map(b => ({ title: b.title, url: `/blog/${b.slug}` }))
+    ];
+
+    const gscSummary = [
+      { query: pageOpt.topQuery, impressions: pageOpt.impressions, clicks: pageOpt.clicks, position: pageOpt.position, ctr: pageOpt.ctr }
+    ];
+
+    const currentContent = {
+      title: blogPost ? blogPost.title : (pageOpt.pageTitle || pageOpt.pageUrl),
+      content: blogPost ? blogPost.content : '',
+      metaTitle: blogPost?.metaTitle || pageOpt.pageTitle,
+      metaDescription: blogPost?.metaDescription || '',
+      position: pageOpt.position,
+      impressions: pageOpt.impressions,
+      clicks: pageOpt.clicks,
+      ctr: pageOpt.ctr,
+      positionChange: pageOpt.positionChange
+    };
+
+    const aiAnalysis = await analyzePageOptimizationWithAi({
+      pageUrl: pageOpt.pageUrl,
+      currentContent,
+      gscData: gscSummary,
+      targetKeyword: pageOpt.targetKeyword || pageOpt.topQuery,
+      sitePages
+    });
+
+    const updated = await prisma.seoPageOptimization.update({
+      where: { id },
+      data: {
+        aiAnalysis: JSON.stringify(aiAnalysis),
+        aiAnalyzedAt: new Date(),
+        status: 'ANALYZED'
+      }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('[AI Page Analysis Error]', err);
+    res.status(500).json({ error: 'AI analizi gerçekleştirilemedi: ' + err.message });
+  }
+});
+
+/**
+ * POST /api/teacher/seo/optimizer/pages/:id/apply
+ * Rule 14 Enforcement: Requires explicit Head Teacher approval [Onayla ve Uygula]
+ */
+router.post('/optimizer/pages/:id/apply', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { titleSuggestion, metaDescriptionSuggestion, updatedContent } = req.body;
+
+  try {
+    const pageOpt = await prisma.seoPageOptimization.findUnique({ where: { id } });
+    if (!pageOpt) return res.status(404).json({ error: 'Sayfa kaydı bulunamadı.' });
+
+    const slugMatch = pageOpt.pageUrl.split('/blog/')[1] || '';
+    const blogPost = slugMatch ? await prisma.blogPost.findUnique({ where: { slug: slugMatch } }) : null;
+
+    let titleBefore = pageOpt.pageTitle;
+    let titleAfter = titleSuggestion || titleBefore;
+    let metaDescBefore = blogPost?.metaDescription || '';
+    let metaDescAfter = metaDescriptionSuggestion || metaDescBefore;
+
+    if (blogPost) {
+      await prisma.blogPost.update({
+        where: { id: blogPost.id },
+        data: {
+          title: titleAfter,
+          metaTitle: titleAfter,
+          metaDescription: metaDescAfter,
+          content: updatedContent || blogPost.content,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    // Record Optimization History for before/after comparison
+    await prisma.seoOptimizationHistory.create({
+      data: {
+        pageUrl: pageOpt.pageUrl,
+        actionType: 'FULL_OPTIMIZATION',
+        titleBefore,
+        titleAfter,
+        metaDescBefore,
+        metaDescAfter,
+        posBefore: pageOpt.position,
+        ctrBefore: pageOpt.ctr,
+        dateApplied: new Date(),
+        resultEvaluated: false
+      }
+    });
+
+    const updatedOpt = await prisma.seoPageOptimization.update({
+      where: { id },
+      data: {
+        pageTitle: titleAfter,
+        status: 'APPLIED',
+        lastAppliedAt: new Date()
+      }
+    });
+
+    // Automatically submit to Google Indexing API & Sitemap API
+    submitUrlToGoogleIndexingApi(pageOpt.pageUrl).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
+    submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
+
+    res.json({ success: true, pageOptimization: updatedOpt });
+  } catch (err) {
+    console.error('[SEO Apply Optimization Error]', err);
+    res.status(500).json({ error: 'Optimizasyon uygulanamadı: ' + err.message });
   }
 });
 

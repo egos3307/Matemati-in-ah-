@@ -334,5 +334,74 @@ model SeoSettings {
   updatedAt              DateTime @updatedAt
 }
 
+model SeoPagePerformance {
+  id               Int      @id @default(autoincrement())
+  pageUrl          String
+  query            String
+  clicks           Int      @default(0)
+  impressions      Int      @default(0)
+  ctr              Float    @default(0)
+  position         Float    @default(0)
+  prevPosition     Float?   @default(0)
+  positionChange   Float?   @default(0)
+  impressionGrowth Float?   @default(0)
+  periodDate       String   @default("CURRENT")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([pageUrl, query, periodDate])
+}
+
+model SeoPageOptimization {
+  id                     Int      @id @default(autoincrement())
+  pageUrl                String   @unique
+  pageTitle              String?
+  targetKeyword          String?
+  topQuery               String?
+  clicks                 Int      @default(0)
+  impressions            Int      @default(0)
+  ctr                    Float    @default(0)
+  position               Float    @default(0)
+  prevPosition           Float?   @default(0)
+  positionChange         Float?   @default(0)
+  optimizationScore      Float    @default(0)
+  opportunityType        String   // "RISING_CONTENT", "TOP_3_OPPORTUNITY", "FIRST_PAGE_OPPORTUNITY", "RANKING_DROP", "HIGH_IMP_LOW_CTR", "CANNIBALIZATION_RISK", "CONTENT_REFRESH", "LOW_POTENTIAL"
+  status                 String   @default("PENDING_ANALYSIS") // "PENDING_ANALYSIS", "ANALYZED", "APPLIED", "IGNORED"
+  aiAnalysis             String?  // JSON string
+  aiAnalyzedAt           DateTime?
+  lastAppliedAt          DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model SeoOptimizationHistory {
+  id               Int      @id @default(autoincrement())
+  pageUrl          String
+  actionType       String   // "TITLE_META_UPDATE", "CONTENT_EXPANDED", "INTERNAL_LINKS_ADDED", "FULL_OPTIMIZATION"
+  titleBefore      String?
+  titleAfter       String?
+  metaDescBefore   String?
+  metaDescAfter    String?
+  contentChanges   String?
+  posBefore        Float?
+  posAfter         Float?
+  ctrBefore        Float?
+  ctrAfter         Float?
+  dateApplied      DateTime @default(now())
+  resultEvaluated  Boolean  @default(false)
+  evaluationNote   String?
+}
+
+model SeoContentCluster {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  slug          String   @unique
+  pillarPageUrl String?
+  targetKeyword String?
+  clusterType   String   @default("GRADE_TOPIC")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 
 
