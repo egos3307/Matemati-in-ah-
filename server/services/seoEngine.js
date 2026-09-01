@@ -1,5 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+let _prisma;
+function getPrisma() {
+  if (!_prisma) {
+    _prisma = new PrismaClient();
+  }
+  return _prisma;
+}
 
 const SEED_KEYWORDS = [
   'matematik',
@@ -231,8 +237,15 @@ async function runSeoDiscoveryScan() {
   console.log('[SEO Engine] Starting SEO Discovery Scan...');
 
   // 1. Get existing content to perform duplicate/cannibalization checks
-  const existingPosts = await prisma.blogPost.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
-  const existingDrafts = await prisma.aiBlogDraft.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
+  let existingPosts = [];
+  let existingDrafts = [];
+  try {
+    const db = getPrisma();
+    existingPosts = await db.blogPost.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
+    existingDrafts = await db.aiBlogDraft.findMany({ select: { id: true, title: true, slug: true, targetKeyword: true } });
+  } catch (dbErr) {
+    console.warn('[SEO Engine] DB read warning:', dbErr.message);
+  }
 
   const gscResult = await fetchGoogleSearchConsoleData();
   const collectedQueries = new Map();
@@ -320,20 +333,41 @@ async function runSeoDiscoveryScan() {
     }
 
     // Save or update in SeoOpportunity DB
-    const savedOpp = await prisma.seoOpportunity.upsert({
-      where: { keyword: rawData.keyword },
-      update: {
-        score,
-        impressions: rawData.impressions,
-        clicks: rawData.clicks,
-        ctr: rawData.ctr,
-        position: rawData.position,
-        reason,
-        status: status === 'NEW' ? undefined : status,
-        targetPostId: targetPostId || undefined,
-        updatedAt: new Date()
-      },
-      create: {
+    try {
+      const db = getPrisma();
+      const savedOpp = await db.seoOpportunity.upsert({
+        where: { keyword: rawData.keyword },
+        update: {
+          score,
+          impressions: rawData.impressions,
+          clicks: rawData.clicks,
+          ctr: rawData.ctr,
+          position: rawData.position,
+          reason,
+          status: status === 'NEW' ? undefined : status,
+          targetPostId: targetPostId || undefined,
+          updatedAt: new Date()
+        },
+        create: {
+          keyword: rawData.keyword,
+          source: rawData.source,
+          score,
+          impressions: rawData.impressions,
+          clicks: rawData.clicks,
+          ctr: rawData.ctr,
+          position: rawData.position,
+          trendData: rawData.trendData,
+          reason,
+          status,
+          targetPostId
+        }
+      });
+
+      opportunitiesCreated++;
+      processedItems.push(savedOpp);
+    } catch (saveErr) {
+      console.warn('[SEO Engine] DB save warning for key:', rawData.keyword, saveErr.message);
+      processedItems.push({
         keyword: rawData.keyword,
         source: rawData.source,
         score,
@@ -341,30 +375,30 @@ async function runSeoDiscoveryScan() {
         clicks: rawData.clicks,
         ctr: rawData.ctr,
         position: rawData.position,
-        trendData: rawData.trendData,
         reason,
-        status,
-        targetPostId
-      }
-    });
-
-    opportunitiesCreated++;
-    processedItems.push(savedOpp);
+        status
+      });
+    }
   }
 
   // 4. Log execution
-  await prisma.seoLog.create({
-    data: {
-      action: 'SEO_DISCOVERY_SCAN',
-      queriesFound: collectedQueries.size,
-      opportunitiesCreated,
-      status: 'SUCCESS',
-      details: JSON.stringify({
-        durationMs: Date.now() - startTime,
-        gscConnected: gscResult.connected
-      })
-    }
-  });
+  try {
+    const db = getPrisma();
+    await db.seoLog.create({
+      data: {
+        action: 'SEO_DISCOVERY_SCAN',
+        queriesFound: collectedQueries.size,
+        opportunitiesCreated,
+        status: 'SUCCESS',
+        details: JSON.stringify({
+          durationMs: Date.now() - startTime,
+          gscConnected: gscResult.connected
+        })
+      }
+    });
+  } catch (logErr) {
+    console.warn('[SEO Engine] Log write warning:', logErr.message);
+  }
 
   return {
     success: true,
