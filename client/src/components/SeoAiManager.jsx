@@ -98,8 +98,12 @@ const SeoAiManager = () => {
       await loadAllData();
     } catch (err) {
       console.error('[SEO Scan Trigger Error]', err);
-      const detail = err.response?.data?.error || err.response?.data?.message || err.message;
-      setErrorMsg(`SEO Taraması Başlatılamadı: ${detail}`);
+      if (err.response?.status === 401 || err.response?.data?.message?.includes('Token')) {
+        setErrorMsg('Oturum süreniz dolmuş veya token geçersiz. Lütfen siteden ÇIKIŞ YAPIP tekrar giriş yapın.');
+      } else {
+        const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+        setErrorMsg(`SEO Taraması Başlatılamadı: ${detail}`);
+      }
     } finally {
       setScanning(false);
     }
