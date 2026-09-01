@@ -296,6 +296,26 @@ const SeoAiManager = () => {
     handleOpenRefineModal(draft);
   };
 
+  const [publishingGradeBlogs, setPublishingGradeBlogs] = useState(false);
+
+  const handlePublishGradeBlogs = async () => {
+    if (!window.confirm('5. sınıftan 12. sınıfa kadar tüm seviyeler (5,6,7,8 LGS, 9,10,11,12 YKS) için hazırlanmış özgün ders anlatım bloglarını otomatik yayınlamak istiyor musunuz? Mükerrer yayınlama engeli mevcuttur.')) return;
+
+    setPublishingGradeBlogs(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await axios.post('/api/teacher/seo/publish-grade-blogs');
+      setSuccessMsg(`Sınıf Blogları İşlemi Tamamlandı! ${res.data.publishedCount || 0} adet yeni sınıf blogu yayınlandı ve Google Indexing API ile Google'a bildirildi.`);
+      await loadAllData();
+    } catch (err) {
+      console.error('[Publish Grade Blogs Error]', err);
+      setErrorMsg(err.response?.data?.error || 'Sınıf blogları yayınlanırken hata oluştu.');
+    } finally {
+      setPublishingGradeBlogs(false);
+    }
+  };
+
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
@@ -344,6 +364,15 @@ const SeoAiManager = () => {
           >
             <span className="material-symbols-outlined text-sm">lightbulb</span>
             <span>{suggestingBest ? 'Bulunuyor...' : 'AI ile En İyi Fikri Bul'}</span>
+          </button>
+
+          <button
+            onClick={handlePublishGradeBlogs}
+            disabled={publishingGradeBlogs}
+            className="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 border border-emerald-200"
+          >
+            <span className="material-symbols-outlined text-sm">{publishingGradeBlogs ? 'sync' : 'school'}</span>
+            <span>{publishingGradeBlogs ? 'Yayınlanıyor...' : '5-12. Sınıf Bloglarını Otomatik Yayınla'}</span>
           </button>
 
           <button

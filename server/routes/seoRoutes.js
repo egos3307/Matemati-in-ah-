@@ -8,6 +8,7 @@ const { auth, checkRole } = require('../middleware/auth');
 const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('../services/seoEngine');
 const { analyzeSearchQuery, generateBlogDraftContent, refineBlogDraftWithInstruction } = require('../lib/ai');
 const { runSeoOptimizerScan, analyzePageOptimizationWithAi } = require('../services/seoOptimizerEngine');
+const { publishAllGradeBlogs } = require('../services/gradeBlogPublisher');
 
 // Rate Limiter for AI generation endpoints (max 10 calls per 15 minutes per IP)
 const aiLimiter = rateLimit({
@@ -823,6 +824,19 @@ router.post('/optimizer/pages/:id/apply', auth, checkRole('HEAD_TEACHER'), async
   } catch (err) {
     console.error('[SEO Apply Optimization Error]', err);
     res.status(500).json({ error: 'Optimizasyon uygulanamadı: ' + err.message });
+  }
+});
+/**
+ * POST /api/teacher/seo/publish-grade-blogs
+ * Publishes 5 to 12 grade math lecture blogs with zero duplicate protection
+ */
+router.post('/publish-grade-blogs', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
+  try {
+    const result = await publishAllGradeBlogs();
+    res.json(result);
+  } catch (err) {
+    console.error('[Publish Grade Blogs Error]', err);
+    res.status(500).json({ error: 'Sınıf blogları yayınlanırken hata oluştu: ' + err.message });
   }
 });
 
