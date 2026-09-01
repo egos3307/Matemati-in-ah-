@@ -102,32 +102,52 @@ async function fetchGoogleSearchConsoleData() {
 
     const { access_token } = await tokenRes.json();
 
-    // 3. Query Search Console Search Analytics API
+    // 3. Query Search Console Search Analytics API trying candidate site URLs
     const today = new Date().toISOString().split('T')[0];
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
-    const apiRes = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        startDate: thirtyDaysAgo,
-        endDate: today,
-        dimensions: ['query'],
-        rowLimit: 100
-      })
-    });
+    const siteCandidates = Array.from(new Set([
+      siteUrl,
+      'https://fullematematigi.com.tr',
+      'https://fullematematigi.com.tr/',
+      'sc-domain:fullematematigi.com.tr',
+      'https://www.fullematematigi.com.tr/',
+      'https://www.fullematematigi.com.tr'
+    ]));
 
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      console.warn('[SEO Engine] GSC API query error:', errText);
+    let apiRes = null;
+    let lastErrText = '';
+
+    for (const candidate of siteCandidates) {
+      const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(candidate)}/searchAnalytics/query`;
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          startDate: thirtyDaysAgo,
+          endDate: today,
+          dimensions: ['query'],
+          rowLimit: 100
+        })
+      });
+
+      if (res.ok) {
+        apiRes = res;
+        break;
+      } else {
+        lastErrText = await res.text();
+      }
+    }
+
+    if (!apiRes) {
+      console.warn('[SEO Engine] GSC API query error on candidates:', lastErrText);
       return {
         connected: false,
         data: [],
-        note: `Search Console'a ${serviceAccountEmail} e-postasını mülk kullanıcısı olarak ekleyin.`
+        note: `Search Console'a ${serviceAccountEmail} e-postasını mülk kullanıcısı olarak ekleyin (Mülk URL eşleşmeli).`
       };
     }
 
