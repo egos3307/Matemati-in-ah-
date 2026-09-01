@@ -189,18 +189,26 @@ Yalnızca ve yalnızca yukarıdaki JSON nesnesini döndür.
     throw new Error('AI blog taslağı için geçerli ve eksiksiz JSON çıktısı üretemedi.');
   }
 
+  const currentAcademicYear = '2026-2027';
+  const sanitizeYearInText = (str) => {
+    if (!str || typeof str !== 'string') return str;
+    return str
+      .replace(/\b(202[0-5]|20[3-9][0-9])\b/g, currentAcademicYear)
+      .replace(/\b2025-2026\b/g, currentAcademicYear);
+  };
+
   // Validate and sanitize structure
   const draft = {
-    title: parsed.title || recTitle,
+    title: sanitizeYearInText(parsed.title || recTitle),
     slug: parsed.slug || keyword.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, ''),
-    metaTitle: parsed.metaTitle || parsed.title,
-    metaDescription: parsed.metaDescription || parsed.excerpt || parsed.title,
-    excerpt: parsed.excerpt || parsed.content.substring(0, 150) + '...',
+    metaTitle: sanitizeYearInText(parsed.metaTitle || parsed.title),
+    metaDescription: sanitizeYearInText(parsed.metaDescription || parsed.excerpt || parsed.title),
+    excerpt: sanitizeYearInText(parsed.excerpt || parsed.content.substring(0, 150) + '...'),
     targetKeyword: parsed.targetKeyword || keyword,
     secondaryKeywords: Array.isArray(parsed.secondaryKeywords) ? parsed.secondaryKeywords : [],
     grade: parsed.grade || targetGrade,
     topic: parsed.topic || keyword,
-    content: parsed.content,
+    content: sanitizeYearInText(parsed.content),
     faq: Array.isArray(parsed.faq) ? parsed.faq : [],
     internalLinks: Array.isArray(parsed.internalLinkSuggestions) ? parsed.internalLinkSuggestions : [],
     verificationRequired: Boolean(parsed.verificationRequired),

@@ -529,17 +529,28 @@ Yalnızca ve yalnızca yukarıdaki JSON nesnesini döndür.
     throw new Error('AI SEO analiz nesnesini geçerli JSON olarak üretemedi.');
   }
 
+  const currentAcademicYear = '2026-2027';
+  const sanitizeYearInText = (str) => {
+    if (!str || typeof str !== 'string') return str;
+    return str
+      .replace(/\b(202[0-5]|20[3-9][0-9])\b/g, currentAcademicYear)
+      .replace(/\b2025-2026\b/g, currentAcademicYear);
+  };
+
+  const rawTitle = parsed.titleSuggestion || currentContent.title;
+  const rawMeta = parsed.metaDescriptionSuggestion || currentContent.metaDescription;
+
   return {
-    summary: parsed.summary || 'Sayfa performans analizi tamamlandı.',
-    mainProblem: parsed.mainProblem || 'Sayfada CTR veya içerik derinliği optimizasyonu gerekiyor.',
-    searchIntent: parsed.searchIntent || 'Matematik konu öğrenimi ve soru çözümü.',
-    recommendedActions: Array.isArray(parsed.recommendedActions) ? parsed.recommendedActions : [],
-    titleSuggestion: parsed.titleSuggestion || currentContent.title,
-    metaDescriptionSuggestion: parsed.metaDescriptionSuggestion || currentContent.metaDescription,
-    sectionsToAdd: Array.isArray(parsed.sectionsToAdd) ? parsed.sectionsToAdd : [],
-    sectionsToImprove: Array.isArray(parsed.sectionsToImprove) ? parsed.sectionsToImprove : [],
+    summary: sanitizeYearInText(parsed.summary || 'Sayfa performans analizi tamamlandı.'),
+    mainProblem: sanitizeYearInText(parsed.mainProblem || 'Sayfada CTR veya içerik derinliği optimizasyonu gerekiyor.'),
+    searchIntent: sanitizeYearInText(parsed.searchIntent || 'Matematik konu öğrenimi ve soru çözümü.'),
+    recommendedActions: Array.isArray(parsed.recommendedActions) ? parsed.recommendedActions.map(sanitizeYearInText) : [],
+    titleSuggestion: sanitizeYearInText(rawTitle),
+    metaDescriptionSuggestion: sanitizeYearInText(rawMeta),
+    sectionsToAdd: Array.isArray(parsed.sectionsToAdd) ? parsed.sectionsToAdd.map(sanitizeYearInText) : [],
+    sectionsToImprove: Array.isArray(parsed.sectionsToImprove) ? parsed.sectionsToImprove.map(sanitizeYearInText) : [],
     internalLinksToAdd: Array.isArray(parsed.internalLinksToAdd) ? parsed.internalLinksToAdd : [],
-    contentGaps: Array.isArray(parsed.contentGaps) ? parsed.contentGaps : [],
+    contentGaps: Array.isArray(parsed.contentGaps) ? parsed.contentGaps.map(sanitizeYearInText) : [],
     priority: parsed.priority || 'HIGH',
     confidence: parsed.confidence || 90,
     aiProvider: result.provider,

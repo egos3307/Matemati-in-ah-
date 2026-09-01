@@ -438,22 +438,34 @@ export default function SeoOptimizer() {
                     <p className="text-slate-700 leading-relaxed">{ai.summary}</p>
                   </div>
 
-                  {/* Title & Meta Comparison */}
-                  <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 space-y-3">
-                    <span className="font-black text-purple-900 text-sm block">Önerilen Başlık ve Meta Description</span>
-
-                    <div>
-                      <span className="font-bold text-slate-500 block mb-0.5">Önerilen Yeni Başlık:</span>
-                      <p className="font-bold text-slate-900 bg-white p-2.5 rounded-xl border border-purple-200 text-xs">
-                        {ai.titleSuggestion}
-                      </p>
+                  {/* Title & Meta Before vs After Comparison */}
+                  <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
+                      <span className="font-black text-purple-900 text-sm flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-purple-600 text-base">swap_horiz</span>
+                        <span>Önce / Sonra Değişim Karşılaştırması</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-purple-200/80 text-purple-900 font-bold text-[10px]">Güncel Eğitim Yılı: 2026-2027</span>
                     </div>
 
-                    <div>
-                      <span className="font-bold text-slate-500 block mb-0.5">Önerilen Meta Açıklaması:</span>
-                      <p className="text-slate-700 bg-white p-2.5 rounded-xl border border-purple-200 text-xs">
-                        {ai.metaDescriptionSuggestion}
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-white p-3 rounded-xl border border-red-200/80 space-y-1">
+                        <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">Mevcut Başlık (Eski)</span>
+                        <p className="font-semibold text-slate-800 text-xs">{selectedPage.pageTitle || selectedPage.pageUrl}</p>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-xl border border-emerald-300 space-y-1 shadow-2xs">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider flex items-center justify-between">
+                          <span>Önerilen Yeni Başlık (AI - 2026-2027)</span>
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 rounded">Yeni</span>
+                        </span>
+                        <p className="font-bold text-slate-900 text-xs text-emerald-950">{ai.titleSuggestion}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-purple-200 space-y-1">
+                      <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Önerilen SEO Meta Açıklaması (Meta Description)</span>
+                      <p className="text-slate-700 text-xs leading-relaxed">{ai.metaDescriptionSuggestion}</p>
                     </div>
                   </div>
 
