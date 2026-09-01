@@ -188,25 +188,25 @@ export default function SeoOptimizer() {
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Toplam Gösterim</span>
           <span className="font-black text-2xl text-slate-900">{stats.totalImpressions?.toLocaleString('tr-TR') || 0}</span>
-          <span className="text-[10px] text-slate-400 mt-1 block">Google Arama</span>
+          <span className="text-[10px] font-semibold text-emerald-600 mt-1 block">Son 28 Gün GSC Verisi</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Toplam Tıklama</span>
           <span className="font-black text-2xl text-emerald-600">{stats.totalClicks?.toLocaleString('tr-TR') || 0}</span>
-          <span className="text-[10px] text-slate-400 mt-1 block">Ziyaretçi</span>
+          <span className="text-[10px] font-semibold text-emerald-600 mt-1 block">Son 28 Gün Ziyaretçi</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ortalama CTR</span>
           <span className="font-black text-2xl text-purple-600">%{stats.avgCtr || 0}</span>
-          <span className="text-[10px] text-slate-400 mt-1 block">Tıklama Oranı</span>
+          <span className="text-[10px] font-semibold text-slate-400 mt-1 block">Tıklama Oranı</span>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ort. Pozisyon</span>
           <span className="font-black text-2xl text-amber-600">{stats.avgPosition || 0}</span>
-          <span className="text-[10px] text-slate-400 mt-1 block">Google Sıralaması</span>
+          <span className="text-[10px] font-semibold text-slate-400 mt-1 block">Google Sıralaması</span>
         </div>
       </div>
 

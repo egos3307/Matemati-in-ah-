@@ -443,10 +443,10 @@ async function runSeoDiscoveryScan() {
     collectedQueries.set(seed.toLowerCase().trim(), {
       keyword: seed.trim(),
       source: 'GOOGLE_AUTOCOMPLETE',
-      impressions: 150,
-      clicks: 12,
-      ctr: 0.08,
-      position: 8,
+      impressions: 0,
+      clicks: 0,
+      ctr: 0,
+      position: 0,
       trendData: JSON.stringify({ seed })
     });
 
@@ -456,10 +456,10 @@ async function runSeoDiscoveryScan() {
         collectedQueries.set(normalizedSug, {
           keyword: sug.trim(),
           source: 'GOOGLE_AUTOCOMPLETE',
-          impressions: 80,
-          clicks: 5,
-          ctr: 0.06,
-          position: 12,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          position: 0,
           trendData: JSON.stringify({ seed })
         });
       }
