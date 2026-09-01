@@ -271,6 +271,12 @@ const seoRoutes = require('./routes/seoRoutes');
 app.use('/api/teacher/seo', seoRoutes);
 app.use('/api', seoRoutes);
 
+const publicFormLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Çok fazla form gönderimi yapıldı. Lütfen biraz bekleyin.' }
+});
+
 app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
@@ -421,7 +427,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 });
 
 // Public Student Registration Form Route
-app.post('/api/register-student', async (req, res) => {
+app.post('/api/register-student', publicFormLimiter, async (req, res) => {
   const {
     name,
     birthDate,
@@ -1268,7 +1274,7 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
 }
 
 // 🔒 Güvenli Drive Video Endpoint'i (Site İçi Oynatıcı İçin)
-app.get('/api/drive/stream/:fileId', async (req, res) => {
+app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   const { fileId } = req.params;
 
   if (!fileId || !/^[a-zA-Z0-9_-]+$/.test(fileId)) {
@@ -2198,7 +2204,7 @@ function censorText(text) {
 }
 
 // Trial Lesson Request Routes
-app.post('/api/trial-requests', async (req, res) => {
+app.post('/api/trial-requests', publicFormLimiter, async (req, res) => {
   const { type, studentName, email, phone, grade } = req.body;
   if (!studentName || !email || !phone || !grade) {
     return res.status(400).json({ error: 'Lütfen tüm zorunlu alanları doldurun.' });
@@ -2325,7 +2331,7 @@ app.post('/api/teacher/trial-requests/:id/reject', auth, checkRole('TEACHER'), a
 });
 
 // Contact Messages Routes
-app.post('/api/contact-messages', async (req, res) => {
+app.post('/api/contact-messages', publicFormLimiter, async (req, res) => {
   const { name, phone, email, message } = req.body;
   if (!name || !phone || !email) {
     return res.status(400).json({ error: 'Lütfen ad soyad, telefon ve e-posta alanlarını doldurun.' });
@@ -3145,7 +3151,7 @@ app.delete('/api/teacher/quota-courses/:id', auth, checkRole('TEACHER'), async (
 let DEFAULT_QUOTA_APPLICATIONS = [];
 
 // Student Quota Application endpoints
-app.post('/api/quota-applications', async (req, res) => {
+app.post('/api/quota-applications', publicFormLimiter, async (req, res) => {
   const { quotaCourseId, category, courseTitle, track, studentName, phone, email } = req.body;
   try {
     if (!studentName || !phone || !email || !track) {
@@ -3283,7 +3289,7 @@ const matchAccessCode = (inputCode, targetCode) => {
   );
 };
 
-app.get('/api/access-codes', async (req, res) => {
+app.get('/api/access-codes', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     let codes = await prisma.accessCode.findMany({
       orderBy: { createdAt: 'desc' }
@@ -3306,7 +3312,7 @@ app.get('/api/access-codes', async (req, res) => {
   }
 });
 
-app.post('/api/access-codes', async (req, res) => {
+app.post('/api/access-codes', auth, checkRole('TEACHER'), async (req, res) => {
   const { code, personName, packageName, driveUrl } = req.body;
   try {
     const rawCode = (code || `SHOP-${Math.random().toString(36).substring(2, 7).toUpperCase()}`).trim().toUpperCase();
@@ -3325,7 +3331,7 @@ app.post('/api/access-codes', async (req, res) => {
   }
 });
 
-app.delete('/api/access-codes/:id', async (req, res) => {
+app.delete('/api/access-codes/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.accessCode.delete({

@@ -420,16 +420,14 @@ router.post('/settings', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
  * Protected by CRON_SECRET token
  */
 router.get('/cron/scan', async (req, res) => {
-  const cronSecret = process.env.CRON_SECRET;
+  const cronSecret = process.env.CRON_SECRET || 'fullematematik_cron_secret_123';
   const authHeader = req.headers.authorization;
   const tokenQuery = req.query.secret;
 
-  if (cronSecret) {
-    const matchesHeader = authHeader === `Bearer ${cronSecret}`;
-    const matchesQuery = tokenQuery === cronSecret;
-    if (!matchesHeader && !matchesQuery) {
-      return res.status(401).json({ error: 'Unauthorized CRON request' });
-    }
+  const matchesHeader = authHeader === `Bearer ${cronSecret}`;
+  const matchesQuery = tokenQuery === cronSecret;
+  if (!matchesHeader && !matchesQuery) {
+    return res.status(401).json({ error: 'Unauthorized CRON request: Valid CRON_SECRET is required' });
   }
 
   try {
