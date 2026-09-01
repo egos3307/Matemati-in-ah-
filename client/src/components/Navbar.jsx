@@ -325,7 +325,7 @@ const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => { setIsAccessCodeModalOpen(true); setActiveVideoData(null); setCodeError(''); }}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-2 py-0.5 sm:px-2.5 rounded-full text-[8.5px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 transition-all hover:scale-105 cursor-pointer shadow-md"
+                  className="bg-white/25 hover:bg-white/35 px-1.5 py-0.5 sm:px-2.5 rounded-full text-[8.5px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 text-white transition-all hover:scale-105 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[11px] sm:text-[13px]">video_library</span>
                   <span>Ders Kayıtları</span>
