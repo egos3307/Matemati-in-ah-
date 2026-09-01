@@ -265,8 +265,15 @@ async function runSeoDiscoveryScan() {
     }
   }
 
-  // 2. Fetch Google Suggestions for Seed Keywords
-  for (const seed of SEED_KEYWORDS) {
+  // 2. Fetch Google Suggestions for Seed Keywords in Parallel
+  const suggestionResults = await Promise.all(
+    SEED_KEYWORDS.map(async (seed) => {
+      const suggestions = await fetchGoogleSuggestions(seed);
+      return { seed, suggestions };
+    })
+  );
+
+  for (const { seed, suggestions } of suggestionResults) {
     collectedQueries.set(seed.toLowerCase().trim(), {
       keyword: seed.trim(),
       source: 'GOOGLE_AUTOCOMPLETE',
@@ -277,7 +284,6 @@ async function runSeoDiscoveryScan() {
       trendData: JSON.stringify({ seed })
     });
 
-    const suggestions = await fetchGoogleSuggestions(seed);
     for (const sug of suggestions) {
       const normalizedSug = sug.toLowerCase().trim();
       if (!collectedQueries.has(normalizedSug)) {

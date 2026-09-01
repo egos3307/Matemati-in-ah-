@@ -15,10 +15,10 @@ const aiLimiter = rateLimit({
   message: { error: 'Çok fazla AI üretimi isteği atıldı. Lütfen birkaç dakika bekleyin.' }
 });
 
-// Rate Limiter for Manual Scan (max 5 scans per 10 minutes)
+// Rate Limiter for Manual Scan
 const scanLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 5,
+  windowMs: 1 * 60 * 1000,
+  max: 30,
   message: { error: 'Çok sık SEO taraması başlatıldı. Lütfen biraz bekleyin.' }
 });
 

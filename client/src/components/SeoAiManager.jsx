@@ -97,7 +97,9 @@ const SeoAiManager = () => {
       setSuccessMsg(`SEO Taraması Tamamlandı! ${res.data.queriesFound || 0} sorgu incelendi, ${res.data.opportunitiesCreated || 0} fırsat güncellendi/bulundu.`);
       await loadAllData();
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'SEO taraması başlatılamadı.');
+      console.error('[SEO Scan Trigger Error]', err);
+      const detail = err.response?.data?.error || err.response?.data?.message || err.message;
+      setErrorMsg(`SEO Taraması Başlatılamadı: ${detail}`);
     } finally {
       setScanning(false);
     }
