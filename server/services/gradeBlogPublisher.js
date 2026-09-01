@@ -293,6 +293,274 @@ const GRADE_BLOGS = [
       { anchorText: 'AYT Matematik Canlı Kampı', targetUrl: '/camps' },
       { anchorText: 'Tüm PDF Notlar', targetUrl: '/pdf-notlar' }
     ]
+  },
+
+  // -------------------------------------------------------------
+  // ALL TOPICS CURRICULUM GUIDES (GRADES 5, 6, 7, 8, 10, 11, 12) - (EXCLUDING 9)
+  // -------------------------------------------------------------
+  {
+    grade: '5',
+    topic: '5. Sınıf Matematik Tüm Konuları',
+    title: '2026-2027 5. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    slug: '5-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    metaTitle: '2026-2027 5. Sınıf Matematik Tüm Konuları & Müfredat Listesi',
+    metaDescription: '2026-2027 MEB müfredatına uygun 5. sınıf matematik tüm konuları, ünite özetleri, sınav çalışma taktikleri ve konu dağılım rehberi.',
+    excerpt: '5. Sınıf matematik dersinin tüm 1. ve 2. dönem üniteleri, doğal sayılar, kesirler, ondalık gösterim, geometri ve ölçme konularının eksiksiz rehberi.',
+    targetKeyword: '5 sınıf matematik tüm konuları',
+    secondaryKeywords: ['5 sınıf matematik müfredatı 2026 2027', '5 sınıf matematik üniteleri', '5 sınıf matematik konuları listesi'],
+    content: `
+      <h2>2026-2027 5. Sınıf Matematik Tüm Konuları ve Ünite Listesi</h2>
+      <p>MEB güncel müfredatına uygun olarak hazırlanan bu rehberde 5. sınıf matematik dersinin 1. ve 2. dönem tüm üniteleri detaylı şekilde açıklanmaktadır.</p>
+      
+      <h3>1. Dönem Üniteleri ve Konuları</h3>
+      <ul>
+        <li><strong>1. Ünite: Doğal Sayılar ve İşlemler</strong> (Milyonlu sayılar, basamak ve bölükler, zihinden işlemler)</li>
+        <li><strong>2. Ünite: Kesirler ve Kesirlerle İşlemler</strong> (Bileşik ve tam sayılı kesirler, sıralama, toplama-çıkarma)</li>
+        <li><strong>3. Ünite: Ondalık Gösterim ve Yüzdeler</strong> (Basamak değerleri, yüzde hesabı ve karşılaştırma)</li>
+      </ul>
+
+      <h3>2. Dönem Üniteleri ve Konuları</h3>
+      <ul>
+        <li><strong>4. Ünite: Temel Geometrik Kavramlar ve Çizimler</strong> (Doğru, ışın, doğru parçası, dik, paralel doğrular, açılar)</li>
+        <li><strong>5. Ünite: Üçgen ve Dörtgenler</strong> (Üçgen çeşitleri, dörtgenlerin açı özellikleri)</li>
+        <li><strong>6. Ünite: Veri İşleme ve Ölçme</strong> (Sıklık tablosu, sütun grafiği, uzunluk, zaman ve alan ölçme)</li>
+        <li><strong>7. Ünite: Geometrik Cisimler</strong> (Dikdörtgenler prizması, yüzey alanı ve hacim)</li>
+      </ul>
+
+      <h3>Başarılı Olmak İçin 3 Altın Çalışma Taktiği</h3>
+      <ol>
+        <li>Kesirlerde toplama-çıkarma yapmadan önce paydaları eşitlemeyi alışkanlık haline getirin.</li>
+        <li>Geometri sorularında mutlaka şekil çizin veya verilen şeklin üzerine açı değerlerini yazın.</li>
+        <li>Haftada bir gün geçmiş ünitelerden 20 karma soru çözerek zihninizi taze tutun.</li>
+      </ol>
+    `,
+    faq: [
+      { question: '5. sınıf matematikte kaç ünite vardır?', answer: 'MEB 5. sınıf matematik müfredatında toplam 7 ünite bulunmaktadır.' }
+    ],
+    internalLinks: [
+      { anchorText: '5. Sınıf PDF Notlar', targetUrl: '/pdf-notlar' },
+      { anchorText: 'Tüm Matematik Derslerimiz', targetUrl: '/derslerimiz' }
+    ]
+  },
+
+  {
+    grade: '6',
+    topic: '6. Sınıf Matematik Tüm Konuları',
+    title: '2026-2027 6. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    slug: '6-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    metaTitle: '2026-2027 6. Sınıf Matematik Tüm Konuları & Ünite Dağılımı',
+    metaDescription: '6. Sınıf matematik tüm üniteleri: Çarpanlar katlar, kümeler, tam sayılar, kesirler, cebirsel ifadeler, veri ve geometri konuları detaylı anlatımı.',
+    excerpt: '2026-2027 eğitim yılında 6. sınıf matematik müfredatındaki tüm üniteler, işlem önceliği, asal sayılar, alan ve hacim hesaplama rehberi.',
+    targetKeyword: '6 sınıf matematik tüm konuları',
+    secondaryKeywords: ['6 sınıf matematik konuları listesi', '6 sınıf matematik müfredatı 2026 2027', '6 sınıf matematik üniteleri'],
+    content: `
+      <h2>2026-2027 6. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>Ortaokul 2. kademenin en kritik yılı olan 6. sınıfta matematik konuları daha soyut ve mantıksal bir yapıya bürünür.</p>
+
+      <h3>1. Dönem Ünite Dağılımı</h3>
+      <ul>
+        <li><strong>1. Ünite: Doğal Sayılarla İşlemler, Çarpanlar ve Katlar, Kümeler</strong> (Üslü nicelikler, işlem önceliği, asal sayılar, EBOB-EKOK giriş, küme kavramı)</li>
+        <li><strong>2. Ünite: Tam Sayılar ve Kesirlerle İşlemler</strong> (Mutlak değer, yönlü sayılar, kesirlerde çarpma ve bölme)</li>
+        <li><strong>3. Ünite: Ondalık Gösterim ve Oran</strong> (Ondalık sayılarda çarpma-bölme, yuvarlama, oran kavramı)</li>
+      </ul>
+
+      <h3>2. Dönem Ünite Dağılımı</h3>
+      <ul>
+        <li><strong>4. Ünite: Cebirsel İfadeler ve Veri Analizi</strong> (Değişken kavramı, aritmetik ortalama ve açıklık)</li>
+        <li><strong>5. Ünite: Açılar, Alan Ölçme ve Çember</strong> (Komşu, tümler, bütünler açılar, paralelkenar ve üçgende alan, çember çevresi)</li>
+        <li><strong>6. Ünite: Geometrik Cisimler ve Sıvı Ölçme</strong> (Hacim ölçme birimleri, sıvı ölçüleri ile hacim ilişkisi)</li>
+      </ul>
+    `,
+    faq: [
+      { question: '6. sınıf matematikte en çok zorlanılan konu hangisidir?', answer: 'Genellikle Çarpanlar-Katlar, Kümeler ve Kesirlerde Bölme işlemlerinde pratik eksikliğinden dolayı zorlanılır.' }
+    ],
+    internalLinks: [
+      { anchorText: '6. Sınıf Notları', targetUrl: '/pdf-notlar' }
+    ]
+  },
+
+  {
+    grade: '7',
+    topic: '7. Sınıf Matematik Tüm Konuları',
+    title: '2026-2027 7. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    slug: '7-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    metaTitle: '2026-2027 7. Sınıf Matematik Tüm Konuları & Ders Notları',
+    metaDescription: '7. Sınıf matematik 1. ve 2. dönem tüm üniteleri: Tam sayılar, rasyonel sayılar, cebirsel ifadeler, denklem kurma, oran orantı ve geometri.',
+    excerpt: '7. Sınıf matematik dersinin LGS hazırlık temeli oluşturan tüm konuları, rasyonel sayılar, denklemler, yüzdeler ve çokgenler rehberi.',
+    targetKeyword: '7 sınıf matematik tüm konuları',
+    secondaryKeywords: ['7 sınıf matematik müfredatı 2026 2027', '7 sınıf denklem kurma', '7 sınıf oran orantı konuları'],
+    content: `
+      <h2>2026-2027 7. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>LGS maratonundan hemen önceki viraj olan 7. sınıf matematik, <strong>Denklem Kurma</strong> ve <strong>Oran-Orantı</strong> mantığının oturtulduğu en hayati sınıftır.</p>
+
+      <h3>1. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>1. Ünite: Tam Sayılarla İşlemler</strong> (Tam sayılarda toplama, çıkarma, çarpma, bölme ve üslü nicelikler)</li>
+        <li><strong>2. Ünite: Rasyonel Sayılar ve İşlemler</strong> (Rasyonel sayıları sayı doğrusunda gösterme, ondalık açınım, rasyonel sayılarla dört işlem)</li>
+        <li><strong>3. Ünite: Cebirsel İfadeler, Eşitlik ve Denklem</strong> (Cebirsel ifadelerle toplama-çıkarma, 1. dereceden 1 bilinmeyenli denklemler ve denklem kurma problemleri)</li>
+      </ul>
+
+      <h3>2. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>4. Ünite: Oran ve Orantı, Yüzdeler</strong> (Doğru ve ters orantı, orantı sabiti, yüzde hesapları, kâr-zarar problemleri)</li>
+        <li><strong>5. Ünite: Doğrular ve Açılar, Çokgenler, Çember ve Daire</strong> (Açıortay, paralel doğruların kestiği açılar, düzgün çokgenler, daire diliminin alanı)</li>
+        <li><strong>6. Ünite: Veri İşleme ve Cisimlerin Görünümü</strong> (Çizgi grafiği, daire grafiği, ortanca, tepe değer, 3 boyutlu cisim görünümü)</li>
+      </ul>
+    `,
+    faq: [
+      { question: '7. sınıf matematik LGS için ne kadar önemli?', answer: '7. sınıftaki Denklem Kurma ve Oran-Orantı konuları LGS Matematik sorularının %60\'ının temel mantığını oluşturur.' }
+    ],
+    internalLinks: [
+      { anchorText: '7. Sınıf Derslerimiz', targetUrl: '/derslerimiz' }
+    ]
+  },
+
+  {
+    grade: '8',
+    topic: '8. Sınıf LGS Matematik Tüm Konuları',
+    title: '2026-2027 8. Sınıf LGS Matematik Tüm Konuları ve Konu Dağılımı Rehberi',
+    slug: '8-sinif-lgs-matematik-tum-konulari-ve-lgs-mufredati',
+    metaTitle: '2026-2027 8. Sınıf LGS Matematik Tüm Konuları | LGS Konu Dağılımı',
+    metaDescription: '8. Sınıf LGS matematik tüm konuları, LGS 2027 çıkmış soru dağılımları, yeni nesil soru çözme taktikleri ve derece çalışma programı.',
+    excerpt: 'LGS 2027 şampiyonlarının rehberi: 8. sınıf matematik EBOB-EKOK, karekök, olasılık, denklem, eşitsizlik ve geometri konularının tamamı.',
+    targetKeyword: '8 sınıf lgs matematik tüm konuları',
+    secondaryKeywords: ['lgs matematik konuları 2027', 'lgs 2027 matematik müfredatı', '8 sınıf lgs matematik konu dağılımı'],
+    content: `
+      <h2>2026-2027 LGS Matematik Tüm Konuları ve Soru Dağılımı</h2>
+      <p>LGS hazırlığında başarılı olmanın ilk kuralı, sınavda karşılaşacağınız 20 matematik sorusunun hangi ünitelerden geleceğini bilmektir.</p>
+
+      <h3>LGS Matematik Ünite Ünite Tam Liste</h3>
+      <ol>
+        <li><strong>Çarpanlar ve Katlar</strong> (EBOB-EKOK problemleri, aralarında asal sayılar)</li>
+        <li><strong>Üslü İfadeler</strong> (Ondalık çözümleme, çok büyük ve çok küçük sayılar, bilimsel gösterim)</li>
+        <li><strong>Kareköklü İfadeler</strong> (Tam kare sayılar, a√b şeklinde yazma, kareköklü ifadelerde dört işlem, gerçek sayılar)</li>
+        <li><strong>Veri Analizi</strong> (Çizgi, sütun ve daire grafiği dönüşümleri)</li>
+        <li><strong>Basit Olayların Olma Olasılığı</strong> (Olası durumlar, eşit şans, imkansız ve kesin olaylar)</li>
+        <li><strong>Cebirsel İfadeler ve Özdeşlikler</strong> (Cebirsel ifadelerle çarpma, özdeşlikler, çarpanlara ayırma)</li>
+        <li><strong>Doğrusal Denklemler</strong> (Eğim, doğru grafikleri, 1. dereceden denklemler ve problemleri)</li>
+        <li><strong>Eşitsizlikler</strong> (Eşitsizlik sembolleri, eşitsizlik çözümü ve sayı doğrusunda gösterme)</li>
+        <li><strong>Üçgenler</strong> (Açıortay, kenarortay, yükseklik, üçgen eşitsizliği, Pisagor bağıntısı)</li>
+        <li><strong>Eşlik ve Benzerlik</strong> (Benzerlik oranı, eşlik sembolleri)</li>
+        <li><strong>Dönüşüm Geometrisi ve Geometrik Cisimler</strong> (Yansıma, öteleme, dik prizmalar, dik piramit ve dik koni)</li>
+      </ol>
+    `,
+    faq: [
+      { question: 'LGS Matematik sorularında en çok hangi üniteden soru gelir?', answer: 'Genellikle Kareköklü İfadeler, Doğrusal Denklemler ve Cebirsel İfadeler ünitesinden 3\'er 4\'er soru gelmektedir.' }
+    ],
+    internalLinks: [
+      { anchorText: '8. Sınıf LGS PDF Notları', targetUrl: '/pdf-notlar' },
+      { anchorText: 'LGS Canlı Hazırlık Kursu', targetUrl: '/kontenjan-kurslari' }
+    ]
+  },
+
+  {
+    grade: '10',
+    topic: '10. Sınıf Matematik Tüm Konuları',
+    title: '2026-2027 10. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    slug: '10-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    metaTitle: '2026-2027 10. Sınıf Matematik Tüm Konuları & Müfredat Özeti',
+    metaDescription: '10. Sınıf matematik tüm üniteleri: Permütasyon, kombinasyon, olasılık, fonksiyonlar, polinomlar, 2. derece denklemler, çokgenler ve katı cisimler.',
+    excerpt: '2026-2027 YKS hazırlığının temeli 10. sınıf matematik dersinin tüm 1. ve 2. dönem üniteleri, fonksiyonlar ve polinomlar konu rehberi.',
+    targetKeyword: '10 sınıf matematik tüm konuları',
+    secondaryKeywords: ['10 sınıf matematik müfredatı 2026 2027', '10 sınıf fonksiyonlar konuları', '10 sınıf polinomlar konu anlatımı'],
+    content: `
+      <h2>2026-2027 10. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>Lisenin 2. yılında işlenen 10. sınıf matematik konuları hem okul yazılılarında hem de ÖSYM'nin YKS (TYT-AYT) sınavlarında doğrudan sorulur.</p>
+
+      <h3>1. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>1. Ünite: Sayma ve Olasılık</strong> (Toplama ve çarpma yoluyla sayma, Permütasyon, Kombinasyon, Binom Açılımı, Koşullu Olasılık)</li>
+        <li><strong>2. Ünite: Fonksiyonlar</strong> (Fonksiyon tanımı, etki alanı, görüntü kümesi, fonksiyon türleri, bileşke ve ters fonksiyon)</li>
+        <li><strong>3. Ünite: Polinomlar</strong> (Polinom kavramı, polinomlarda 4 işlem, bölme kuralı, Kalan Teoremi, çarpanlara ayırma yöntemleri)</li>
+      </ul>
+
+      <h3>2. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>4. Ünite: İkinci Dereceden Denklemler</strong> (Karmaşık sayılara giriş, diskriminant Δ hesabı, kök-katsayı bağıntıları)</li>
+        <li><strong>5. Ünite: Dörtgenler ve Çokgenler</strong> (Çokgenlerin açı ve alan özellikleri, deltoid, paralelkenar, eşkenar dörtgen, dikdörtgen, kare, yamuk)</li>
+        <li><strong>6. Ünite: Uzay Geometri (Katı Cisimler)</strong> (Prizmalar ve piramitlerin yüzey alanı ve hacim hesapları)</li>
+      </ul>
+    `,
+    faq: [
+      { question: '10. sınıf matematiğin TYT ve AYT\'deki ağırlığı nedir?', answer: 'Fonksiyonlar, Polinomlar ve İkinci Dereceden Denklemler her yıl TYT ve AYT\'de toplam 6-8 soru oluşturur.' }
+    ],
+    internalLinks: [
+      { anchorText: '10. Sınıf Notları', targetUrl: '/pdf-notlar' }
+    ]
+  },
+
+  {
+    grade: '11',
+    topic: '11. Sınıf Matematik Tüm Konuları',
+    title: '2026-2027 11. Sınıf Matematik Tüm Konuları ve AYT Müfredat Rehberi',
+    slug: '11-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    metaTitle: '2026-2027 11. Sınıf Matematik Tüm Konuları & AYT Ders Rehberi',
+    metaDescription: '11. Sınıf matematik tüm konuları: Trigonometri, analitik geometri, fonksiyon uygulamaları, denklem sistemleri, çember daire ve olasılık.',
+    excerpt: 'AYT 2027 sınavının en ağırlıklı müfredatı: 11. sınıf matematik Trigonometri formülleri, analitik geometri, parabola ve çember analitiği rehberi.',
+    targetKeyword: '11 sınıf matematik tüm konuları',
+    secondaryKeywords: ['11 sınıf matematik müfredatı 2026 2027', '11 sınıf ayt konuları', '11 sınıf trigonometri ve analitik'],
+    content: `
+      <h2>2026-2027 11. Sınıf Matematik Tüm Konuları ve AYT Rehberi</h2>
+      <p>Sayısal ve Eşit Ağırlık öğrencilerinin AYT derecesini belirleyen en kritik yıl 11. sınıftır.</p>
+
+      <h3>1. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>1. Ünite: Trigonometri</strong> (Yönlü açılar, birim çember, trigonometrik fonksiyonlar, sinüs-kosinüs teoremleri, trigonometrik grafikler, ters trigonometrik fonksiyonlar)</li>
+        <li><strong>2. Ünite: Analitik Geometri</strong> (Noktanın analitiği, doğrunun analitik incelenmesi, doğrunun eğimi, iki doğru arasındaki açı ve uzaklık)</li>
+        <li><strong>3. Ünite: Fonksiyonlarda Uygulamalar</strong> (Fonksiyonların grafikleri, artan-azalanlık, tepe noktası, parabol denklemi ve dönüşümler)</li>
+      </ul>
+
+      <h3>2. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>4. Ünite: Denklem ve Eşitsizlik Sistemleri</strong> (İkinci dereceden iki bilinmeyenli denklem sistemleri, ikinci dereceden eşitsizlikler ve işaret tablosu)</li>
+        <li><strong>5. Ünite: Çember ve Daire</strong> (Çemberde açılar, kiriş-teğet özellikleri, dairede çevre ve alan hesapları)</li>
+        <li><strong>6. Ünite: Uzay Geometri ve Olasılık</strong> (Küre, dik dairesel silindir, dik dairesel koni, bileşik olayların olasılığı)</li>
+      </ul>
+    `,
+    faq: [
+      { question: '11. sınıf matematik konuları AYT\'de kaç soru yaptırır?', answer: 'Trigonometri ve Analitik Geometri tek başına AYT Matematik\'te 8-10 net kazandırır.' }
+    ],
+    internalLinks: [
+      { anchorText: '11. Sınıf Canlı Kursu', targetUrl: '/kontenjan-kurslari' }
+    ]
+  },
+
+  {
+    grade: '12',
+    topic: '12. Sınıf AYT Matematik Tüm Konuları',
+    title: '2026-2027 12. Sınıf AYT Matematik Tüm Konuları ve YKS Müfredat Rehberi',
+    slug: '12-sinif-ayt-matematik-tum-konulari-ve-yks-mufredati',
+    metaTitle: '2026-2027 12. Sınıf AYT Matematik Tüm Konuları | YKS Derece Rehberi',
+    metaDescription: '12. Sınıf AYT matematik tüm konuları: Logaritma, diziler, toplam-fark formülleri, limit, süreklilik, türev, integral ve çemberin analitiği.',
+    excerpt: 'YKS 2027 derece hedefleyenler için 12. sınıf AYT matematik konuları, türev-integral çalışma planı ve sınav taktikleri rehberi.',
+    targetKeyword: '12 sınıf ayt matematik tüm konuları',
+    secondaryKeywords: ['12 sınıf ayt matematik müfredatı 2026 2027', 'yks 2027 ayt matematik konuları', '12 sınıf turev integral logaritma'],
+    content: `
+      <h2>2026-2027 12. Sınıf AYT Matematik Tüm Konuları Rehberi</h2>
+      <p>YKS Maratonunun zirve noktası olan 12. sınıf AYT matematik müfredatı, yüksek öğretimde mühendislik, tıp ve iktisat hedeflerinin belirleyicisidir.</p>
+
+      <h3>1. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>1. Ünite: Üstel ve Logaritmik Fonksiyonlar</strong> (Üstel fonksiyon, logaritma fonksiyonu özellikleri, logaritmik denklemler ve eşitsizlikler)</li>
+        <li><strong>2. Ünite: Diziler</strong> (Gerçek sayı dizileri, aritmetik dizi, geometrik dizi ve toplam sembolü)</li>
+        <li><strong>3. Ünite: Trigonometri II</strong> (Toplam-fark formülleri, iki kat açı formülleri, trigonometrik denklemler)</li>
+        <li><strong>4. Ünite: Limit ve Süreklilik</strong> (Sağdan-soldan limit, belirsizlik durumları, fonksiyonlarda süreklilik şartı)</li>
+      </ul>
+
+      <h3>2. Dönem Üniteleri</h3>
+      <ul>
+        <li><strong>5. Ünite: Türev</strong> (Türev tanımı, türev alma kuralları, zincir kuralı, teğet ve normal denklemi, artan-azalanlık, ekstremum noktalar, maksimum-minimum problemleri)</li>
+        <li><strong>6. Ünite: İntegral</strong> (Belirsiz integral, değişken değiştirme yöntemi, belirli integral, eğri altında kalan alan hesapları)</li>
+        <li><strong>7. Ünite: Çemberin Analitik İncelenmesi</strong> (Çemberin standart ve genel denklemi, doğru ile çemberin durumları)</li>
+      </ul>
+    `,
+    faq: [
+      { question: 'AYT Matematikte Türev ve İntegral kaç soru getirir?', answer: 'Türev ve İntegral konuları AYT Matematik testinde her yıl toplam 9-10 soru oluşturur.' }
+    ],
+    internalLinks: [
+      { anchorText: 'AYT Matematik Derece Kampı', targetUrl: '/camps' },
+      { anchorText: 'Tüm PDF Notlar', targetUrl: '/pdf-notlar' }
+    ]
   }
 ];
 
