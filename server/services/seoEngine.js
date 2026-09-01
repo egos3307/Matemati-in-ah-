@@ -32,14 +32,20 @@ function base64url(buf) {
 }
 
 function generateGoogleAccessToken(clientEmail, privateKey, scope) {
-  let formattedKey = privateKey.replace(/\\n/g, '\n').trim();
+  const cleanEmail = (clientEmail || '').replace(/^["']|["']$/g, '').trim();
+  let formattedKey = (privateKey || '')
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\r/g, '')
+    .trim();
+
   if (!formattedKey.includes('-----BEGIN PRIVATE KEY-----')) {
     formattedKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----\n`;
   }
   const header = { alg: 'RS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const claim = {
-    iss: clientEmail,
+    iss: cleanEmail,
     scope: scope || 'https://www.googleapis.com/auth/webmasters.readonly',
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
