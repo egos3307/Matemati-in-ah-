@@ -195,15 +195,25 @@ function calculateOptimizationScore(metrics) {
 }
 
 /**
- * Determine exact Opportunity Type Badge
+ * Determine exact Opportunity Type Badge strictly backed by GSC empirical numbers
  */
 function determineOpportunityType(metrics) {
-  const { position, positionChange, impressionGrowth, impressions, ctr, cannibalizationCount, title } = metrics;
+  const { position, positionChange, impressionGrowth, impressions, ctr, cannibalizationCount, title, hasGscData } = metrics;
+
+  // New or unindexed content without real GSC impressions
+  if (!hasGscData || impressions === 0) {
+    return 'LOW_POTENTIAL';
+  }
 
   if (cannibalizationCount > 0) return 'CANNIBALIZATION_RISK';
-  if (positionChange > 3) return 'RANKING_DROP';
+  if (positionChange > 3.0) return 'RANKING_DROP';
+
+  // Real GSC Position 3.5 - 10.4: Genuine Top 3 Opportunity (Page 1 -> Top 3)
   if (position >= 3.5 && position <= 10.4) return 'TOP_3_OPPORTUNITY';
+
+  // Real GSC Position 10.5 - 20.4: Genuine First Page Opportunity (Page 2 -> Page 1)
   if (position >= 10.5 && position <= 20.4) return 'FIRST_PAGE_OPPORTUNITY';
+
   if (impressionGrowth > 40 && impressions > 150) return 'RISING_CONTENT';
   if (impressions > 250 && ctr < 0.035) return 'HIGH_IMP_LOW_CTR';
 
@@ -212,8 +222,7 @@ function determineOpportunityType(metrics) {
     return 'CONTENT_REFRESH';
   }
 
-  if (position > 50 && impressions < 50) return 'LOW_POTENTIAL';
-  return 'FIRST_PAGE_OPPORTUNITY';
+  return 'LOW_POTENTIAL';
 }
 
 /**
@@ -367,9 +376,10 @@ async function runSeoOptimizerScan() {
     const pageTitle = matchingPost ? matchingPost.title : (agg.pageTitle || pageUrl);
     const targetKeyword = matchingPost?.targetKeyword || agg.topQuery || 'Matematik Konu Anlatımı';
 
-    const avgPos = agg.count > 0 ? (agg.posSum / agg.count) : 25;
-    const prevAvgPos = agg.count > 0 && agg.prevPosSum > 0 ? (agg.prevPosSum / agg.count) : avgPos;
-    const positionChange = Number((avgPos - prevAvgPos).toFixed(1));
+    const hasGscData = agg.count > 0 && agg.totalImpressions > 0;
+    const avgPos = hasGscData ? (agg.posSum / agg.count) : 0;
+    const prevAvgPos = hasGscData && agg.prevPosSum > 0 ? (agg.prevPosSum / agg.count) : avgPos;
+    const positionChange = hasGscData ? Number((avgPos - prevAvgPos).toFixed(1)) : 0;
 
     const impressionGrowth = agg.prevImpSum > 0
       ? Number((((agg.totalImpressions - agg.prevImpSum) / agg.prevImpSum) * 100).toFixed(1))
@@ -387,7 +397,8 @@ async function runSeoOptimizerScan() {
       impressionGrowth,
       queryCount: agg.queries.length,
       cannibalizationCount,
-      title: pageTitle
+      title: pageTitle,
+      hasGscData
     };
 
     const optimizationScore = calculateOptimizationScore(metrics);
