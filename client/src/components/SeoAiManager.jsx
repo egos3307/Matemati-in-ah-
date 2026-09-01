@@ -15,6 +15,9 @@ const SeoAiManager = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [creatingCustomDraft, setCreatingCustomDraft] = useState(false);
+
   // Draft Editor State
   const [editingDraft, setEditingDraft] = useState(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -134,6 +137,41 @@ const SeoAiManager = () => {
       setErrorMsg(err.response?.data?.error || 'AI Taslak üretimi başarısız oldu.');
     } finally {
       setGeneratingDraftId(null);
+    }
+  };
+
+  const handleCreateCustomDraft = async (e) => {
+    if (e) e.preventDefault();
+    if (!customPrompt.trim()) return;
+
+    setCreatingCustomDraft(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await axios.post('/api/teacher/seo/generate-draft', {
+        keyword: customPrompt.trim()
+      });
+      setSuccessMsg(`"${customPrompt}" konusu için AI Blog Taslağı başarıyla oluşturuldu!`);
+      setCustomPrompt('');
+      await loadAllData();
+      setActiveSubTab('drafts');
+      if (res.data) {
+        setEditingDraft({
+          ...res.data,
+          secondaryKeywords: typeof res.data.secondaryKeywords === 'string' ? JSON.parse(res.data.secondaryKeywords || '[]') : (res.data.secondaryKeywords || []),
+          faq: typeof res.data.faq === 'string' ? JSON.parse(res.data.faq || '[]') : (res.data.faq || []),
+          internalLinks: typeof res.data.internalLinks === 'string' ? JSON.parse(res.data.internalLinks || '[]') : (res.data.internalLinks || [])
+        });
+      }
+    } catch (err) {
+      console.error('[Custom Draft Error]', err);
+      if (err.response?.status === 401 || err.response?.data?.message?.includes('Token')) {
+        setErrorMsg('Oturum süreniz dolmuş veya token geçersiz. Lütfen siteden ÇIKIŞ YAPIP tekrar giriş yapın.');
+      } else {
+        setErrorMsg(err.response?.data?.error || err.response?.data?.message || 'Özel AI Taslağı oluşturulamadı.');
+      }
+    } finally {
+      setCreatingCustomDraft(false);
     }
   };
 
@@ -271,6 +309,36 @@ const SeoAiManager = () => {
             <span>{scanning ? 'Taranıyor...' : 'SEO Taramasını Şimdi Başlat'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Custom Prompt / Subject Generator Card */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl shadow-md border border-slate-800 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-purple-400 text-xl">edit_square</span>
+          <h3 className="font-black text-base">Özel Konu veya Prompt İle AI Blog Taslağı Oluştur</h3>
+        </div>
+        <p className="text-xs text-slate-300">
+          İstediğiniz özel matematik konusunu, müfredat başlığını veya soru tarzını yazın; AI Baş Öğretmen detaylı ve SEO uyumlu blog taslağını anında hazırlasın.
+        </p>
+
+        <form onSubmit={handleCreateCustomDraft} className="flex flex-col sm:flex-row gap-3 pt-2">
+          <input
+            type="text"
+            placeholder="Örn: 9. Sınıf Üslü Sayılar Konu Anlatımı ve Örnek Soru Çözümleri"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            disabled={creatingCustomDraft}
+            className="flex-1 px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-purple-400 focus:bg-white/15 transition-all"
+          />
+          <button
+            type="submit"
+            disabled={creatingCustomDraft || !customPrompt.trim()}
+            className="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-purple-600/30 whitespace-nowrap"
+          >
+            <span className="material-symbols-outlined text-sm">{creatingCustomDraft ? 'sync' : 'auto_awesome'}</span>
+            <span>{creatingCustomDraft ? 'Taslak Üretiliyor...' : 'AI ile Özel Taslak Üret'}</span>
+          </button>
+        </form>
       </div>
 
       {/* Notifications */}
