@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
@@ -50,9 +54,7 @@ async function createDailyRoom() {
   }
 }
 
-const path = require('path');
 const fs = require('fs');
-dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // Database is loaded directly via Prisma using DATABASE_URL environment variable
 
