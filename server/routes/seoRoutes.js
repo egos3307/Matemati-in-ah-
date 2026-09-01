@@ -5,7 +5,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const { auth, checkRole } = require('../middleware/auth');
-const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData } = require('../services/seoEngine');
+const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi } = require('../services/seoEngine');
 const { analyzeSearchQuery, generateBlogDraftContent } = require('../lib/ai');
 
 // Rate Limiter for AI generation endpoints (max 10 calls per 15 minutes per IP)
@@ -330,11 +330,17 @@ router.post('/drafts/:id/publish', auth, checkRole('HEAD_TEACHER'), async (req, 
       });
     }
 
+    // Automatically submit published URL to Google Indexing API for instant indexing
+    const publishedUrl = `https://fullematematigi.com.tr/blog/${blogPost.slug}`;
+    submitUrlToGoogleIndexingApi(publishedUrl).catch(idxErr => {
+      console.warn('[Auto Indexing API Warning]:', idxErr.message);
+    });
+
     await prisma.seoLog.create({
       data: {
         action: 'PUBLISH_AI_BLOG',
         status: 'SUCCESS',
-        details: `Blog published: "${blogPost.title}" (ID: ${blogPost.id})`
+        details: `Blog published & submitted to Google Indexing API: "${blogPost.title}" (${publishedUrl})`
       }
     });
 

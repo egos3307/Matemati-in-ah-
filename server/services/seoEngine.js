@@ -178,6 +178,68 @@ async function fetchGoogleSearchConsoleData() {
 }
 
 /**
+ * Submit newly published blog URL directly to Google Indexing API for rapid Google indexing
+ */
+async function submitUrlToGoogleIndexingApi(targetUrl) {
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+
+  if (!serviceAccountEmail || !privateKey || !targetUrl) {
+    return { success: false, note: 'Service Account credentials or target URL missing' };
+  }
+
+  try {
+    const jwtAssertion = generateGoogleAccessToken(
+      serviceAccountEmail,
+      privateKey,
+      'https://www.googleapis.com/auth/indexing'
+    );
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwtAssertion
+      })
+    });
+
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.warn('[Google Indexing API] Token request failed:', errText);
+      return { success: false, note: errText };
+    }
+
+    const { access_token } = await tokenRes.json();
+
+    const publishRes = await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: targetUrl,
+        type: 'URL_UPDATED'
+      })
+    });
+
+    if (!publishRes.ok) {
+      const errText = await publishRes.text();
+      console.warn('[Google Indexing API] Publish URL error:', errText);
+      return { success: false, note: errText };
+    }
+
+    const publishData = await publishRes.json();
+    console.log(`[Google Indexing API] Successfully submitted URL for Google indexing: ${targetUrl}`);
+    return { success: true, data: publishData };
+  } catch (err) {
+    console.warn('[Google Indexing API] Exception:', err.message);
+    return { success: false, note: err.message };
+  }
+}
+
+/**
  * Fetch Google Autocomplete / Suggestion Signals
  */
 async function fetchGoogleSuggestions(seedKeyword) {
@@ -441,6 +503,7 @@ async function runSeoDiscoveryScan() {
 module.exports = {
   runSeoDiscoveryScan,
   fetchGoogleSearchConsoleData,
+  submitUrlToGoogleIndexingApi,
   calculateOpportunityScore,
   calculateTextSimilarity
 };

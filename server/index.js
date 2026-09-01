@@ -2455,6 +2455,15 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
         authorId: req.user.id
       }
     });
+
+    // Automatically submit to Google Indexing API for rapid indexing
+    try {
+      const { submitUrlToGoogleIndexingApi } = require('./services/seoEngine');
+      submitUrlToGoogleIndexingApi(`https://fullematematigi.com.tr/blog/${post.slug}`).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
+    } catch (e) {
+      console.warn('[Auto Indexing Import Warning]:', e.message);
+    }
+
     res.json(post);
   } catch (err) {
     console.error('Error creating blog post:', err);
