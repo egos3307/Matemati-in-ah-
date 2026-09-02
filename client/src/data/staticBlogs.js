@@ -122,63 +122,136 @@ export const FALLBACK_BLOGS = [
     id: 'blog-4',
     slug: '9-sinif-matematik-konulari',
     title: '9. Sınıf Matematik Konuları 2026-2027 | Güncel MEB Müfredatı',
-    metaTitle: '9. Sınıf Matematik Konuları 2026-2027 | Fullematematiği',
-    description: '2026-2027 Eğitim Öğretim Yılı 9. sınıf matematik konuları, ünite dağılımları ve Lise 1 matematik müfredatı rehberi.',
-    excerpt: '9. sınıf matematik konuları, ünite dağılımları ve MEB müfredatına uygun konu anlatım başlıkları rehberi.',
+    metaTitle: '9. Sınıf Matematik Konuları 2026-2027 | Güncel MEB Müfredatı | Fullematematiği',
+    description: '2026-2027 MEB müfredatına uygun 9. sınıf matematik konuları, 1. ve 2. dönem ünite tablosu, konu anlatım rehberi ve YKS altyapı taktikleri.',
+    excerpt: '9. sınıf matematik konuları 2026-2027 MEB müfredatı, 1. ve 2. dönem ünite tablosu, konu anlatım bağlantıları ve çalışma stratejileri.',
     coverImage: '/IMG_3033.jpeg',
     createdAt: '2026-08-01T08:00:00.000Z',
-    updatedAt: '2026-08-18T10:00:00.000Z',
+    updatedAt: '2026-09-02T21:40:00.000Z',
     category: 'Lise Matematik',
     targetKeyword: '9. sınıf matematik konuları',
-    relatedKeywords: ['9 sınıf matematik konuları 2026', '9 sınıf matematik müfredatı', 'lise 1 matematik konuları'],
+    relatedKeywords: ['9. sınıf matematik konuları 2027', '9. sınıf matematik konuları 2026-2027', '9. sınıf matematik müfredatı', 'lise 1 matematik konuları'],
     author: { name: 'Fullematematiği Lise Zümresi' },
     content: `
-      <h2>9. Sınıf Matematik Konuları ve Ünite Dağılımı</h2>
-      <p>Lise hayatının ilk yılı olan 9. sınıf, hem okul yazılı sınavları hem de ileride girilecek olan YKS (TYT-AYT) sınavının temel harcını oluşturur. 9. sınıf matematik müfredatında yer alan konular, lise matematiğinin en kritik mantıksal yapı taşlarını içerir.</p>
-      
-      <p>Özellikle <a href="/blog/tyt-matematik-konulari" class="text-primary font-bold hover:underline">TYT Matematik Konuları</a> sınavında karşımıza çıkan Mantık, Kümeler, Denklemler ve Eşitsizlikler ile Üçgenler üniteleri doğrudan 9. sınıf müfredatına dayanmaktadır.</p>
+      <div class="my-4 rounded-2xl bg-primary/5 p-5 border border-primary/20">
+        <h2 class="text-lg font-bold text-slate-900 mb-2">9. Sınıf Matematik Konuları 2026-2027 (Hızlı Özet)</h2>
+        <p class="text-sm text-slate-700 leading-relaxed mb-0">
+          2026-2027 Eğitim-Öğretim Yılı MEB müfredatına uygun <strong>9. sınıf matematik konuları</strong> 2 ana dönem ve 6 temel üniteden oluşur. 1. Dönem: <strong>Mantık</strong>, <strong>Kümeler</strong>, <strong>Denklemler ve Eşitsizlikler</strong> (Temel Kavramlar, Bölünebilme, Mutlak Değer, Üslü ve Köklü İfadeler). 2. Dönem: <strong>Oran ve Orantı</strong>, <strong>Problemler</strong>, <strong>Üçgenler (Geometri)</strong> ile <strong>Veri ve Olasılık</strong> konularını kapsar.
+        </p>
+      </div>
 
-      <h3>1. Dönem 9. Sınıf Matematik Müfredatı</h3>
+      <h2>2026-2027 MEB 9. Sınıf Matematik Ünite ve Konu Dağılım Tablosu</h2>
+      <p>Aşağıdaki tabloda 9. sınıf matematik müfredatı kapsamında işlenen üniteler, dönemler ve bu konuların YKS (TYT) sınavı açısından taşıdığı önem gösterilmiştir:</p>
+
+      <div class="overflow-x-auto my-6">
+        <table class="w-full text-sm text-left border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <thead class="bg-slate-100 text-slate-900 font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200">Dönem</th>
+              <th class="p-3 border-r border-slate-200">Ünite Adı</th>
+              <th class="p-3 border-r border-slate-200">Ana Konu Başlıkları</th>
+              <th class="p-3">TYT / Sınav Önemi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-slate-700">
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-semibold" rowspan="3">1. Dönem</td>
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">1. Ünite: Mantık</td>
+              <td class="p-3 border-r border-slate-200">Önermeler, Bileşik Önermeler, Niceleyiciler</td>
+              <td class="p-3">TYT'de 1 Soru</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">2. Ünite: Kümeler</td>
+              <td class="p-3 border-r border-slate-200">Alt Küme, Küme İşlemleri, Küme Problemleri</td>
+              <td class="p-3">TYT'de 1-2 Soru</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">3. Ünite: Denklemler ve Eşitsizlikler</td>
+              <td class="p-3 border-r border-slate-200">Sayı Kümeleri, Bölme-Bölünebilme, Mutlak Değer, Üslü & Köklü Sayılar</td>
+              <td class="p-3 font-semibold text-emerald-700">TYT Temeli (~6-8 Soru)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-semibold" rowspan="3">2. Dönem</td>
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">4. Ünite: Oran & Orantı ve Problemler</td>
+              <td class="p-3 border-r border-slate-200">Doğru-Ters Orantı, Sayı-Kesir, Yaş, Yüzde, Karışım Problemleri</td>
+              <td class="p-3 font-semibold text-emerald-700">TYT Kalbi (~10-12 Soru)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">5. Ünite: Üçgenler (Geometri)</td>
+              <td class="p-3 border-r border-slate-200">Açılar, Dik Üçgen, Özel Üçgenler, Benzerlik, Açıortay, Kenarortay, Alan</td>
+              <td class="p-3 font-semibold text-emerald-700">Geometri Temeli (~5-7 Soru)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">6. Ünite: Veri & Olasılık</td>
+              <td class="p-3 border-r border-slate-200">Merkezi Eğilim Ölçüleri, Grafik Okuma, Basit Olasılık</td>
+              <td class="p-3">TYT'de 1-2 Soru</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>1. Dönem 9. Sınıf Matematik Konuları ve Detayları</h2>
+      <p>Lise 1 eğitiminin ilk yarısı, soyut düşünme becerisini geliştiren sembolik mantık ve matematik dili olan kümeler ile başlar. Ardından temel cebirsel işlemlerin yapıldığı sayı dizilimlerine geçilir.</p>
+
+      <h3>1. Mantık Ünitesi</h3>
+      <p>Doğruluk değeri, önermeler (p, q, r), "ve", "veya", "ise", "ancak ve ancak" bağlaçları ile açık önermeler incelenir. İlerleyen konularda ispat yöntemlerinin temeli burada atılır.</p>
+
+      <h3>2. Kümeler Ünitesi</h3>
+      <p>Küme gösterim yöntemleri (liste, venn şeması, ortak özellik), alt küme hesabı ($2^n$), kümelerde kesişim, birleşim, fark ve tümleme işlemleri. Kümeler ile günlük hayat problemlerinin çözümü yapılır.</p>
+
+      <h3>3. Denklemler ve Eşitsizlikler Ünitesi</h3>
+      <p>9. sınıf matematik müfredatının en geniş kapsamlı ünitesidir. Bu ünitede yer alan alt başlıklar şunlardır:</p>
       <ul>
-        <li><strong>Mantık:</strong> Önermeler, bileşik önermeler (ve, veya, ise, ancak ve ancak bağlaçları), açık önermeler ve nicelikleyiciler.</li>
-        <li><strong>Kümeler:</strong> Küme kavramı, alt küme, öz alt küme, kümelerde işlemler (birleşim, kesişim, fark, tümleme) ve küme problemleri.</li>
-        <li><strong>Denklemler ve Eşitsizlikler:</strong> 
-          <ul>
-            <li>Sayı kümeleri ve temel kavramlar (<a href="/blog/tyt-temel-kavramlar" class="text-primary font-bold hover:underline">TYT Temel Kavramlar</a>)</li>
-            <li><a href="/blog/bolme-bolunebilme" class="text-primary font-bold hover:underline">Bölme ve Bölünebilme Kuralları</a>, EBOB-EKOK</li>
-            <li>Birinci dereceden denklemler ve eşitsizlikler (<a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme</a>)</li>
-            <li><a href="/blog/mutlak-deger" class="text-primary font-bold hover:underline">Mutlak Değer</a> ve özellikleri</li>
-            <li><a href="/blog/uslu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Üslü İfadeler</a> ve <a href="/blog/koklu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Köklü İfadeler</a></li>
-          </ul>
-        </li>
+        <li><strong>Sayı Kümeleri ve Temel Kavramlar:</strong> Doğal sayılar, tam sayılar, rasyonel ve irrasyonel sayılar. Ayrıntılı anlatım için <a href="/blog/tyt-temel-kavramlar" class="text-primary font-bold hover:underline">TYT Temel Kavramlar</a> rehberimizi inceleyebilirsiniz.</li>
+        <li><strong>Bölme ve Bölünebilme Kuralları:</strong> 2, 3, 4, 5, 8, 9, 11 ile bölünebilme ve EBOB-EKOK uygulamaları. Detaylı rehber için <a href="/blog/bolme-bolunebilme" class="text-primary font-bold hover:underline">Bölme ve Bölünebilme Kuralları</a> sayfamıza göz atın.</li>
+        <li><strong>Birinci Dereceden Denklemler ve Eşitsizlikler:</strong> Denklem kurma ve eşitsizlik aralıkları. Bkz: <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme Rehberi</a>.</li>
+        <li><strong>Mutlak Değer:</strong> Sayı doğrusundaki uzaklık kavramı ve mutlak değerli eşitsizlikler. Detaylı anlatım: <a href="/blog/mutlak-deger" class="text-primary font-bold hover:underline">Mutlak Değer Konu Anlatımı</a>.</li>
+        <li><strong>Üslü ve Köklü İfadeler:</strong> Üslü sayılarda sıralama, kök dereceleri ve eşlenik kuralları. Konu detayları için <a href="/blog/uslu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Üslü Sayılar Konu Anlatımı</a> ve <a href="/blog/koklu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Köklü Sayılar Konu Anlatımı</a> yazılarımıza bakabilirsiniz.</li>
       </ul>
 
-      <h3>2. Dönem 9. Sınıf Matematik Müfredatı</h3>
+      <h2>2. Dönem 9. Sınıf Matematik Konuları ve Detayları</h2>
+      <p>9. sınıfın ikinci döneminde oran-orantı ve problemler ile birlikte lise geometrisinin temel taşı olan Üçgenler ünitesi işlenir.</p>
+
+      <h3>1. Oran ve Orantı Ünitesi</h3>
+      <p>Oran orantı özellikleri, doğru orantı, ters orantı ve bileşik orantı kuralları. İncelemek için: <a href="/blog/oran-oranti" class="text-primary font-bold hover:underline">Oran Orantı Özellikleri ve Örnekleri</a>.</p>
+
+      <h3>2. Problemler Ünitesi</h3>
+      <p>Matematiksel modelleme yapma becerisini geliştiren en önemli başlık. Sayı-kesir, <a href="/blog/yas-problemleri" class="text-primary font-bold hover:underline">Yaş Problemleri</a>, <a href="/blog/yuzde-problemleri" class="text-primary font-bold hover:underline">Yüzde Kar-Zarar Problemleri</a>, karışım ve hareket problemleri. Tümü için: <a href="/blog/tyt-problemler" class="text-primary font-bold hover:underline">TYT Problemler Taktikleri</a>.</p>
+
+      <h3>3. Üçgenler Ünitesi (Geometri Temeli)</h3>
+      <p>Tüm YKS Geometri testinin altyapısı 9. sınıfta atılır:</p>
       <ul>
-        <li><strong>Oran ve Orantı:</strong> <a href="/blog/oran-oranti" class="text-primary font-bold hover:underline">Oran Orantı Özellikleri</a>, doğru ve ters orantı.</li>
-        <li><strong>Problemler:</strong> Sayı-kesir, <a href="/blog/yas-problemleri" class="text-primary font-bold hover:underline">Yaş Problemleri</a>, <a href="/blog/yuzde-problemleri" class="text-primary font-bold hover:underline">Yüzde Kar-Zarar Problemleri</a>, karışım ve hareket problemleri.</li>
-        <li><strong>Üçgenler (Geometri Temeli):</strong> 
-          <ul>
-            <li>Üçgende açılar, dik üçgen ve trigonometrik oranlar</li>
-            <li>Özel üçgenler (30-60-90, 45-45-90) - Detaylar için <a href="/blog/geometride-sekilleri-gormek-ve-geometri-taktikleri" class="text-primary font-bold hover:underline">Geometride Şekilleri Görmek</a> yazımızı inceleyin.</li>
-            <li>Üçgende eşlik ve benzerlik, üçgenin yardımcı elemanları (açıortay, kenarortay, yükseklik)</li>
-            <li>Üçgende alan bağıntıları</li>
-          </ul>
-        </li>
-        <li><strong>Veri ve Olasılık:</strong> Merkezi eğilim ve yayılım ölçüleri, basit olayların olasılığı.</li>
+        <li>Üçgende açılar ve açı bağıntıları</li>
+        <li>Dik üçgen, Pisagor ve Öklid bağıntıları</li>
+        <li>Özel dik üçgenler (30-60-90, 45-45-90) ve görme taktikleri (<a href="/blog/geometride-sekilleri-gormek-ve-geometri-taktikleri" class="text-primary font-bold hover:underline">Geometride Şekilleri Görmek</a>)</li>
+        <li>Üçgende eşlik ve benzerlik (A.A., K.A.K. benzerlikleri)</li>
+        <li>Üçgenin yardımcı elemanları: Açıortay, kenarortay, diklik merkezi</li>
+        <li>Üçgende alan ve alan paylaşımı</li>
       </ul>
 
-      <h3>9. Sınıf Matematiğine Nasıl Çalışılmalı?</h3>
-      <p>9. sınıf matematiğinde başarılı olmak için formül ezberlemek yerine konuların mantığını anlamak esastır. Her konunun ardından en az 2 farklı kaynaktan soru çözülmeli ve takılınan sorular öğretmenlere sorulmalıdır.</p>
+      <h3>4. Veri ve Olasılık Ünitesi</h3>
+      <p>Aritmetik ortalama, medyan (ortanca), mod (tepe değer), standart sapma gibi merkezi eğilim ve yayılım ölçüleri ile basit olayların olasılığı hesabı yapılır.</p>
+
+      <h2>9. Sınıf Matematik Dersine Nasıl Çalışılmalı?</h2>
+      <p>9. sınıf matematiği ezberle yürütülemez. Konuların büyük çoğunluğu 10, 11 ve 12. sınıf konularının ve YKS (TYT-AYT) sınavının temelidir. Başarılı olmak için:</p>
+      <ul>
+        <li>Ders derste dinlenmeli ve günlük konu tekrarı aksatılmamalıdır.</li>
+        <li>Özellikle <a href="/blog/carpanlara-ayirma" class="text-primary font-bold hover:underline">Çarpanlara Ayırma</a> ve denklem çözme becerileri sürekli pratikle canlı tutulmalıdır.</li>
+        <li>Haftalık planlı çalışma yürütülmelidir. <a href="/blog/tyt-matematik-konulari" class="text-primary font-bold hover:underline">TYT Matematik Konuları</a> listemizi de inceleyerek lise hedeflerinizi şimdiden belirleyebilirsiniz.</li>
+      </ul>
     `,
     faq: [
       {
-        question: '9. sınıf matematik zor mu?',
-        answer: 'Ortaokul matematiğine göre daha soyut kavramlar (Mantık, Kümeler, Mutlak Değer) içerdiği için baştan düzenli çalışmayı gerektirir.'
+        question: '9. sınıf matematik konuları YKS (TYT) için ne kadar önemli?',
+        answer: 'TYT Matematik sınavındaki soruların yaklaşık %40-50’si doğrudan 9. sınıf müfredatındaki Mantık, Kümeler, Denklemler, Problemler ve Üçgenler konularından oluşmaktadır.'
       },
       {
-        question: '9. sınıf matematik YKS için ne kadar önemli?',
-        answer: 'TYT matematik sorularının yaklaşık %40-50’si doğrudan 9. sınıf müfredat konularından oluşmaktadır.'
+        question: '9. sınıf matematiğinde en çok zorlanılan konular hangileridir?',
+        answer: 'Öğrencilerin en çok zorlandığı konular soyut yapısı nedeniyle Mantık-Kümeler ile geniş formül ve görme becerisi isteyen Üçgenler (Geometri) ünitesidir.'
+      },
+      {
+        question: '9. sınıf matematik konuları 2026-2027 müfredatında değişiklik var mı?',
+        answer: '2026-2027 MEB müfredatı güncel kazanımları korumakta olup Mantık, Kümeler, Denklemler-Eşitsizlikler, Problemler, Üçgenler ve Veri-Olasılık sırasıyla işlenmektedir.'
       }
     ]
   },
@@ -461,39 +534,146 @@ export const FALLBACK_BLOGS = [
   {
     id: 'blog-10',
     slug: 'koklu-sayilar-konu-anlatimi',
-    title: 'Köklü Sayılar Konu Anlatımı | Dereceler, Kurallar ve Özellikler',
-    metaTitle: 'Köklü Sayılar Konu Anlatımı | Fullematematiği',
-    description: 'Köklü sayılar konu anlatımı, kök dışına çıkarma, eşlenik çarpımı, köklü ifadelerde işlemler ve sınav soru pratikleri.',
-    excerpt: 'Köklü sayılar nedir, kök derecesi ve eşlenik kuralları nelerdir? Örneklerle detaylı konu anlatımı.',
+    title: 'Köklü Sayılar Konu Anlatımı ve Formülleri – Kurallar ve Örnekler',
+    metaTitle: 'Köklü Sayılar Konu Anlatımı ve Formülleri | Fullematematiği',
+    description: 'Köklü sayılar konu anlatımı, köklü sayılar formülleri, temel kök kuralları, kök dışına çıkarma, eşlenik çarpımı ve çözümlü örnek sorular.',
+    excerpt: 'Köklü sayılar konu anlatımı ve köklü sayılar formülleri. Tüm köklü sayı kuralları, eşlenik ve iç içe kök formülleri çözümlü örneklerle.',
     coverImage: '/IMG_3034.jpeg',
     createdAt: '2026-08-07T11:00:00.000Z',
-    updatedAt: '2026-08-18T10:00:00.000Z',
+    updatedAt: '2026-09-02T21:40:00.000Z',
     category: 'Matematik Konuları',
     targetKeyword: 'köklü sayılar konu anlatımı',
-    relatedKeywords: ['köklü sayılar kuralları', 'kök dışına çıkarma', 'köklü sayılarda eşlenik'],
+    relatedKeywords: ['köklü sayılar formülleri', 'köklü sayı kuralları', 'kök dışına çıkarma', 'köklü sayılarda eşlenik', 'iç içe kökler'],
     author: { name: 'Fullematematiği Matematik Zümresi' },
     content: `
+      <div class="my-4 rounded-2xl bg-primary/5 p-5 border border-primary/20">
+        <h2 class="text-lg font-bold text-slate-900 mb-2">Köklü Sayılar Konu Anlatımı ve Formülleri (Hızlı Özet)</h2>
+        <p class="text-sm text-slate-700 leading-relaxed mb-0">
+          <strong>Köklü sayılar</strong>, rasyonel üslü ifadelerin kök sembolü (<sup>n</sup>&radic;a) ile gösteriliş biçimidir. Temel <strong>köklü sayılar formülleri</strong>: Rasyonel üs <sup>n</sup>&radic;a<sup>m</sup> = a<sup>m/n</sup>, Çarpma <sup>n</sup>&radic;a · <sup>n</sup>&radic;b = <sup>n</sup>&radic;(a·b), Bölme <sup>n</sup>&radic;a / <sup>n</sup>&radic;b = <sup>n</sup>&radic;(a/b) ve Eşlenik Çarpımı (&radic;a - &radic;b)(&radic;a + &radic;b) = a - b kurallarına dayanır.
+        </p>
+      </div>
+
       <h2>Köklü Sayılar Nedir?</h2>
-      <p>Karesi veya belirli bir kuvveti verilen bir sayıya eşit olan sayıyı bulma işlemine kök alma işlemi denir. <sup>n</sup>&radic;a şeklinde gösterilir; burada n kök derecesidir.</p>
+      <p>Karesi veya belirli bir n-inci kuvveti verilen bir sayıya eşit olan sayıyı bulma işlemine kök alma işlemi denir. <sup>n</sup>&radic;a şeklinde gösterilir; burada <em>n</em> kök derecesini, <em>a</em> ise kök içindeki ifadeyi temsil eder.</p>
 
-      <p>Köklü sayılar, esasen <a href="/blog/uslu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Üslü Sayılar</a> konusunun rasyonel üslü halidir: <sup>n</sup>&radic;a<sup>m</sup> = a<sup>m/n</sup>.</p>
+      <p>Köklü sayılar, esasen <a href="/blog/uslu-sayilar-konu-anlatimi" class="text-primary font-bold hover:underline">Üslü Sayılar Konu Anlatımı</a> başlığında işlenen üslü ifadelerin rasyonel üs biçiminde yazılmış halidir.</p>
 
-      <h3>Köklü Sayıların Temel Özellikleri</h3>
-      <ul>
-        <li>Kök derecesi çift ise kök içindeki ifade negatif olamaz (a &ge; 0).</li>
-        <li>Kök derecesi tek ise kök içi reel sayı olabilir.</li>
-        <li><strong>Eşlenik Çarpımı:</strong> Paydadaki kökten kurtulmak için ifadenin eşleniği ile çarpılır (Örn: &radic;a - &radic;b eşleniği &radic;a + &radic;b biçimindedir).</li>
-      </ul>
+      <h2>Köklü Sayılar Formülleri ve Temel Kurallar</h2>
+      <p>Sınavlarda hızlı ve hatasız çözüm yapabilmeniz için bilmeniz gereken en önemli <strong>köklü sayı kuralları</strong> ve formül özeti şöyledir:</p>
 
-      <h3>Köklü Sayılarda Dört İşlem</h3>
-      <p>Kök dereceleri ve kök içleri aynı olan ifadeler toplanabilir veya çıkarılabilir. Çarpma ve bölme işlemlerinde ise kök derecelerinin eşit olması gerekir.</p>
+      <div class="overflow-x-auto my-6">
+        <table class="w-full text-sm text-left border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <thead class="bg-slate-100 text-slate-900 font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200">Formül Adı</th>
+              <th class="p-3 border-r border-slate-200">Matematiksel İfade / Formül</th>
+              <th class="p-3">Kullanım Amacı</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-slate-700">
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">Rasyonel Üs Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono"><sup>n</sup>&radic;(a<sup>m</sup>) = a<sup>m/n</sup></td>
+              <td class="p-3">Kökten kurtarma ve üslü sayıya çevirme</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">Çarpma Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono"><sup>n</sup>&radic;a &middot; <sup>n</sup>&radic;b = <sup>n</sup>&radic;(a &middot; b)</td>
+              <td class="p-3">Aynı dereceli kökleri tek kökte çarpma</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">Bölme Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono"><sup>n</sup>&radic;a / <sup>n</sup>&radic;b = <sup>n</sup>&radic;(a / b)</td>
+              <td class="p-3">Aynı dereceli kökleri tek kökte bölme</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">Eşlenik Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono">(&radic;a - &radic;b)(&radic;a + &radic;b) = a - b</td>
+              <td class="p-3">Paydadaki köklü ifadeden kurtulma</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">İç İçe Kökler Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono"><sup>m</sup>&radic;(<sup>n</sup>&radic;a) = <sup>m&middot;n</sup>&radic;a</td>
+              <td class="p-3">Dereceleri çarparak tek köke indirme</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">Özel Kök Formülü</td>
+              <td class="p-3 border-r border-slate-200 font-mono">&radic;(a &plusmn; 2&radic;b) = &radic;x &plusmn; &radic;y</td>
+              <td class="p-3">x+y=a ve x&middot;y=b durumunda açılım</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      <p>Detaylı sınav stratejileri için <a href="/blog/tyt-ayt-matematik-geometri-net-artirma-taktikleri" class="text-primary font-bold hover:underline">TYT Net Artırma Taktikleri</a> yazımızı inceleyin.</p>
+      <h2>Köklü Sayı Kuralları ve Çözümlü Örnekler</h2>
+
+      <h3>1. Rasyonel Üs Formülü (Kökten Çıkarma)</h3>
+      <p>Bir sayının üssü kök derecesine bölündüğünde sayı kök dışına çıkar. Eğer üs ve kök derecesi eşitse <sup>n</sup>&radic;(a<sup>n</sup>) = a (tek derece) veya |a| (çift derece) olur. Çift derecede mutlak değere dikkat edilmelidir (<a href="/blog/mutlak-deger" class="text-primary font-bold hover:underline">Mutlak Değer</a>).</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 1:</strong> <sup>3</sup>&radic;27 + &radic;16 ifadesinin değerini bulunuz.<br/>
+        <strong>Çözüm:</strong> 27 = 3<sup>3</sup> olduğundan <sup>3</sup>&radic;(3<sup>3</sup>) = 3<sup>3/3</sup> = 3. 16 = 4<sup>2</sup> olduğundan &radic;(4<sup>2</sup>) = 4. Toplam: 3 + 4 = <strong>7</strong>.
+      </div>
+
+      <h3>2. Kök İçi ve Kök Dışına Alma Formülü</h3>
+      <p>Kök içindeki bir çarpan <sup>n</sup>&radic;(a<sup>n</sup> &middot; b) = a &middot; <sup>n</sup>&radic;b şeklinde dışarı çıkarılır. Benzer şekilde dışarıdaki pozitif sayı kök içine girerken kök derecesini üs olarak alır: a &middot; <sup>n</sup>&radic;b = <sup>n</sup>&radic;(a<sup>n</sup> &middot; b).</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 2:</strong> &radic;72 sayısını a&radic;b şeklinde yazınız.<br/>
+        <strong>Çözüm:</strong> 72 = 36 &middot; 2 = 6<sup>2</sup> &middot; 2 şeklinde çarpanlarına ayrılır. 6 dışarı çıkar: &radic;72 = <strong>6&radic;2</strong>.
+      </div>
+
+      <h3>3. Köklü Sayılarda Çarpma ve Bölme Formülleri</h3>
+      <p>Çarpma ve bölme işlemlerinde kök derecelerinin aynı olması şarttır. Kök dereceleri eşitse kök içleri kendi arasında çarpılır veya bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 3:</strong> &radic;3 &middot; &radic;12 ve &radic;50 / &radic;2 işlemlerinin sonucunu bulunuz.<br/>
+        <strong>Çözüm:</strong> &radic;3 &middot; &radic;12 = &radic;(3 &middot; 12) = &radic;36 = <strong>6</strong>.<br/>
+        &radic;50 / &radic;2 = &radic;(50 / 2) = &radic;25 = <strong>5</strong>.
+      </div>
+
+      <h3>4. Köklü Sayılarda Toplama ve Çıkarma Kuralları</h3>
+      <p>Köklü ifadelerde toplama ve çıkarma yapılabilmesi için <strong>hem kök derecelerinin hem de kök içlerinin birebir aynı</strong> olması gerekir. Kat sayılar toplanır veya çıkarılır: x &middot; <sup>n</sup>&radic;a + y &middot; <sup>n</sup>&radic;a = (x + y) &middot; <sup>n</sup>&radic;a.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 4:</strong> 4&radic;5 + 3&radic;5 - 2&radic;5 işleminin sonucu nedir?<br/>
+        <strong>Çözüm:</strong> Kök içleri &radic;5 ortak olduğu için katsayılar işleme alınır: (4 + 3 - 2)&radic;5 = <strong>5&radic;5</strong>.
+      </div>
+
+      <h3>5. Eşlenik Formülleri (Paydayı Rasyonel Yapma)</h3>
+      <p>Paydası köklü olan bir kesirde paydayı kökten kurtarmak için kesir, paydanın eşleniği ile genişletilir. İki kare farkı özdeşliği (<a href="/blog/carpanlara-ayirma" class="text-primary font-bold hover:underline">Çarpanlara Ayırma</a>) kullanılır: (&radic;a - &radic;b)(&radic;a + &radic;b) = a - b.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 5:</strong> 6 / &radic;3 ifadesinin paydasını rasyonel yapınız.<br/>
+        <strong>Çözüm:</strong> Payı ve paydayı &radic;3 ile çarparız: (6 &middot; &radic;3) / (&radic;3 &middot; &radic;3) = (6&radic;3) / 3 = <strong>2&radic;3</strong>.
+      </div>
+
+      <h3>6. Kökün Kökü (İç İçe Kökler) Formülü</h3>
+      <p>İç içe verilmiş köklü ifadelerde kökler arasında sayı yoksa dereceler birbiriyle çarpılarak tek bir kök derecesi elde edilir: <sup>m</sup>&radic;(<sup>n</sup>&radic;a) = <sup>m&middot;n</sup>&radic;a.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 6:</strong> &radic;(<sup>3</sup>&radic;64) ifadesinin değerini bulunuz.<br/>
+        <strong>Çözüm:</strong> Dıştaki kök derecesi 2, içteki 3'tür. Dereceler çarpılır: 2 &middot; 3 = 6. <sup>6</sup>&radic;64 = <sup>6</sup>&radic;(2<sup>6</sup>) = <strong>2</strong>.
+      </div>
+
+      <h3>7. &radic;(a &plusmn; 2&radic;b) Özel Kök Formülü</h3>
+      <p>Toplama veya çıkarma durumundaki köklü ifadelerde içteki kökün önünde 2 katsayısı varsa; çarpımları b'yi, toplamları a'yı veren x ve y sayıları bulunur (x > y). Formül: &radic;(a &plusmn; 2&radic;b) = &radic;x &plusmn; &radic;y.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 7:</strong> &radic;(5 + 2&radic;6) ifadesini sadeleştiriniz.<br/>
+        <strong>Çözüm:</strong> Çarpımları 6, toplamları 5 olan sayılar 3 ve 2'dir (3&middot;2=6, 3+2=5). O halde &radic;(5 + 2&radic;6) = <strong>&radic;3 + &radic;2</strong>.
+      </div>
+
+      <h2>Köklü Sayılar Sorularında Sık Yapılan Hatalar</h2>
+      <p>Sınavlarda köklü sayılar sorularında en çok yapılan hata, &radic;(a<sup>2</sup> + b<sup>2</sup>) = a + b şeklinde toplama üzerine kökü dağıtmaktır. Kök toplama üzerine dağılmaz! Ayrıca denklemlerde <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme</a> yaparken çift dereceli kök dışına negatif sayı çıkarılmayacağı unutulmamalıdır.</p>
+
+      <p>Bu konuyu tamamladıktan sonra <a href="/blog/9-sinif-matematik-konulari" class="text-primary font-bold hover:underline">9. Sınıf Matematik Konuları</a> ve <a href="/blog/tyt-matematik-konulari" class="text-primary font-bold hover:underline">TYT Matematik Konuları</a> rehberlerimize göz atarak soru çözümlerine devam edebilirsiniz.</p>
     `,
     faq: [
       {
-        question: 'Karekök içinden sayı nasıl dışarı çıkar?',
-        answer: 'Kök içindeki sayı asal çarpanlarına ayrılır, üssü kök derecesine tam bölünen çarpanlar kök dışına çıkarılır.'
+        question: 'Köklü sayılarda eşlenik ne demektir ve ne işe yarar?',
+        answer: 'Eşlenik, bir köklü ifadeyi çarptığınızda sonucu rasyonel sayı yapan ifadedir (örneğin √a - √b için √a + √b). Kesirli işlemlerde paydayı kökten kurtarmak için kullanılır.'
+      },
+      {
+        question: 'Çift dereceli bir kök dışarı negatif çıkabilir mi?',
+        answer: 'Hayır, reel sayılar kümesinde çift dereceli bir kökün sonucu daima sıfır veya pozitiftir (√a² = |a|).'
+      },
+      {
+        question: 'Köklü sayılar formülleri ezberlenmeli mi?',
+        answer: 'Formülleri ezberlemek yerine köklü sayıların rasyonel üslü sayılar (n√a^m = a^(m/n)) olduğunu anlamak tüm kuralları kendiliğinden türetmenizi sağlar.'
       }
     ]
   },
@@ -613,37 +793,200 @@ export const FALLBACK_BLOGS = [
   {
     id: 'blog-14',
     slug: 'bolme-bolunebilme',
-    title: 'Bölme ve Bölünebilme Kuralları Konu Anlatımı | 2, 3, 4, 5, 9, 11 Kuralları',
-    metaTitle: 'Bölme ve Bölünebilme Kuralları | Fullematematiği',
-    description: 'Bölme ve bölünebilme kuralları konu anlatımı, 2, 3, 4, 5, 8, 9, 10, 11 ile bölünebilme taktikleri ve kalan bulma.',
-    excerpt: 'Bölünebilme kuralları nelerdir? Kalan bulma yöntemleri ve sınavda pratik çözümler.',
+    title: 'Bölme ve Bölünebilme Kuralları – Kolay Anlatım ve Örnekler',
+    metaTitle: 'Bölme ve Bölünebilme Kuralları – Kolay Anlatım ve Örnekler | Fullematematiği',
+    description: 'Bölme ve bölünebilme kuralları konu anlatımı, 2, 3, 4, 5, 6, 8, 9, 10 ve 11 ile bölünebilme kuralları tablosu, pratik çözümlü örnekler ve sınav tekrarları.',
+    excerpt: 'Bölme ve bölünebilme kuralları konu anlatımı. 2, 3, 4, 5, 6, 8, 9, 10 ve 11 ile bölünebilme kuralları tablosu, pratik çözümlü örnek sorular.',
     coverImage: '/IMG_3037.jpeg',
     createdAt: '2026-08-11T09:00:00.000Z',
-    updatedAt: '2026-08-18T10:00:00.000Z',
+    updatedAt: '2026-09-02T21:40:00.000Z',
     category: 'Matematik Konuları',
-    targetKeyword: 'bölme bölünebilme',
-    relatedKeywords: ['bölünebilme kuralları', '3 ile bölünebilme', '11 ile bölünebilme'],
+    targetKeyword: 'bölme ve bölünebilme kuralları',
+    relatedKeywords: ['bölme kuralları', 'bölünebilme kuralları', 'bölünebilme kuralları konu anlatımı', '11 ile bölünebilme kuralı'],
     author: { name: 'Fullematematiği Eğitim Kadrosu' },
     content: `
-      <h2>Bölme ve Bölünebilme Kuralları</h2>
-      <p>Bir sayının başka bir sayıya tam bölünüp bölünmediğini uzun uzun bölme yapmadan anlamamızı sağlayan kurallardır.</p>
+      <div class="my-4 rounded-2xl bg-primary/5 p-5 border border-primary/20">
+        <h2 class="text-lg font-bold text-slate-900 mb-2">Bölme ve Bölünebilme Kuralları (Hızlı Cevap & Özet)</h2>
+        <p class="text-sm text-slate-700 leading-relaxed mb-0">
+          <strong>Bölme ve bölünebilme kuralları</strong>, bir tam sayının başka bir tam sayıya tam (kalan 0) bölünüp bölünmediğini uzun bölme işlemi yapmadan anlamamızı sağlayan pratik matematik yöntemleridir. 2, 3, 4, 5, 6, 8, 9, 10 ve 11 bölünebilme kuralları; son basamak, rakamlar toplamı veya özel işaret metodu (+ / -) kullanılarak saniyeler içinde hesaplanır.
+        </p>
+      </div>
 
-      <h3>Pratik Bölünebilme Kuralları</h3>
+      <h2>Bölme İşleminin Temel Elemanları ve Özellikleri</h2>
+      <p>Bölme ve bölünebilme kuralları konu anlatımı incelenirken öncelikle bölme bağıntısı bilinmelidir: A sayısının B sayısına bölümünde bölüm C, kalan K ise;</p>
       <ul>
-        <li><strong>2 ile Bölünebilme:</strong> Son rakamı çift olan sayılar tam bölünür.</li>
-        <li><strong>3 ile Bölünebilme:</strong> Rakamları toplamı 3 veya 3'ün katı olan sayılar tam bölünür.</li>
-        <li><strong>4 ile Bölünebilme:</strong> Son iki basamağı 00 veya 4'ün katı olan sayılar.</li>
-        <li><strong>5 ile Bölünebilme:</strong> Son rakamı 0 veya 5 olan sayılar.</li>
-        <li><strong>9 ile Bölünebilme:</strong> Rakamları toplamı 9 veya 9'un katı olan sayılar.</li>
-        <li><strong>11 ile Bölünebilme:</strong> Sağdan başlanarak rakamlara sırasıyla +, -, +, - işaretleri verilip toplanır.</li>
+        <li><strong>Bölme Bağıntısı:</strong> A = B &middot; C + K</li>
+        <li><strong>Kalan Şartı:</strong> 0 &le; K &lt; B (Kalan sayı negatif olamaz ve bölenden küçük olmalıdır).</li>
+        <li>Kalan K = 0 ise "A sayısı B sayısına tam bölünüyor" demektir.</li>
+      </ul>
+      <p>Bu temel kavramlar <a href="/blog/tyt-temel-kavramlar" class="text-primary font-bold hover:underline">TYT Temel Kavramlar</a> ve <a href="/blog/sayi-basamaklari" class="text-primary font-bold hover:underline">Sayı Basamakları</a> konularında sıklıkla karşımıza çıkar.</p>
+
+      <h2>2, 3, 4, 5, 6, 8, 9, 10 ve 11 ile Bölünebilme Kuralları Tablosu</h2>
+      <p>Öğrencilerin hızlıca göz gezdirebileceği tüm <strong>bölme ve bölünebilme kuralları</strong> özet tablosu aşağıda sunulmuştur:</p>
+
+      <div class="overflow-x-auto my-6">
+        <table class="w-full text-sm text-left border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <thead class="bg-slate-100 text-slate-900 font-bold border-b border-slate-200">
+            <tr>
+              <th class="p-3 border-r border-slate-200">Bölen Sayı</th>
+              <th class="p-3 border-r border-slate-200">Bölünebilme Kuralı / Şartı</th>
+              <th class="p-3">Pratik İpucu / Kontrol Yöntemi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-slate-700">
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">2 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Birler basamağı çift sayı olmalıdır (0, 2, 4, 6, 8).</td>
+              <td class="p-3">Sadece son rakama bakılır. Tek ise kalan 1'dir.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">3 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Rakamları toplamı 3 veya 3'ün katı olmalıdır.</td>
+              <td class="p-3">Rakamları toplayıp 3'e bölerek kalan bulunur.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">4 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Son iki basamağı 00 veya 4'ün katı olmalıdır.</td>
+              <td class="p-3">Son iki basamak 4'e bölünerek kalan hesaplanır.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">5 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Birler basamağı 0 veya 5 olmalıdır.</td>
+              <td class="p-3">Son rakam 5'ten küçükse kalan son rakamdır.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">6 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Sayının hem 2'ye hem de 3'e tam bölünmesi gerekir.</td>
+              <td class="p-3">Sayı hem çift olmalı hem rakamları toplamı 3'ün katı olmalı.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">8 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Son üç basamağı 000 veya 8'in katı olmalıdır.</td>
+              <td class="p-3">Son üç basamaktaki sayı 8'e bölünür.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">9 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Rakamları toplamı 9 veya 9'un katı olmalıdır.</td>
+              <td class="p-3">Rakamları toplayıp 9'a bölerek kalan tespit edilir.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">10 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Birler basamağı 0 olmalıdır.</td>
+              <td class="p-3">Sayının son rakamı doğrudan 10'a bölümünden kalandır.</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 border-r border-slate-200 font-bold text-primary">11 ile Bölünebilme</td>
+              <td class="p-3 border-r border-slate-200">Sağdan başlanarak rakamlara (+, -, +, -...) verilip toplanır. Sonuç 0 veya 11'in katı olmalıdır.</td>
+              <td class="p-3">Çıkan sonuç negatif ise 11 eklenerek kalan bulunur.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Bölünebilme Kuralları ve Çözümlü Örnekler</h2>
+
+      <h3>2 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Bir sayının 2 ile tam bölünebilmesi için birler basamağındaki rakamın çift (0, 2, 4, 6, 8) olması gerekir.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 1:</strong> 486 ve 735 sayılarının 2 ile bölümünden kalanları bulunuz.<br/>
+        <strong>Çözüm:</strong> 486 sayısının birler basamağı 6 (çift) olduğu için 2'ye tam bölünür, kalan <strong>0</strong>'dır.<br/>
+        735 sayısının birler basamağı 5 (tek) olduğu için 2 ile bölümünden kalan <strong>1</strong>'dir.
+      </div>
+
+      <h3>3 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Bir sayının rakamları toplamı 3 veya 3'ün katı ise o sayı 3'e tam bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 2:</strong> Dört basamaklı 52a4 sayısı 3 ile tam bölündüğüne göre a'nın alabileceği değerler toplamı kaçtır?<br/>
+        <strong>Çözüm:</strong> Rakamlar toplamı: 5 + 2 + a + 4 = 11 + a. 11 + a ifadesinin 3'ün katı olması için a değerleri 1, 4, 7 olabilir (11+1=12, 11+4=15, 11+7=18).<br/>
+        a değerleri toplamı: 1 + 4 + 7 = <strong>12</strong>.
+      </div>
+
+      <h3>4 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Sayının son iki basamağı 00 veya 4'ün katı ise sayı 4 ile tam bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 3:</strong> 7324 sayısının 4 ile bölümünden kalanı bulunuz.<br/>
+        <strong>Çözüm:</strong> Son iki basamak 24'tür. 24 sayısı 4'e tam bölündüğü için (24 = 4 &middot; 6) 7324 sayısının 4 ile bölümünden kalan <strong>0</strong>'dır.
+      </div>
+
+      <h3>5 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Birler basamağı 0 veya 5 olan sayılar 5 ile tam bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 4:</strong> 897 sayısının 5 ile bölümünden kalan kaçtır?<br/>
+        <strong>Çözüm:</strong> Birler basamağı 7'dir. 7'nin 5 ile bölümünden kalan 2 olduğu için 897 sayısının 5 ile bölümünden kalan <strong>2</strong>'dir.
+      </div>
+
+      <h3>6 ile Bölünebilme Kuralı ve Örnek (Aralarında Asal Çarpanlar)</h3>
+      <p>6 = 2 &middot; 3 olduğundan, bir sayının 6 ile tam bölünebilmesi için hem 2 ile (çift sayı) hem de 3 ile (rakamları toplamı 3'ün katı) tam bölünmesi gerekir.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 5:</strong> 318 sayısı 6'ya tam bölünür mü?<br/>
+        <strong>Çözüm:</strong> 1) Birler basamağı 8 (çift) olduğu için 2'ye tam bölünür.<br/>
+        2) Rakamları toplamı: 3 + 1 + 8 = 12 (3'ün katı) olduğu için 3'e de tam bölünür.<br/>
+        Hem 2 hem 3'e bölündüğü için 318 sayısı 6 ile <strong>tam bölünür</strong>.
+      </div>
+
+      <h3>8 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Son üç basamağı 000 veya 8'in katı olan sayılar 8 ile tam bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 6:</strong> 5816 sayısının 8 ile tam bölünüp bölünmediğini inceleyiniz.<br/>
+        <strong>Çözüm:</strong> Son üç basamak 816'dır. 816 / 8 = 102 (kalan 0) olduğu için 5816 sayısı 8'e <strong>tam bölünür</strong>.
+      </div>
+
+      <h3>9 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Rakamları toplamı 9 veya 9'un katı olan sayılar 9 ile tam bölünür. Bir sayının 9 ile bölümünden kalan, rakamları toplamının 9 ile bölümünden kalana eşittir.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 7:</strong> 6738 sayısının 9 ile bölümünden kalan kaçtır?<br/>
+        <strong>Çözüm:</strong> Rakamları toplamı: 6 + 7 + 3 + 8 = 24. 24 sayısının 9 ile bölümünden kalan (24 = 2 &middot; 9 + 6) <strong>6</strong>'dır.
+      </div>
+
+      <h3>10 ile Bölünebilme Kuralı ve Örnek</h3>
+      <p>Birler basamağı 0 olan sayılar 10 ile tam bölünür. Bir sayının birler basamağındaki rakam doğrudan 10 ile bölümünden kalandır.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 8:</strong> 2984 sayısının 10 ile bölümünden kalan kaçtır?<br/>
+        <strong>Çözüm:</strong> Birler basamağı 4 olduğu için kalan doğrudan <strong>4</strong>'tür.
+      </div>
+
+      <h3>11 ile Bölünebilme Kuralı ve Örnek (+ / - Metodu)</h3>
+      <p>Sayının rakamlarına en sağdaki (birler) basamaktan başlanarak sırasıyla +, -, +, -, +... işaretleri verilir. Bu sayıların toplamı 0 veya 11'in katı ise sayı 11'e tam bölünür.</p>
+      <div class="my-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+        <strong>Çözümlü Örnek 9:</strong> 9284 sayısının 11 ile tam bölünüp bölünmediğini kontrol ediniz.<br/>
+        <strong>Çözüm:</strong> Sağdan sola işaretleme: 4(+), 8(-), 2(+), 9(-).<br/>
+        İşlem: (+4) + (-8) + (+2) + (-9) = 4 - 8 + 2 - 9 = -11.<br/>
+        -11 sayısı 11'in katı (11 &middot; -1) olduğu için 9284 sayısı 11 ile <strong>tam bölünür</strong>.
+      </div>
+
+      <h2>Bölme İşleminde Kalan Bulma Yöntemleri ve Özellikleri</h2>
+      <p>Bölme ve bölünebilme kuralları sorularında şu pratik özellikler hayat kurtarır:</p>
+      <ul>
+        <li>A sayısının m ile bölümünden kalan k1, B sayısının m ile bölümünden kalan k2 ise:</li>
+        <li>(A + B)'nin m ile bölümünden kalan (k1 + k2)'nin m ile bölümünden kalandır.</li>
+        <li>(A &middot; B)'nin m ile bölümünden kalan (k1 &middot; k2)'nin m ile bölümünden kalandır.</li>
+        <li>Denklem problemlerinde soru çözümünü kolaylaştırmak için <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme</a> ve <a href="/blog/carpanlara-ayirma" class="text-primary font-bold hover:underline">Çarpanlara Ayırma</a> kurallarından yararlanabilirsiniz.</li>
       </ul>
 
-      <p>Ayrıca <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme</a> yazımızı da inceleyebilirsiniz.</p>
+      <div class="my-6 rounded-2xl bg-amber-50 p-5 border border-amber-200">
+        <h2 class="text-base font-bold text-amber-900 mb-2">Öğrenciler İçin Hızlı Tekrar Kutusu (Sınav Öncesi)</h2>
+        <ul class="text-xs text-amber-800 space-y-1.5 leading-relaxed mb-0">
+          <li>&bull; <strong>Son Rakama Bakanlar:</strong> 2 (çift mi?), 5 (0 veya 5 mi?), 10 (0 mı?).</li>
+          <li>&bull; <strong>Son Basamaklara Bakanlar:</strong> 4 (son 2 basamak), 8 (son 3 basamak).</li>
+          <li>&bull; <strong>Rakamlar Toplamına Bakanlar:</strong> 3 (toplam 3'ün katı mı?), 9 (toplam 9'un katı mı?).</li>
+          <li>&bull; <strong>Aralarında Asal Çarpanlar:</strong> 6 (2 ve 3), 12 (3 ve 4), 15 (3 ve 5), 36 (4 ve 9), 45 (5 ve 9).</li>
+        </ul>
+      </div>
+
+      <p>Bu konudaki bilginizi pekiştirdikten sonra <a href="/blog/9-sinif-matematik-konulari" class="text-primary font-bold hover:underline">9. Sınıf Matematik Konuları</a> ve <a href="/blog/tyt-matematik-konulari" class="text-primary font-bold hover:underline">TYT Matematik Konuları</a> çalışma rehberlerimizi inceleyerek hedeflerinizi büyültebilirsiniz.</p>
     `,
     faq: [
       {
         question: 'Bir sayı hem 3 hem 4 e bölünüyorsa kaça tam bölünür?',
-        answer: 'Aralarında asal oldukları için 3 × 4 = 12 ile tam bölünür.'
+        answer: '3 ve 4 sayıları aralarında asal olduğu için bu sayı 3 × 4 = 12 sayılarına da tam bölünür.'
+      },
+      {
+        question: 'Bölme işleminde kalan sayı en fazla kaç olabilir?',
+        answer: 'Bölme kuralı gereği kalan sayı daima bölen sayıdan küçük olmalıdır (0 ≤ K < B). Bu yüzden kalan en fazla (Bölen - 1) olabilir.'
+      },
+      {
+        question: 'Rakamları toplamı kuralı hangi bölünebilme kurallarında geçerlidir?',
+        answer: 'Rakamları toplamı kuralı doğrudan 3 ve 9 ile bölünebilme kurallarında geçerlidir.'
       }
     ]
   },
