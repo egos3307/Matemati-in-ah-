@@ -652,31 +652,65 @@ export const FALLBACK_BLOGS = [
     slug: 'mutlak-deger',
     title: 'Mutlak Değer Konu Anlatımı | Tanım, Özellikler ve Eşitsizlikler',
     metaTitle: 'Mutlak Değer Konu Anlatımı | Fullematematiği',
-    description: 'Mutlak değer nedir, mutlak değerli denklemler ve eşitsizlikler nasıl çözülür? Adım adım konu anlatımı.',
-    excerpt: 'Mutlak değer uzaklık kavramı ve mutlak değerli denklemlerin pratik çözüm yolları.',
+    description: 'Mutlak değer nedir, mutlak değerli denklemler ve eşitsizlikler nasıl çözülür? Adım adım konu anlatımı ve çözümlü soru örnekleri.',
+    excerpt: 'Mutlak değer uzaklık kavramı, özellikler ve mutlak değerli denklemlerin pratik çözüm yolları.',
     coverImage: '/IMG_3039.jpeg',
     createdAt: '2026-08-12T10:00:00.000Z',
     updatedAt: '2026-08-18T10:00:00.000Z',
     category: 'Matematik Konuları',
     targetKeyword: 'mutlak değer',
-    relatedKeywords: ['mutlak değer konu anlatımı', 'mutlak değerli eşitsizlikler', 'mutlak değer özellikleri'],
+    relatedKeywords: ['mutlak değer konu anlatımı', 'mutlak değerli eşitsizlikler', 'mutlak değer özellikleri', 'mutlak değer soru çözümü'],
     author: { name: 'Fullematematiği YKS Zümresi' },
     content: `
-      <h2>Mutlak Değer Nedir?</h2>
-      <p>Bir reel sayının sayı doğrusundaki başlangıç noktasına (orijine) olan uzaklığına o sayının <strong>mutlak değeri</strong> denir ve |x| ile gösterilir. Uzaklık negatif olamayacağı için mutlak değerin sonucu asla negatif çıkamaz.</p>
+      <h2>Mutlak Değer Konu Anlatımı</h2>
+      <p>Mutlak değer, gerçek sayıların sayı doğrusu üzerindeki uzaklık tanımıdır. Matematikte bir <em>x</em> reel sayısının başlangıç noktasına (orijine) olan uzaklığına <strong>x'in mutlak değeri</strong> denir ve <strong>|x|</strong> biçiminde gösterilir.</p>
 
-      <h3>Mutlak Değer Çıkarma Kuralı</h3>
+      <p>Sayı doğrusunda uzaklık negatif olamayacağı için mutlak değerin sonucu hiçbir zaman 0'dan küçük olamaz (|x| &ge; 0). <a href="/blog/9-sinif-matematik-konulari" class="text-primary font-bold hover:underline">9. Sınıf Matematik Konuları</a> ve <a href="/blog/tyt-matematik-konulari" class="text-primary font-bold hover:underline">TYT Matematik Konuları</a> sınavlarında kilit ünitelerdendir.</p>
+
+      <h3>1. Mutlak Değerin Temel Özellikleri</h3>
       <ul>
-        <li>Eğer içi pozitifse olduğu gibi çıkar: x &gt; 0 ise |x| = x</li>
-        <li>Eğer içi negatifse önüne eksi alarak çıkar: x &lt; 0 ise |x| = -x</li>
+        <li><strong>Kökten Çıkarma Kuralı:</strong> 
+          <ul>
+            <li>Eğer x &gt; 0 ise |x| = x (olduğu gibi çıkar).</li>
+            <li>Eğer x = 0 ise |0| = 0.</li>
+            <li>Eğer x &lt; 0 ise |x| = -x (önüne eksi alarak pozitif çıkar).</li>
+          </ul>
+        </li>
+        <li>|-x| = |x| ve |x - y| = |y - x| (iki nokta arasındaki uzaklık simetriktir).</li>
+        <li>|x · y| = |x| · |y| ve |x / y| = |x| / |y| (y &ne; 0).</li>
+        <li>Üçgen Eşitsizliği: |x + y| &le; |x| + |y|.</li>
       </ul>
 
-      <p><a href="/blog/9-sinif-matematik-konulari" class="text-primary font-bold hover:underline">9. Sınıf Matematik Konuları</a> müfredatının en kritik konusudur.</p>
+      <h3>2. Mutlak Değerli Denklemler ve Eşitsizlikler</h3>
+      <p><strong>|x| = a (a &ge; 0) denklemi:</strong> x = a veya x = -a olur.</p>
+      <p><strong>|x| &le; a (a &gt; 0) eşitsizliği:</strong> -a &le; x &le; a biçiminde çözülür.</p>
+      <p><strong>|x| &ge; a (a &gt; 0) eşitsizliği:</strong> x &ge; a veya x &le; -a biçiminde iki ayrı eşitsizliğe ayrılır.</p>
+
+      <h3>3. Çözümlü Soru Örnekleri</h3>
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 1:</h4>
+        <p class="text-sm text-slate-700">|2x - 6| + |x + 3| ifadesinde x &lt; -3 olduğuna göre en sade hali nedir?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">x &lt; -3 için:<br/>2x - 6 negatiftir &rArr; |2x - 6| = -(2x - 6) = -2x + 6.<br/>x + 3 negatiftir &rArr; |x + 3| = -(x + 3) = -x - 3.<br/>Toplam = (-2x + 6) + (-x - 3) = -3x + 3 bulunur.</p>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 2:</h4>
+        <p class="text-sm text-slate-700">|3x - 1| &le; 8 eşitsizliğini sağlayan x tam sayılarının toplamı kaçtır?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">-8 &le; 3x - 1 &le; 8 &rArr; -7 &le; 3x &le; 9 &rArr; -7/3 &le; x &le; 3.<br/>x tam sayıları: -2, -1, 0, 1, 2, 3.<br/>Toplam = -2 + -1 + 0 + 1 + 2 + 3 = 3 bulunur.</p>
+      </div>
+
+      <p>Konuyu pekiştirmek için <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme Konu Anlatımı</a> yazımıza da göz atabilirsiniz.</p>
     `,
     faq: [
       {
         question: 'Mutlak değer sonucu negatif olabilir mi?',
         answer: 'Hayır, mutlak değer bir uzaklık belirttiği için sonucu en küçük 0 olabilir.'
+      },
+      {
+        question: 'İçinde bilinmeyen olan mutlak değerli denklem nasıl çözülür?',
+        answer: 'Mutlak değerin içi pozitif ve negatif varsayılarak iki ayrı durum incelenir ve bulunan köklerin denklemde tanımı bozup bozmadığı kontrol edilir.'
       }
     ]
   },
@@ -785,31 +819,58 @@ export const FALLBACK_BLOGS = [
     slug: 'oran-oranti',
     title: 'Oran Orantı Konu Anlatımı | Doğru, Ters ve Bileşik Orantı',
     metaTitle: 'Oran Orantı Konu Anlatımı | Fullematematiği',
-    description: 'Oran orantı konu anlatımı, orantı sabit k, doğru orantı, ters orantı ve bileşik orantı problemleri.',
-    excerpt: 'Oran ve orantı çeşitleri, orantı sabiti k ve günlük hayat problemleri.',
+    description: 'Oran orantı konu anlatımı, orantı sabiti k, doğru orantı, ters orantı, bileşik orantı ve çözümlü soru örnekleri.',
+    excerpt: 'Oran ve orantı çeşitleri, orantı sabiti k, doğru ve ters orantı günlük hayat problemleri.',
     coverImage: '/IMG_3041.jpeg',
     createdAt: '2026-08-16T10:00:00.000Z',
     updatedAt: '2026-08-18T10:00:00.000Z',
     category: 'Matematik Konuları',
     targetKeyword: 'oran orantı',
-    relatedKeywords: ['oran orantı konu anlatımı', 'doğru orantı ters orantı', 'orantı sabiti k'],
+    relatedKeywords: ['oran orantı konu anlatımı', 'doğru orantı ters orantı', 'orantı sabiti k', 'oran orantı çözümlü sorular'],
     author: { name: 'Fullematematiği Koçluk Ekibi' },
     content: `
       <h2>Oran ve Orantı Nedir?</h2>
-      <p>İki çokluğun bölme yoluyla karşılaştırılmasına <strong>oran</strong>, iki veya daha fazla oranı birbirine eşitlemeye <strong>orantı</strong> denir (a / b = c / d = k).</p>
+      <p>Matematikte iki aynı türden niceliğin bölme yoluyla karşılaştırılmasına <strong>oran</strong> denir. İki veya daha fazla oranın birbirine eşitlenmesiyle oluşan matematiksel ifadeye ise <strong>orantı</strong> adı verilir. Örneğin <em>a / b = c / d = k</em> ifadesinde <em>k</em> katsayısına <strong>orantı sabiti</strong> denir.</p>
 
-      <h3>Orantı Çeşitleri</h3>
+      <p>Sitemizdeki <a href="/blog/tyt-problemler" class="text-primary font-bold hover:underline">TYT Problemler</a> ve <a href="/blog/yuzde-problemleri" class="text-primary font-bold hover:underline">Yüzde Problemleri</a> konularının tamamı oran-orantı mantığına dayanmaktadır.</p>
+
+      <h3>1. Orantının Temel Özellikleri</h3>
       <ul>
-        <li><strong>Doğru Orantı:</strong> İki çokluktan biri artarken diğeri de aynı oranda artıyorsa (Bölümleri sabittir: x / y = k).</li>
-        <li><strong>Ters Orantı:</strong> İki çokluktan biri artarken diğeri aynı oranda azalıyorsa (Çarpımları sabittir: x · y = k).</li>
+        <li><strong>İçler Dışlar Çarpımı:</strong> a / b = c / d ise a · d = b · c olur.</li>
+        <li><strong>Orantı Sabiti Değişmezliği:</strong> (a + c) / (b + d) = k veya (a - c) / (b - d) = k olarak yazılabilir.</li>
+        <li><strong>Kuvvet Alma:</strong> (a / b)<sup>n</sup> = (c / d)<sup>n</sup> = k<sup>n</sup> şeklindedir.</li>
       </ul>
 
-      <p><a href="/blog/yas-problemleri" class="text-primary font-bold hover:underline">Yaş Problemleri</a> çözümlerinde orantı mantığı sıkça kullanılır.</p>
+      <h3>2. Doğru Orantı, Ters Orantı ve Bileşik Orantı</h3>
+      <p><strong>Doğru Orantı:</strong> İki çokluktan biri artarken diğeri de aynı oranda artıyorsa veya biri azalırken diğeri aynı oranda azalıyorsa bu iki çokluk doğru orantılıdır (x / y = k).</p>
+      <p><strong>Ters Orantı:</strong> İki çokluktan biri artarken diğeri aynı oranda azalıyorsa bu iki çokluk ters orantılıdır (x · y = k). İşçi sayıları ve bitirme süreleri ters orantıya klasik örnektir.</p>
+      <p><strong>Bileşik Orantı:</strong> İçinde hem doğru hem ters orantı barındıran üç veya daha fazla çokluktan oluşan orantılardır.</p>
+
+      <h3>3. Çözümlü Soru Örnekleri</h3>
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 1:</h4>
+        <p class="text-sm text-slate-700">Bir haritada 2 cm olan mesafe gerçekte 50 km'yi göstermektedir. Buna göre gerçekte 175 km olan iki şehir arası uzaklık haritada kaç cm ile gösterilir?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">Harita uzaklığı ile gerçek uzaklık doğru orantılıdır. 2 cm / 50 km = x cm / 175 km &rArr; 50 · x = 2 · 175 &rArr; 50x = 350 &rArr; x = 7 cm bulunur.</p>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 2:</h4>
+        <p class="text-sm text-slate-700">6 işçinin günde 8 saat çalışarak 10 günde bitirebildiği bir işi, aynı hızdaki 8 işçi günde 5 saat çalışarak kaç günde bitirir?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">Yapılan İş / Diğer Verilerin Çarpımı kuralından: 1 / (6 · 8 · 10) = 1 / (8 · 5 · x) &rArr; 480 = 40x &rArr; x = 12 gün bulunur.</p>
+      </div>
+
+      <p>Ayrıca <a href="/blog/yas-problemleri" class="text-primary font-bold hover:underline">Yaş Problemleri</a> çözümlerinde de orantı mantığı sıkça kullanılır.</p>
     `,
     faq: [
       {
         question: 'Orantı sabiti k nedir?',
         answer: 'Oranların eşitlendiği sabit reel sayı değerine k orantı sabiti denir.'
+      },
+      {
+        question: 'Doğru orantı ile ters orantı arasındaki fark nedir?',
+        answer: 'Doğru orantıda iki nicelik aynı yönde değişir (bölümleri sabittir: x/y=k), ters orantıda ise zıt yönde değişir (çarpımları sabittir: x·y=k).'
       }
     ]
   },
@@ -818,32 +879,54 @@ export const FALLBACK_BLOGS = [
     slug: 'yas-problemleri',
     title: 'TYT Yaş Problemleri Konu Anlatımı | Denklem Kurma Taktikleri',
     metaTitle: 'TYT Yaş Problemleri Konu Anlatımı | Fullematematiği',
-    description: 'TYT yaş problemleri konu anlatımı, yaş farkı kuralı, geçmiş ve gelecek yıllar tablo yöntemi.',
-    excerpt: 'Yaş problemleri soruları nasıl kolay çözülür? Tablo yöntemi ve pratik kurallar.',
+    description: 'TYT yaş problemleri konu anlatımı, yaş farkı kuralı, geçmiş ve gelecek yıllar tablo yöntemi ve çözümlü soru örnekleri.',
+    excerpt: 'Yaş problemleri soruları nasıl kolay çözülür? Tablo yöntemi, pratik kurallar ve soru örnekleri.',
     coverImage: '/IMG_3042.jpeg',
     createdAt: '2026-08-16T14:00:00.000Z',
     updatedAt: '2026-08-18T10:00:00.000Z',
     category: 'Matematik Konuları',
     targetKeyword: 'tyt yaş problemleri',
-    relatedKeywords: ['yaş problemleri konu anlatımı', 'yaş problemleri taktikleri', 'yaş farkı kuralı'],
+    relatedKeywords: ['yaş problemleri konu anlatımı', 'yaş problemleri taktikleri', 'yaş farkı kuralı', 'yaş problemleri çözümlü sorular'],
     author: { name: 'Problem Zümresi' },
     content: `
-      <h2>Yaş Problemlerinde Altın Kurallar</h2>
-      <p>Yaş problemleri, sınavda en hızlı net getirilebilen problem türlerinden biridir.</p>
+      <h2>TYT Yaş Problemleri Konu Anlatımı</h2>
+      <p>Yaş problemleri, ÖSYM'nin her yıl YKS (TYT), KPSS ve ALES sınavlarında mutlaka sorduğu, denklem kurma becerisini ve mantıksal akıl yürütmeyi ölçen en önemli problem başlıklarından biridir.</p>
 
-      <h3>Kritik Özellikler</h3>
+      <p>Konuyu tam kavrayabilmek için önceden <a href="/blog/denklem-cozme" class="text-primary font-bold hover:underline">Denklem Çözme</a> ve <a href="/blog/oran-oranti" class="text-primary font-bold hover:underline">Oran Orantı</a> konularının temel adımlarını pekiştirmeniz faydalı olacaktır.</p>
+
+      <h3>1. Yaş Problemlerinin Altın Kuralları</h3>
       <ul>
-        <li>Bir kişinin bugünkü yaşı x ise, n yıl sonraki yaşı x + n, n yıl önceki yaşı x - n olur.</li>
-        <li><strong>İki kişinin yaşları arasındaki fark yıllar geçse de ASLA değişmez.</strong></li>
-        <li>k kişinin yaşları toplamı n yıl sonra k · n kadar artar.</li>
+        <li><strong>Yaş Farkı Değişmez:</strong> İki kişi arasındaki yaş farkı zaman ne kadar geçerse geçsin daima sabittir. (Örn: A ile B arasındaki yaş farkı bugün 5 ise, 20 yıl sonra da 5'tir.)</li>
+        <li><strong>Geçen Zaman Kuralı:</strong> Bir kişinin bugünkü yaşı <em>x</em> ise; <em>n</em> yıl sonraki yaşı <em>x + n</em>, <em>n</em> yıl önceki yaşı <em>x - n</em> olur.</li>
+        <li><strong>Grup Yaş Toplamı:</strong> <em>k</em> kişilik bir grubun bugünkü yaşları toplamı <em>T</em> ise; <em>n</em> yıl sonraki yaşları toplamı <em>T + k · n</em> olur.</li>
+        <li><strong>Grup Yaş Ortalaması:</strong> <em>k</em> kişinin <em>n</em> yıl sonraki yaş ortalaması <em>n</em> kadar artar.</li>
       </ul>
+
+      <h3>2. Çözümlü Soru Örnekleri</h3>
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 1:</h4>
+        <p class="text-sm text-slate-700">Bir babanın yaşı, oğlunun yaşının 4 katına eşittir. 5 yıl sonra babanın yaşı oğlunun yaşının 3 katından 2 fazla olacağına göre babanın bugünkü yaşı kaçtır?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">Oğlunun bugünkü yaşı = x &rArr; Babanın bugünkü yaşı = 4x.<br/>5 yıl sonra: Oğul = x + 5, Baba = 4x + 5.<br/>Denklem: 4x + 5 = 3(x + 5) + 2 &rArr; 4x + 5 = 3x + 15 + 2 &rArr; 4x - 3x = 17 - 5 &rArr; x = 12.<br/>Babanın bugünkü yaşı = 4 · 12 = 48 bulunur.</p>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+        <h4 class="font-bold text-slate-900">Çözümlü Soru 2:</h4>
+        <p class="text-sm text-slate-700">Ahmet ile Mehmet'in yaşları toplamı 42'dir. Ahmet, Mehmet'in yaşındayken Mehmet 15 yaşında olduğuna göre Ahmet'in bugünkü yaşı kaçtır?</p>
+        <p class="text-sm font-semibold text-primary mt-2">Çözüm:</p>
+        <p class="text-xs text-slate-600">Ahmet = A, Mehmet = M. A + M = 42.<br/>Yaş farkı sabittir: A - M = M - 15 &rArr; A - 2M = -15 &rArr; A = 2M - 15.<br/>A yerine koyalım: (2M - 15) + M = 42 &rArr; 3M = 57 &rArr; M = 19.<br/>Ahmet'in yaşı A = 42 - 19 = 23 bulunur.</p>
+      </div>
 
       <p>Diğer problem türleri için <a href="/blog/tyt-problemler" class="text-primary font-bold hover:underline">TYT Problemler Rehberini</a> ziyaret edebilirsiniz.</p>
     `,
     faq: [
       {
-        question: 'İki kişinin yaş farkı değişir mi?',
-        answer: 'Hayır, zaman kaç yıl geçerse geçsin iki insan arasındaki yaş farkı sabit kalır.'
+        question: 'İki kişinin yaş farkı zamanla değişir mi?',
+        answer: 'Hayır, zaman kaç yıl geçerse geçsin iki insan arasındaki yaş farkı daima sabit kalır.'
+      },
+      {
+        question: 'Yaş problemlerinde denklem kurmanın en kolay yolu nedir?',
+        answer: 'Soruda verilen zaman dilimlerini (bugün, n yıl önce, n yıl sonra) bir tablo halinde kişilerin altına yazarak denklem kurmaktır.'
       }
     ]
   },

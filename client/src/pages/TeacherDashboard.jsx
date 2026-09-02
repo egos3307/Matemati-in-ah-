@@ -113,6 +113,7 @@ const TeacherDashboard = () => {
   const [editingClassroom, setEditingClassroom] = useState(null);
   const [classNameInput, setClassNameInput] = useState('');
   const [classStudentIdsInput, setClassStudentIdsInput] = useState([]);
+  const [classTeacherIdsInput, setClassTeacherIdsInput] = useState([]);
   const [classStudentSearch, setClassStudentSearch] = useState('');
   const [recurringStartDate, setRecurringStartDate] = useState(() => new Date().toISOString().split('T')[0]);
 
@@ -504,6 +505,11 @@ const TeacherDashboard = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user && user.role !== 'HEAD_TEACHER' && activeTab === 'seo-ai') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, user]);
 
   const fetchClassrooms = async () => {
     try {
@@ -524,13 +530,15 @@ const TeacherDashboard = () => {
       if (editingClassroom) {
         await axios.put(`/api/teacher/classrooms/${editingClassroom.id}`, {
           name: classNameInput.trim(),
-          studentIds: classStudentIdsInput
+          studentIds: classStudentIdsInput,
+          teacherIds: classTeacherIdsInput
         });
         alert('Sınıf başarıyla güncellendi!');
       } else {
         await axios.post('/api/teacher/classrooms', {
           name: classNameInput.trim(),
-          studentIds: classStudentIdsInput
+          studentIds: classStudentIdsInput,
+          teacherIds: classTeacherIdsInput
         });
         alert('Yeni sınıf başarıyla oluşturuldu!');
       }
@@ -538,6 +546,7 @@ const TeacherDashboard = () => {
       setEditingClassroom(null);
       setClassNameInput('');
       setClassStudentIdsInput([]);
+      setClassTeacherIdsInput([]);
       fetchClassrooms();
     } catch (err) {
       alert('Sınıf kaydedilirken hata oluştu: ' + (err.response?.data?.error || err.message));
@@ -650,9 +659,12 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleAssignTeacher = async (studentId, teacherId) => {
+  const handleAssignTeacher = async (studentId, teacherIdOrIds) => {
     try {
-      await axios.post(`/api/teacher/students/${studentId}/assign-teacher`, { teacherId });
+      const ids = Array.isArray(teacherIdOrIds)
+        ? teacherIdOrIds.map(Number).filter(id => !isNaN(id))
+        : (teacherIdOrIds ? [parseInt(teacherIdOrIds)] : []);
+      await axios.post(`/api/teacher/students/${studentId}/assign-teacher`, { teacherIds: ids });
       fetchStudents();
       fetchTeachers();
       setAssigningStudentId(null);
@@ -2013,6 +2025,7 @@ const TeacherDashboard = () => {
                             setEditingClassroom(null);
                             setClassNameInput('');
                             setClassStudentIdsInput([]);
+                            setClassTeacherIdsInput(user?.role === 'TEACHER' ? [user.id] : []);
                             setShowClassModal(true);
                           }}
                           className="inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-white px-5 py-2.5 rounded-2xl text-xs font-black shadow-md transition-all cursor-pointer mt-2"
@@ -2026,6 +2039,12 @@ const TeacherDashboard = () => {
                         {classrooms.map(cls => {
                           const classStudentNames = (cls.studentIds || [])
                             .map(id => students.find(s => s.id === id)?.name)
+                            .filter(Boolean);
+                          const classTeacherNames = (cls.teacherIds || (cls.teacherId ? [cls.teacherId] : []))
+                            .map(id => {
+                              if (user && user.id === id) return user.name;
+                              return teachers.find(t => t.id === id)?.name;
+                            })
                             .filter(Boolean);
                           return (
                             <div key={cls.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all space-y-4">
@@ -2045,6 +2064,7 @@ const TeacherDashboard = () => {
                                       setEditingClassroom(cls);
                                       setClassNameInput(cls.name);
                                       setClassStudentIdsInput(cls.studentIds || []);
+                                      setClassTeacherIdsInput(cls.teacherIds || (cls.teacherId ? [cls.teacherId] : []));
                                       setShowClassModal(true);
                                     }}
                                     className="text-slate-300 hover:text-primary transition-colors p-1"
@@ -2061,6 +2081,24 @@ const TeacherDashboard = () => {
                                   </button>
                                 </div>
                               </div>
+
+                              {/* Sınıf Öğretmenleri */}
+                              <div className="border-t border-slate-100 pt-3">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Atanmış Öğretmenler</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {classTeacherNames.length === 0 ? (
+                                    <span className="text-xs text-slate-400 italic">Öğretmen atanmamış</span>
+                                  ) : (
+                                    classTeacherNames.map((tName, i) => (
+                                      <span key={i} className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-xl">
+                                        {tName}
+                                      </span>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Sınıftaki Öğrenciler */}
                               <div className="border-t border-slate-100 pt-3">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Sınıftaki Öğrenciler</p>
                                 <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
@@ -2096,7 +2134,7 @@ const TeacherDashboard = () => {
                             <h3 className="font-black text-slate-900 text-lg">
                               {editingClassroom ? 'Sınıfı Düzenle' : 'Yeni Sınıf Oluştur'}
                             </h3>
-                            <p className="text-xs text-slate-400 font-semibold">Sınıf adı verip öğrencileri ekleyin</p>
+                            <p className="text-xs text-slate-400 font-semibold">Sınıf adı verip öğretmen ve öğrencileri ekleyin</p>
                           </div>
                         </div>
                         <button
@@ -2118,6 +2156,43 @@ const TeacherDashboard = () => {
                             onChange={(e) => setClassNameInput(e.target.value)}
                             required
                           />
+                        </div>
+
+                        {/* Sınıfa Atanacak Öğretmenler */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                            Sınıfın Öğretmenleri ({classTeacherIdsInput.length})
+                          </label>
+                          <div className="max-h-36 overflow-y-auto border border-slate-200 bg-slate-50 rounded-2xl p-3 space-y-1.5">
+                            {teachers.length === 0 ? (
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-100 rounded-xl">
+                                <span className="text-xs font-bold text-slate-800">{user?.name}</span>
+                              </div>
+                            ) : (
+                              teachers.map(t => {
+                                const isChecked = classTeacherIdsInput.includes(t.id);
+                                return (
+                                  <label key={t.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        setClassTeacherIdsInput(prev =>
+                                          prev.includes(t.id)
+                                            ? prev.filter(id => id !== t.id)
+                                            : [...prev, t.id]
+                                        );
+                                      }}
+                                      className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5 cursor-pointer accent-primary"
+                                    />
+                                    <span className="text-sm font-bold text-slate-800">
+                                      {t.name}
+                                    </span>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -2144,7 +2219,7 @@ const TeacherDashboard = () => {
                             value={classStudentSearch}
                             onChange={(e) => setClassStudentSearch(e.target.value)}
                           />
-                          <div className="max-h-56 overflow-y-auto border border-slate-100 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
+                          <div className="max-h-48 overflow-y-auto border border-slate-100 bg-slate-50/50 rounded-2xl p-3 space-y-1.5">
                             {students.filter(student =>
                               student.name.toLowerCase().includes(classStudentSearch.toLowerCase())
                             ).map(student => {
@@ -4460,7 +4535,7 @@ const TeacherDashboard = () => {
               {/* Student Assignments Table */}
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mt-8">
                 <h4 className="font-black text-slate-900 text-lg mb-2">Öğrenci - Öğretmen Atama Paneli</h4>
-                <p className="text-slate-400 font-bold text-sm mb-6">Öğrencilerin atanacağı öğretmenleri seçebilirsiniz.</p>
+                <p className="text-slate-400 font-bold text-sm mb-6">Öğrencilerin atanacağı öğretmenleri (birden fazla öğretmen seçebilirsiniz) seçebilirsiniz.</p>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -4468,42 +4543,68 @@ const TeacherDashboard = () => {
                       <tr className="border-b border-slate-100 text-slate-400 font-black text-xs uppercase tracking-wider">
                         <th className="py-4">Öğrenci Adı</th>
                         <th className="py-4">Sınıfı</th>
-                        <th className="py-4">Mevcut Öğretmen</th>
-                        <th className="py-4 text-right pr-2">Öğretmen Ataması Yap</th>
+                        <th className="py-4">Mevcut Öğretmenler</th>
+                        <th className="py-4 text-right pr-2">Öğretmen Ataması Yap (Çoklu Seçim)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {students.map((student) => (
-                        <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="py-4 font-bold text-slate-900 text-sm">{student.name}</td>
-                          <td className="py-4 font-bold text-slate-500 text-sm">
-                            {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}
-                          </td>
-                          <td className="py-4">
-                            {student.teacher ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                                {student.teacher.name}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-400 italic">
-                                Atanmamış
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4 text-right pr-2">
-                            <select
-                              value={student.teacherId || ''}
-                              onChange={(e) => handleAssignTeacher(student.id, e.target.value || null)}
-                              className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-primary focus:bg-white transition-all"
-                            >
-                              <option value="">Seçiniz (Atamayı Kaldır)</option>
-                              {teachers.filter(t => t.role === 'TEACHER').map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
+                      {students.map((student) => {
+                        const currentTeacherIds = student.teacherIds || (student.teacherId ? [student.teacherId] : []);
+                        const assignedTeachers = teachers.filter(t => currentTeacherIds.includes(t.id));
+                        if (assignedTeachers.length === 0 && student.teacher) {
+                          assignedTeachers.push(student.teacher);
+                        }
+                        return (
+                          <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="py-4 font-bold text-slate-900 text-sm">{student.name}</td>
+                            <td className="py-4 font-bold text-slate-500 text-sm">
+                              {(['KPSS', 'Mezun', 'LGS', 'ALES', 'DGS', 'AGS'].includes(student.grade)) ? student.grade : `${student.grade}. Sınıf`}
+                            </td>
+                            <td className="py-4">
+                              {assignedTeachers.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {assignedTeachers.map(t => (
+                                    <span key={t.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                                      {t.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-400 italic">
+                                  Atanmamış
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-4 text-right pr-2">
+                              <div className="flex flex-wrap justify-end gap-1.5 max-w-xs ml-auto">
+                                {teachers.map(t => {
+                                  const isAssigned = currentTeacherIds.includes(t.id);
+                                  return (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const newIds = isAssigned
+                                          ? currentTeacherIds.filter(id => id !== t.id)
+                                          : [...currentTeacherIds, t.id];
+                                        handleAssignTeacher(student.id, newIds);
+                                      }}
+                                      className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                        isAssigned
+                                          ? 'bg-primary text-white border-primary shadow-sm hover:bg-primary/90'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                      title={isAssigned ? `${t.name} atamasını kaldır` : `${t.name} ekle`}
+                                    >
+                                      {isAssigned ? '✓ ' : '+ '}{t.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -50,6 +50,7 @@ model User {
 
   teacherId Int?
   teacher   User?    @relation("TeacherStudents", fields: [teacherId], references: [id])
+  teacherIds String? // JSON string array e.g. "[1, 2, 3]"
   students  User[]   @relation("TeacherStudents")
 
   lessons   Lesson[] @relation("TeacherLessons")
@@ -210,6 +211,7 @@ model Classroom {
   name       String
   teacherId  Int
   teacher    User     @relation(fields: [teacherId], references: [id])
+  teacherIds String?  // JSON string array e.g. "[1, 2, 3]"
   studentIds String   // JSON array string: "[1, 2, 3]"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

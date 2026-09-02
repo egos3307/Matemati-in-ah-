@@ -3,14 +3,11 @@ Allow: /
 Allow: /blog
 Allow: /blog/*
 Allow: /derslerimiz
-Allow: /kontenjan-dersleri
 Allow: /pdf-notlari
+Allow: /camps
+Allow: /kontenjan-kurslari
 Allow: /iletisim
 Allow: /kvkk
-Allow: /llms.txt
-Allow: /llms.md
-Allow: /geo/llms.txt
-Allow: /geo/llms.md
 
 Disallow: /ogretmen
 Disallow: /ogretmen/*
@@ -19,6 +16,8 @@ Disallow: /ogrenci/*
 Disallow: /veli
 Disallow: /veli/*
 Disallow: /giris
+Disallow: /ogrenci-kayit
+Disallow: /kayit-formu
 Disallow: /api/
 Disallow: /api/*
 

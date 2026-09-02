@@ -281,6 +281,37 @@ app.get('/', (req, res) => {
   res.send('Fullematematik API is running...');
 });
 
+// 🤖 Robots.txt Route
+app.get(['/robots.txt', '/api/robots.txt'], (req, res) => {
+  const robotsTxt = `User-agent: *
+Allow: /
+Allow: /blog
+Allow: /blog/*
+Allow: /derslerimiz
+Allow: /pdf-notlari
+Allow: /camps
+Allow: /kontenjan-kurslari
+Allow: /iletisim
+Allow: /kvkk
+
+Disallow: /ogretmen
+Disallow: /ogretmen/*
+Disallow: /ogrenci
+Disallow: /ogrenci/*
+Disallow: /veli
+Disallow: /veli/*
+Disallow: /giris
+Disallow: /ogrenci-kayit
+Disallow: /kayit-formu
+Disallow: /api/
+Disallow: /api/*
+
+Sitemap: https://fullematematigi.com.tr/sitemap.xml`;
+
+  res.header('Content-Type', 'text/plain');
+  res.send(robotsTxt);
+});
+
 // 🗺️ Dynamic Sitemap XML Generator Route
 app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
   try {
@@ -289,17 +320,62 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
       { url: '/', priority: '1.0', changefreq: 'daily' },
       { url: '/blog', priority: '0.9', changefreq: 'daily' },
       { url: '/derslerimiz', priority: '0.8', changefreq: 'weekly' },
-      { url: '/pdf-notlar', priority: '0.8', changefreq: 'weekly' },
+      { url: '/pdf-notlari', priority: '0.8', changefreq: 'weekly' },
       { url: '/camps', priority: '0.7', changefreq: 'weekly' },
-      { url: '/kontenjan-kurslari', priority: '0.7', changefreq: 'weekly' }
+      { url: '/kontenjan-kurslari', priority: '0.7', changefreq: 'weekly' },
+      { url: '/iletisim', priority: '0.5', changefreq: 'monthly' },
+      { url: '/kvkk', priority: '0.3', changefreq: 'monthly' }
     ];
 
-    let blogPosts = [];
+    // Static fallback blog slugs list
+    const staticBlogSlugs = [
+      'online-matematik-ozel-ders-rehberi',
+      'geometride-sekilleri-gormek-ve-geometri-taktikleri',
+      'tyt-ayt-matematik-geometri-net-artirma-taktikleri',
+      '9-sinif-matematik-konulari',
+      'tyt-matematik-konulari',
+      'tyt-matematik-soru-dagilimi',
+      'lgs-matematik-konulari',
+      'lgs-matematik-soru-dagilimi',
+      'uslu-sayilar-konu-anlatimi',
+      'koklu-sayilar-konu-anlatimi',
+      'tyt-temel-kavramlar',
+      'tyt-problemler',
+      'sayi-basamaklari',
+      'bolme-bolunebilme',
+      'mutlak-deger',
+      'rasyonel-sayilar',
+      'carpanlara-ayirma',
+      'denklem-cozme',
+      'oran-oranti',
+      'yas-problemleri',
+      'yuzde-problemleri',
+      'tyt-fonksiyonlar',
+      'tyt-matematik-calisma-programi'
+    ];
+
+    let blogPostsMap = new Map();
+
+    // 1. Add static blogs first
+    for (const slug of staticBlogSlugs) {
+      blogPostsMap.set(slug, {
+        slug,
+        lastmod: new Date().toISOString().split('T')[0]
+      });
+    }
+
+    // 2. Fetch database blogs and merge/override
     try {
-      blogPosts = await prisma.blogPost.findMany({
+      const dbPosts = await prisma.blogPost.findMany({
         select: { slug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' }
       });
+      for (const p of dbPosts) {
+        if (p.slug) {
+          const lastmod = p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          blogPostsMap.set(p.slug, { slug: p.slug, lastmod });
+        }
+      }
     } catch (e) {
       console.warn('[Sitemap] DB fetch warning:', e.message);
     }
@@ -315,11 +391,10 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
       xml += `  </url>\n`;
     }
 
-    for (const post of blogPosts) {
-      const lastMod = post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    for (const post of blogPostsMap.values()) {
       xml += `  <url>\n`;
       xml += `    <loc>${baseUrl}/blog/${post.slug}</loc>\n`;
-      xml += `    <lastmod>${lastMod}</lastmod>\n`;
+      xml += `    <lastmod>${post.lastmod}</lastmod>\n`;
       xml += `    <changefreq>weekly</changefreq>\n`;
       xml += `    <priority>0.8</priority>\n`;
       xml += `  </url>\n`;
@@ -820,36 +895,51 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
 
 app.get('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res) => {
   try {
-    const where = req.user.role === 'HEAD_TEACHER' ? {} : { teacherId: req.user.id };
     const classrooms = await prisma.classroom.findMany({
-      where,
       orderBy: { createdAt: 'desc' }
     });
-    const parsed = classrooms.map(c => ({
-      ...c,
-      studentIds: JSON.parse(c.studentIds || '[]')
-    }));
-    res.json(parsed);
+    const parsed = classrooms.map(c => {
+      const studentIds = JSON.parse(c.studentIds || '[]');
+      const teacherIds = c.teacherIds ? JSON.parse(c.teacherIds) : (c.teacherId ? [c.teacherId] : []);
+      return {
+        ...c,
+        studentIds,
+        teacherIds
+      };
+    });
+
+    if (req.user.role === 'HEAD_TEACHER') {
+      return res.json(parsed);
+    }
+
+    const filtered = parsed.filter(c => 
+      c.teacherId === req.user.id || c.teacherIds.includes(req.user.id)
+    );
+    res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res) => {
-  const { name, studentIds } = req.body;
+  const { name, studentIds, teacherIds } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Sınıf adı zorunludur.' });
   }
   try {
-    const ids = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    const sIds = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    const tIds = Array.isArray(teacherIds) ? teacherIds.map(Number).filter(id => !isNaN(id)) : [req.user.id];
+    if (tIds.length === 0) tIds.push(req.user.id);
+    const primaryTeacherId = tIds[0];
     const classroom = await prisma.classroom.create({
       data: {
         name: name.trim(),
-        teacherId: req.user.id,
-        studentIds: JSON.stringify(ids)
+        teacherId: primaryTeacherId,
+        teacherIds: JSON.stringify(tIds),
+        studentIds: JSON.stringify(sIds)
       }
     });
-    res.json({ ...classroom, studentIds: ids });
+    res.json({ ...classroom, studentIds: sIds, teacherIds: tIds });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -857,17 +947,28 @@ app.post('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res)
 
 app.put('/api/teacher/classrooms/:id', auth, checkRole('TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, studentIds } = req.body;
+  const { name, studentIds, teacherIds } = req.body;
   try {
-    const ids = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+    const sIds = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : undefined;
+    const tIds = Array.isArray(teacherIds) ? teacherIds.map(Number).filter(id => !isNaN(id)) : undefined;
+    
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (sIds !== undefined) updateData.studentIds = JSON.stringify(sIds);
+    if (tIds !== undefined) {
+      updateData.teacherIds = JSON.stringify(tIds);
+      if (tIds.length > 0) updateData.teacherId = tIds[0];
+    }
+    
     const classroom = await prisma.classroom.update({
       where: { id },
-      data: {
-        name: name ? name.trim() : undefined,
-        studentIds: JSON.stringify(ids)
-      }
+      data: updateData
     });
-    res.json({ ...classroom, studentIds: ids });
+    res.json({
+      ...classroom,
+      studentIds: JSON.parse(classroom.studentIds || '[]'),
+      teacherIds: JSON.parse(classroom.teacherIds || '[]')
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1796,27 +1897,35 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
 
 app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) => {
   try {
-    let students;
     const studentSelect = {
       id: true, email: true, name: true, grade: true, parentName: true, parentTel: true, studentTel: true,
       serviceProvided: true, paymentStatus: true, paymentDay: true, paymentAmount: true, paymentNote: true,
-      paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true,
+      paymentType: true, totalLessons: true, studentCode: true, parentCode: true, role: true, teacherId: true, teacherIds: true,
       birthDate: true, schoolName: true, address: true, preferredSchedule: true, educationType: true,
       mathLevel: true, goalsNotes: true, formDate: true, createdAt: true
     };
 
+    const students = await prisma.user.findMany({
+      where: { role: 'STUDENT', deletedAt: null },
+      select: { ...studentSelect, teacher: { select: { id: true, name: true } } }
+    });
+
+    const parsed = students.map(s => {
+      const tIds = s.teacherIds ? JSON.parse(s.teacherIds) : (s.teacherId ? [s.teacherId] : []);
+      return {
+        ...s,
+        teacherIds: tIds
+      };
+    });
+
     if (req.user.role === 'HEAD_TEACHER') {
-      students = await prisma.user.findMany({
-        where: { role: 'STUDENT', deletedAt: null },
-        select: { ...studentSelect, teacher: { select: { id: true, name: true } } }
-      });
-    } else {
-      students = await prisma.user.findMany({
-        where: { role: 'STUDENT', teacherId: req.user.id, deletedAt: null },
-        select: studentSelect
-      });
+      return res.json(parsed);
     }
-    res.json(students);
+
+    const filtered = parsed.filter(s =>
+      s.teacherId === req.user.id || s.teacherIds.includes(req.user.id)
+    );
+    res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2015,15 +2124,25 @@ app.post('/api/teacher/students/:id/assign-teacher', auth, checkRole('TEACHER'),
     return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır.' });
   }
   const studentId = parseInt(req.params.id);
-  const { teacherId } = req.body;
+  const { teacherId, teacherIds } = req.body;
   try {
+    let ids = [];
+    if (Array.isArray(teacherIds)) {
+      ids = teacherIds.map(Number).filter(id => !isNaN(id));
+    } else if (teacherId !== undefined && teacherId !== null) {
+      const parsedId = parseInt(teacherId);
+      if (!isNaN(parsedId)) ids = [parsedId];
+    }
+
+    const primaryTeacherId = ids.length > 0 ? ids[0] : null;
     const updatedStudent = await prisma.user.update({
       where: { id: studentId },
       data: { 
-        teacherId: teacherId ? parseInt(teacherId) : null 
+        teacherId: primaryTeacherId,
+        teacherIds: JSON.stringify(ids)
       }
     });
-    res.json({ success: true, updatedStudent });
+    res.json({ success: true, updatedStudent: { ...updatedStudent, teacherIds: ids } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import SeoOptimizer from './SeoOptimizer';
+import { useAuth } from '../context/AuthContext';
 
 const SeoAiManager = () => {
+  const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState('optimizer'); // 'optimizer' | 'opportunities' | 'drafts' | 'logs' | 'settings'
+
+  if (user?.role !== 'HEAD_TEACHER') {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-slate-100 shadow-sm my-6">
+        <div className="h-16 w-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+          🚫
+        </div>
+        <h3 className="text-lg font-black text-slate-800">Erişim Engellendi</h3>
+        <p className="text-xs font-bold text-slate-400 mt-1">
+          SEO & AI Blog yönetimi sadece Baş Öğretmen yetkisine sahip kullanıcılar tarafından görüntülenebilir.
+        </p>
+      </div>
+    );
+  }
   const [overview, setOverview] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
   const [drafts, setDrafts] = useState([]);
