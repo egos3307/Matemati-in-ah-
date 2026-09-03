@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
+import { trackEvent } from '../utils/analytics';
 
 const YT_CHANNEL_URL = 'https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0';
 const IG_URL = 'https://www.instagram.com/fullematematigi';
@@ -201,6 +202,11 @@ const Home = () => {
         email: trialEmail,
         phone: trialPhone,
         grade: trialGrade,
+      });
+      trackEvent('form_submit_success', {
+        form_name: 'trial_lesson_form',
+        button_location: 'home_trial_section',
+        button_text: 'Ücretsiz Tanışma Dersi Talebi Oluştur'
       });
       setTrialSuccess('Tanışma dersi talebiniz başarıyla alınmıştır. Öğretmenimiz en kısa sürede sizinle iletişime geçecektir.');
       setTrialStudentName('');

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { trackEvent } from '../utils/analytics';
 
 const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = null }) => {
   const todayStr = new Date().toLocaleDateString('tr-TR');
@@ -80,6 +81,11 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
       const res = await axios.post(endpoint, formData);
 
       if (res.data) {
+        trackEvent('form_submit_success', {
+          form_name: 'student_registration_form',
+          button_location: isModal ? 'registration_modal' : 'registration_page',
+          button_text: 'Öğrenci Kaydını Tamamla'
+        });
         const studentInfo = res.data.student || res.data;
         const tempPass = res.data.initialPassword || formData.password || 'fulle123';
         setRegisteredStudent({ ...studentInfo, tempPass });

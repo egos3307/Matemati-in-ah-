@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import SEO from '../components/SEO';
+import { trackEvent } from '../utils/analytics';
 
 const Contact = () => {
   const [name, setName] = useState('');
@@ -23,6 +24,11 @@ const Contact = () => {
         phone,
         email,
         message
+      });
+      trackEvent('form_submit_success', {
+        form_name: 'contact_form',
+        button_location: 'contact_page',
+        button_text: 'Mesajı İlet'
       });
       setSuccess('Mesajınız başarıyla iletildi. En kısa sürede sizinle iletişime geçeceğiz.');
       setName('');

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
+import { trackEvent } from '../utils/analytics';
 
 const CATEGORIES = ['YKS 2027', 'LGS 2027', 'KPSS 2027', 'MAARIF'];
 
@@ -183,6 +184,11 @@ const QuotaCourseSelection = () => {
       };
 
       await axios.post('/api/quota-applications', payload);
+      trackEvent('form_submit_success', {
+        form_name: 'quota_course_application_form',
+        button_location: 'quota_course_page',
+        button_text: 'Yeri Ayırt & Öğretmene Gönder'
+      });
       setSubmitSuccess(true);
       setStep(4);
     } catch (err) {

@@ -18,6 +18,7 @@ import WatchRecording from './pages/WatchRecording';
 import StudentRegistrationForm from './pages/StudentRegistrationForm';
 import KVKK from './pages/KVKK';
 import NotFound from './pages/NotFound';
+import AnalyticsTracker from './components/AnalyticsTracker';
 
 const WhatsAppButton = () => {
   const { user } = useAuth();
@@ -71,6 +72,7 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen">
+      <AnalyticsTracker />
       {!hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
