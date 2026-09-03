@@ -136,6 +136,8 @@ const SEO = ({
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="theme-color" content="#ff8c00" />
+      <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ff8c00" />
+      <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#ff8c00" />
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
       <link rel="canonical" href={canonicalUrl} />
