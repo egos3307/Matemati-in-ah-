@@ -11,6 +11,9 @@
 }
 
 @layer base {
+  html {
+    background-color: var(--color-primary, #ff8c00);
+  }
   body {
     @apply bg-background-light font-display text-slate-900;
   }
