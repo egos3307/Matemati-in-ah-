@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd server && npm install && npx prisma db push && npx prisma generate && cd ../client && npm install && npm run build",
+  "buildCommand": "npx --yes prisma generate --schema=server/prisma/schema.prisma && cd client && npm run build",
   "outputDirectory": "client/dist",
   "crons": [
     {
