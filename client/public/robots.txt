@@ -9,6 +9,17 @@ Allow: /kontenjan-kurslari
 Allow: /iletisim
 Allow: /kvkk
 
+# Allow public API endpoints for client-side rendering (Googlebot XHR)
+Allow: /api/blog
+Allow: /api/blog/*
+Allow: /api/pdf-notes
+Allow: /api/camps
+Allow: /api/quota-courses
+Allow: /api/social/youtube-feed
+Allow: /api/sitemap.xml
+Allow: /api/robots.txt
+
+# Disallow private/admin endpoints
 Disallow: /ogretmen
 Disallow: /ogretmen/*
 Disallow: /ogrenci
@@ -18,7 +29,16 @@ Disallow: /veli/*
 Disallow: /giris
 Disallow: /ogrenci-kayit
 Disallow: /kayit-formu
+Disallow: /api/teacher
+Disallow: /api/teacher/*
+Disallow: /api/student
+Disallow: /api/student/*
+Disallow: /api/parent
+Disallow: /api/parent/*
+Disallow: /api/auth
+Disallow: /api/auth/*
+Disallow: /api/drive
+Disallow: /api/drive/*
 Disallow: /api/
-Disallow: /api/*
 
 Sitemap: https://fullematematigi.com.tr/sitemap.xml

@@ -1381,5 +1381,313 @@ export const FALLBACK_BLOGS = [
         answer: 'Haftalık hedefe göre günde ortalama 2-3 saat konu anlatımı ve soru çözümü idealdir.'
       }
     ]
+  },
+  {
+    id: 'blog-grade-5',
+    slug: '5-sinif-matematik-dogal-sayilar-ve-islemler',
+    title: '5. Sınıf Matematik Doğal Sayılar ve İşlemler Konu Anlatımı & Çözümlü Sorular (2026-2027 MEB)',
+    metaTitle: '5. Sınıf Matematik Doğal Sayılar ve İşlemler | Konu Anlatımı & Test',
+    description: '5. Sınıf matematik doğal sayılar, basamak değerleri, bölükler, dört işlem ve çözümlü örnek sorular ile 2026-2027 MEB müfredatı rehberi.',
+    excerpt: '5. Sınıf matematik dersinin ilk ünitesi olan Doğal Sayılar ve İşlemler konusunun detaylı anlatımı, formülleri, çözümlü örnek soruları ve mini testi.',
+    coverImage: '/IMG_3033.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '5 sınıf matematik doğal sayılar',
+    relatedKeywords: ['5 sınıf doğal sayılar konu anlatımı', '5 sınıf basamak değerleri', '5 sınıf matematik soruları'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>5. Sınıf Matematik Doğal Sayılar ve İşlemler Rehberi</h2>
+      <p>5. sınıf matematik müfredatının temeli olan <strong>Doğal Sayılar ve İşlemler</strong> ünitesinde 6, 7, 8 ve 9 basamaklı sayıları okuma, basamak ve bölük kavramlarını anlama ile zihinden işlem yapma becerileri kazandırılır.</p>
+      
+      <h3>1. Bölükler ve Basamak Değerleri</h3>
+      <p>Büyük doğal sayıları daha kolay okuyabilmek için sayılar sağdan sola doğru üçerli gruplara ayrılır. Bu gruplara <strong>bölük</strong> adı verilir.</p>
+      <ul>
+        <li><strong>Birler Bölüğü:</strong> Birler, onlar, yüzler basamağı.</li>
+        <li><strong>Binler Bölüğü:</strong> Binler, onlar binler, yüz binler basamağı.</li>
+        <li><strong>Milyonlar Bölüğü:</strong> Milyonlar, onlar milyonlar, yüz milyonlar basamağı.</li>
+      </ul>
+    `,
+    faq: [{ question: '5. sınıf doğal sayılarda kaç bölük vardır?', answer: 'İlkokul ve ortaokul düzeyinde en sık birler, binler ve milyonlar olmak üzere 3 bölük işlenir.' }]
+  },
+  {
+    id: 'blog-grade-6',
+    slug: '6-sinif-matematik-kesirler-ve-ondalik-gosterim',
+    title: '6. Sınıf Matematik Kesirler ve Ondalık Gösterim Konu Anlatımı & Örnek Sorular (2026-2027 MEB)',
+    metaTitle: '6. Sınıf Matematik Kesirler ve Ondalık Gösterim | Konu Anlatımı',
+    description: '6. Sınıf matematik kesirlerle işlemler, kesirleri sıralama, ondalık gösterim ve yuvarlama konularının detaylı açıklaması ve test soruları.',
+    excerpt: '6. Sınıf matematik kesirlerle toplama, çıkarma, çarpma, bölme ve ondalık gösterim konularının pratik yöntemleri ve çözümlü test örnekleri.',
+    coverImage: '/IMG_3034.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '6 sınıf matematik kesirler',
+    relatedKeywords: ['6 sınıf kesirlerle işlemler', '6 sınıf ondalık gösterim', '6 sınıf matematik test'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>6. Sınıf Kesirler ve Ondalık Gösterim Rehberi</h2>
+      <p>6. sınıf matematik dersinin en önemli konularından biri olan <strong>Kesirler ve Ondalık Gösterim</strong>, günlük hayattaki paylaştırma ve oran problemlerinin temelini oluşturur.</p>
+    `,
+    faq: [{ question: 'Ondalık kesirlerde virgül nasıl kaydırılır?', answer: '10, 100, 1000 ile çarparken virgül sağa, bölerken sola kaydırılır.' }]
+  },
+  {
+    id: 'blog-grade-7',
+    slug: '7-sinif-matematik-tam-sayilar-ve-rasyonel-sayilar',
+    title: '7. Sınıf Matematik Tam Sayılar ve Rasyonel Sayılar Rehberi (2026-2027 MEB)',
+    metaTitle: '7. Sınıf Matematik Tam Sayılar ve Rasyonel Sayılar | Konu Anlatımı',
+    description: '7. Sınıf matematik negatif ve pozitif tam sayılar, rasyonel sayılar kümesi, sayma pulları ve çözümlü soru bankası rehberi.',
+    excerpt: '7. Sınıf matematik tam sayılarla dört işlem kuralları, işaret etkileşimi ve rasyonel sayıların sayı doğrusunda gösterimi.',
+    coverImage: '/IMG_3037.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '7 sınıf matematik tam sayılar',
+    relatedKeywords: ['7 sınıf rasyonel sayılar', '7 sınıf matematik soruları', 'tam sayılarla işlemler'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>7. Sınıf Tam Sayılar ve Rasyonel Sayılar</h2>
+      <p>7. sınıfta matematik dünyasına <strong>negatif sayılar</strong> ve <strong>rasyonel sayılar</strong> tam anlamıyla giriş yapar.</p>
+    `,
+    faq: [{ question: 'Sıfır bir tam sayı mıdır?', answer: 'Evet, sıfır bir tam sayıdır ancak işareti yoktur (nötrdür).' }]
+  },
+  {
+    id: 'blog-grade-8',
+    slug: '8-sinif-lgs-matematik-carpanlar-katlar-uslu-ifadeler',
+    title: '8. Sınıf LGS Matematik Çarpanlar Katlar ve Üslü İfadeler Derece Rehberi (2026-2027)',
+    metaTitle: '8. Sınıf LGS Matematik Çarpanlar Katlar & Üslü Sayılar | LGS Taktikleri',
+    description: '8. Sınıf LGS matematik EBOB-EKOK, çarpanlar ve katlar, üslü ifadeler yeni nesil soru çözümleri ve LGS 2027 derece taktikleri.',
+    excerpt: 'LGS 2027 hazırlığında 8. sınıf matematik EBOB EKOK problemleri, üslü denklem çözümleri ve LGS yeni nesil soru kalıpları.',
+    coverImage: '/IMG_3039.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'LGS Hazırlık',
+    targetKeyword: '8 sınıf lgs matematik',
+    relatedKeywords: ['8 sınıf ebob ekok', 'lgs üslü sayılar yeni nesil', 'lgs matematik derece'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>8. Sınıf LGS Matematik: EBOB-EKOK ve Üslü Sayılar</h2>
+      <p>LGS Matematik sınavında her yıl en az 4-5 soru <strong>Çarpanlar ve Katlar (EBOB-EKOK)</strong> ve <strong>Üslü İfadeler</strong> konularından gelir.</p>
+    `,
+    faq: [{ question: 'LGS matematikte yeni nesil sorular nasıl çözülür?', answer: 'Sorudaki görseli ve hikayeyi önce matematiksel denkleme dökün, ardından EBOB/EKOK kurallarını uygulayın.' }]
+  },
+  {
+    id: 'blog-grade-8-all',
+    slug: '8-sinif-lgs-matematik-tum-konulari-ve-lgs-mufredati',
+    title: '2026-2027 8. Sınıf LGS Matematik Tüm Konuları ve Konu Dağılımı Rehberi',
+    metaTitle: '2026-2027 8. Sınıf LGS Matematik Tüm Konuları | LGS Konu Dağılımı',
+    description: '8. Sınıf LGS matematik tüm konuları, LGS 2027 çıkmış soru dağılıımları, yeni nesil soru çözme taktikleri ve derece çalışma programı.',
+    excerpt: 'LGS 2027 şampiyonlarının rehberi: 8. sınıf matematik EBOB-EKOK, karekök, olasılık, denklem, eşitsizlik ve geometri konularının tamamı.',
+    coverImage: '/IMG_3041.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'LGS Hazırlık',
+    targetKeyword: '8 sınıf lgs matematik tüm konuları',
+    relatedKeywords: ['lgs matematik konuları 2027', 'lgs 2027 matematik müfredatı', '8 sınıf lgs matematik konu dağılımı'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 LGS Matematik Tüm Konuları ve Soru Dağılımı</h2>
+      <p>LGS hazırlığında başarılı olmanın ilk kuralı, sınavda karşılaşacağınız 20 matematik sorusunun hangi ünitelerden geleceğini bilmektir.</p>
+    `,
+    faq: [{ question: 'LGS Matematik sorularında en çok hangi üniteden soru gelir?', answer: 'Genellikle Kareköklü İfadeler, Doğrusal Denklemler ve Cebirsel İfadeler ünitesinden 3-4 soru gelmektedir.' }]
+  },
+  {
+    id: 'blog-grade-9',
+    slug: '9-sinif-matematik-kumeler-ve-mantik-konu-anlatimi',
+    title: '9. Sınıf Matematik Mantık ve Kümeler Konu Anlatımı & Çözümlü Sorular (2026-2027)',
+    metaTitle: '9. Sınıf Matematik Mantık ve Kümeler | Konu Anlatımı & Soru Çözümü',
+    description: '9. Sınıf matematik önermeler, ve/veya/ise/ancak ve ancak bağlaçları, küme sembolleri, alt küme formülleri ve Venn şeması rehberi.',
+    excerpt: '9. Sınıf matematik dersinin giriş ünitesi olan Mantık ve Kümeler konularının kuralları, de Morgan kuralları ve kümelerde birleşim/kesişim örnekleri.',
+    coverImage: '/IMG_3033.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Lise Matematik',
+    targetKeyword: '9 sınıf matematik konuları',
+    relatedKeywords: ['9 sınıf mantık konu anlatımı', '9 sınıf kümeler soruları', '9 sınıf matematik 1 dönem'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>9. Sınıf Matematik: Mantık ve Kümeler Konu Anlatımı</h2>
+      <p>Liseye geçişte 9. sınıf matematik müfredatı sözel akıl yürütmeyi sembolleştiren <strong>Sembolik Mantık</strong> ve <strong>Kümeler</strong> ile başlar.</p>
+    `,
+    faq: [{ question: 'Boş küme her kümenin alt kümesi midir?', answer: 'Evet, boş küme her kümenin öz alt kümesi ve alt kümesidir.' }]
+  },
+  {
+    id: 'blog-grade-10',
+    slug: '10-sinif-matematik-sayma-ve-olasilik-permutasyon-kombinasyon',
+    title: '10. Sınıf Matematik Permütasyon, Kombinasyon ve Olasılık Rehberi (2026-2027)',
+    metaTitle: '10. Sınıf Matematik Permütasyon Kombinasyon Olasılık | Konu Anlatımı',
+    description: '10. Sınıf matematik sıralama (permütasyon), seçme (kombinasyon), Binom açılımı ve basit olayların olasılığı detaylı anlatımı.',
+    excerpt: '10. Sınıf matematik permütasyon sıralama ile kombinasyon seçme farkı, faktöriyel hesaplama ve ÖSYM tarzı olasılık soru çözümleri.',
+    coverImage: '/IMG_3034.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Lise Matematik',
+    targetKeyword: '10 sınıf matematik permutasyon kombinasyon',
+    relatedKeywords: ['10 sınıf olasılık konu anlatımı', 'permutasyon kombinasyon farkı', '10 sınıf matematik soruları'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>10. Sınıf Matematik: Permütasyon, Kombinasyon ve Olasılık</h2>
+      <p>ÖSYM'nin hem TYT hem AYT sınavlarında aksatmadan sorduğu <strong>Permütasyon, Kombinasyon ve Olasılık</strong> ünitesi 10. sınıfın ana omurgasıdır.</p>
+    `,
+    faq: [{ question: 'Permütasyon ile kombinasyon nasıl ayırt edilir?', answer: 'Soruda dizilim/sıralama varsa Permütasyon, gruplama/seçme varsa Kombinasyon kullanılır.' }]
+  },
+  {
+    id: 'blog-grade-11',
+    slug: '11-sinif-matematik-trigonometri-konu-anlatimi',
+    title: '11. Sınıf Matematik Trigonometri Konu Anlatımı & Formül Rehberi (2026-2027)',
+    metaTitle: '11. Sınıf Matematik Trigonometri | Konu Anlatımı & Formüller',
+    description: '11. Sınıf matematik birim çember, sinüs, kosinüs, tanjant, kotanjant fonksiyonları, dönüşüm formülleri ve AYT trigonometri soru çözümleri.',
+    excerpt: '11. Sınıf matematik dersinin 1 numaralı konusu Trigonometri rehberi: birim çember özellikleri, esas ölçü, sinüs-kosinüs teoremleri ve formüller.',
+    coverImage: '/IMG_3037.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'YKS Hazırlık',
+    targetKeyword: '11 sınıf matematik trigonometri',
+    relatedKeywords: ['11 sınıf trigonometri formülleri', 'ayt trigonometri konu anlatımı', 'birim çember trigonometri'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>11. Sınıf Matematik: Trigonometri Detaylı Rehber</h2>
+      <p>AYT Matematik sınavında 4-5 soru ile en yüksek ağırlığa sahip olan <strong>Trigonometri</strong> ünitesi 11. sınıfta öğretilir.</p>
+    `,
+    faq: [{ question: 'Trigonometride esas ölçü nasıl bulunur?', answer: 'Derece cinsinden 360\'a bölünerek kalan bulunur, radyan cinsinden 2π çıkarılarak bulunur.' }]
+  },
+  {
+    id: 'blog-grade-12',
+    slug: '12-sinif-ayt-matematik-turev-ve-integral-temelleri',
+    title: '12. Sınıf AYT Matematik Türev ve İntegral Derece Rehberi (2026-2027)',
+    metaTitle: '12. Sınıf AYT Matematik Türev ve İntegral | Derece Taktikleri',
+    description: '12. Sınıf ve YKS hazırlık AYT matematik limit, süreklilik, türev alma kuralları, teğet denklemi, belirli-belirsiz integral ve alan hesabı.',
+    excerpt: 'YKS 2027 AYT Matematik sınavının zirve konuları: Türev fiziksel yorumu, maksimum-minimum problemleri, integralde alan hesabı ve pratik soru çözümleri.',
+    coverImage: '/IMG_3039.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'YKS Hazırlık',
+    targetKeyword: '12 sınıf ayt matematik turev integral',
+    relatedKeywords: ['ayt türev konu anlatımı', 'ayt integral alan hesabı', '12 sınıf matematik konuları'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>12. Sınıf AYT Matematik: Türev ve İntegral</h2>
+      <p>YKS AYT Matematik sınavında derece yapmanın anahtarı <strong>Türev ve İntegral</strong> konularına hakim olmaktır.</p>
+    `,
+    faq: [{ question: 'Türev ile İntegral arasındaki ilişki nedir?', answer: 'İntegral, türevin ters işlemidir (Türev alma işleminin geri döndürülmesidir).' }]
+  },
+  {
+    id: 'blog-grade-5-all',
+    slug: '5-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    title: '2026-2027 5. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    metaTitle: '2026-2027 5. Sınıf Matematik Tüm Konuları & Müfredat Listesi',
+    description: '2026-2027 MEB müfredatına uygun 5. sınıf matematik tüm konuları, ünite özetleri, sınav çalışma taktikleri ve konu dağılım rehberi.',
+    excerpt: '5. Sınıf matematik dersinin tüm 1. ve 2. dönem üniteleri, doğal sayılar, kesirler, ondalık gösterim, geometri ve ölçme konularının eksiksiz rehberi.',
+    coverImage: '/IMG_3033.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '5 sınıf matematik tüm konuları',
+    relatedKeywords: ['5 sınıf matematik müfredatı 2026 2027', '5 sınıf matematik üniteleri', '5 sınıf matematik konuları listesi'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 5. Sınıf Matematik Tüm Konuları ve Ünite Listesi</h2>
+      <p>MEB güncel müfredatına uygun olarak hazırlanan bu rehberde 5. sınıf matematik dersinin 1. ve 2. dönem tüm üniteleri detaylı şekilde açıklanmaktadır.</p>
+    `,
+    faq: [{ question: '5. sınıf matematikte kaç ünite vardır?', answer: 'MEB 5. sınıf matematik müfredatında toplam 7 ünite bulunmaktadır.' }]
+  },
+  {
+    id: 'blog-grade-6-all',
+    slug: '6-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    title: '2026-2027 6. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    metaTitle: '2026-2027 6. Sınıf Matematik Tüm Konuları & Ünite Dağılımı',
+    description: '6. Sınıf matematik tüm üniteleri: Çarpanlar katlar, kümeler, tam sayılar, kesirler, cebirsel ifadeler, veri ve geometri konuları detaylı anlatımı.',
+    excerpt: '2026-2027 eğitim yılında 6. sınıf matematik müfredatındaki tüm üniteler, işlem önceliği, asal sayılar, alan ve hacim hesaplama rehberi.',
+    coverImage: '/IMG_3034.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '6 sınıf matematik tüm konuları',
+    relatedKeywords: ['6 sınıf matematik konuları listesi', '6 sınıf matematik müfredatı 2026 2027', '6 sınıf matematik üniteleri'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 6. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>Ortaokul 2. kademenin en kritik yılı olan 6. sınıfta matematik konuları daha soyut ve mantıksal bir yapıya bürünür.</p>
+    `,
+    faq: [{ question: '6. sınıf matematikte en çok zorlanılan konu hangisidir?', answer: 'Genellikle Çarpanlar-Katlar, Kümeler ve Kesirlerde Bölme işlemlerinde pratik eksikliğinden dolayı zorlanılır.' }]
+  },
+  {
+    id: 'blog-grade-7-all',
+    slug: '7-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    title: '2026-2027 7. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    metaTitle: '2026-2027 7. Sınıf Matematik Tüm Konuları & Ders Notları',
+    description: '7. Sınıf matematik 1. ve 2. dönem tüm üniteleri: Tam sayılar, rasyonel sayılar, cebirsel ifadeler, denklem kurma, oran orantı ve geometri.',
+    excerpt: '7. Sınıf matematik dersinin LGS hazırlık temeli oluşturan tüm konuları, rasyonel sayılar, denklemler, yüzdeler ve çokgenler rehberi.',
+    coverImage: '/IMG_3037.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Ortaokul Matematik',
+    targetKeyword: '7 sınıf matematik tüm konuları',
+    relatedKeywords: ['7 sınıf matematik müfredatı 2026 2027', '7 sınıf denklem kurma', '7 sınıf oran orantı konuları'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 7. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>LGS maratonundan hemen önceki viraj olan 7. sınıf matematik, <strong>Denklem Kurma</strong> ve <strong>Oran-Orantı</strong> mantığının oturtulduğu en hayati sınıftır.</p>
+    `,
+    faq: [{ question: '7. sınıf matematik LGS için ne kadar önemli?', answer: '7. sınıftaki Denklem Kurma ve Oran-Orantı konuları LGS Matematik sorularının %60\'ının temel mantığını oluşturur.' }]
+  },
+  {
+    id: 'blog-grade-10-all',
+    slug: '10-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    title: '2026-2027 10. Sınıf Matematik Tüm Konuları ve MEB Müfredat Rehberi',
+    metaTitle: '2026-2027 10. Sınıf Matematik Tüm Konuları & Müfredat Özeti',
+    description: '10. Sınıf matematik tüm üniteleri: Permütasyon, kombinasyon, olasılık, fonksiyonlar, polinomlar, 2. derece denklemler, çokgenler ve katı cisimler.',
+    excerpt: '2026-2027 YKS hazırlığının temeli 10. sınıf matematik dersinin tüm 1. ve 2. dönem üniteleri, fonksiyonlar ve polinomlar konu rehberi.',
+    coverImage: '/IMG_3039.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'Lise Matematik',
+    targetKeyword: '10 sınıf matematik tüm konuları',
+    relatedKeywords: ['10 sınıf matematik müfredatı 2026 2027', '10 sınıf fonksiyonlar konuları', '10 sınıf polinomlar konu anlatımı'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 10. Sınıf Matematik Tüm Konuları Rehberi</h2>
+      <p>Lisenin 2. yılında işlenen 10. sınıf matematik konuları hem okul yazılılarında hem de ÖSYM'nin YKS (TYT-AYT) sınavlarında doğrudan sorulur.</p>
+    `,
+    faq: [{ question: '10. sınıf matematiğin TYT ve AYT\'deki ağırlığı nedir?', answer: 'Fonksiyonlar, Polinomlar ve İkinci Dereceden Denklemler her yıl TYT ve AYT\'de toplam 6-8 soru oluşturur.' }]
+  },
+  {
+    id: 'blog-grade-11-all',
+    slug: '11-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+    title: '2026-2027 11. Sınıf Matematik Tüm Konuları ve AYT Müfredat Rehberi',
+    metaTitle: '2026-2027 11. Sınıf Matematik Tüm Konuları & AYT Ders Rehberi',
+    description: '11. Sınıf matematik tüm konuları: Trigonometri, analitik geometri, fonksiyon uygulamaları, denklem sistemleri, çember daire ve olasılık.',
+    excerpt: 'AYT 2027 sınavının en ağırlıklı müfredatı: 11. sınıf matematik Trigonometri formülleri, analitik geometri, parabola ve çember analitiği rehberi.',
+    coverImage: '/IMG_3041.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'YKS Hazırlık',
+    targetKeyword: '11 sınıf matematik tüm konuları',
+    relatedKeywords: ['11 sınıf matematik müfredatı 2026 2027', '11 sınıf ayt konuları', '11 sınıf trigonometri ve analitik'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 11. Sınıf Matematik Tüm Konuları ve AYT Rehberi</h2>
+      <p>Sayısal ve Eşit Ağırlık öğrencilerinin AYT derecesini belirleyen en kritik yıl 11. sınıftır.</p>
+    `,
+    faq: [{ question: '11. sınıf matematik konuları AYT\'de kaç soru yaptırır?', answer: 'Trigonometri ve Analitik Geometri tek başına AYT Matematik\'te 8-10 net kazandırır.' }]
+  },
+  {
+    id: 'blog-grade-12-all',
+    slug: '12-sinif-ayt-matematik-tum-konulari-ve-yks-mufredati',
+    title: '2026-2027 12. Sınıf AYT Matematik Tüm Konuları ve YKS Müfredat Rehberi',
+    metaTitle: '2026-2027 12. Sınıf AYT Matematik Tüm Konuları | YKS Derece Rehberi',
+    description: '12. Sınıf AYT matematik tüm konuları: Logaritma, diziler, toplam-fark formülleri, limit, süreklilik, türev, integral ve çemberin analitiği.',
+    excerpt: 'YKS 2027 derece hedefleyenler için 12. sınıf AYT matematik konuları, türev-integral çalışma planı ve sınav taktikleri rehberi.',
+    coverImage: '/IMG_3037.jpeg',
+    createdAt: '2026-09-02T10:00:00.000Z',
+    updatedAt: '2026-09-04T00:00:00.000Z',
+    category: 'YKS Hazırlık',
+    targetKeyword: '12 sınıf ayt matematik tüm konuları',
+    relatedKeywords: ['12 sınıf ayt matematik müfredatı 2026 2027', 'yks 2027 ayt matematik konuları', '12 sınıf turev integral logaritma'],
+    author: { name: 'Burak Çelik' },
+    content: `
+      <h2>2026-2027 12. Sınıf AYT Matematik Tüm Konuları Rehberi</h2>
+      <p>YKS Maratonunun zirve noktası olan 12. sınıf AYT matematik müfredatı, yüksek öğretimde mühendislik, tıp ve iktisat hedeflerinin belirleyicisidir.</p>
+    `,
+    faq: [{ question: 'AYT Matematikte Türev ve İntegral kaç soru getirir?', answer: 'Türev ve İntegral konuları AYT Matematik testinde her yıl toplam 9-10 soru oluşturur.' }]
   }
 ];

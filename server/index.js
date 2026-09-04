@@ -294,6 +294,17 @@ Allow: /kontenjan-kurslari
 Allow: /iletisim
 Allow: /kvkk
 
+# Allow public API endpoints for client-side rendering (Googlebot XHR)
+Allow: /api/blog
+Allow: /api/blog/*
+Allow: /api/pdf-notes
+Allow: /api/camps
+Allow: /api/quota-courses
+Allow: /api/social/youtube-feed
+Allow: /api/sitemap.xml
+Allow: /api/robots.txt
+
+# Disallow private/admin endpoints
 Disallow: /ogretmen
 Disallow: /ogretmen/*
 Disallow: /ogrenci
@@ -303,8 +314,17 @@ Disallow: /veli/*
 Disallow: /giris
 Disallow: /ogrenci-kayit
 Disallow: /kayit-formu
+Disallow: /api/teacher
+Disallow: /api/teacher/*
+Disallow: /api/student
+Disallow: /api/student/*
+Disallow: /api/parent
+Disallow: /api/parent/*
+Disallow: /api/auth
+Disallow: /api/auth/*
+Disallow: /api/drive
+Disallow: /api/drive/*
 Disallow: /api/
-Disallow: /api/*
 
 Sitemap: https://fullematematigi.com.tr/sitemap.xml`;
 
@@ -327,7 +347,7 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
       { url: '/kvkk', priority: '0.3', changefreq: 'monthly' }
     ];
 
-    // Static fallback blog slugs list
+    // Static fallback blog slugs list (including Grade 5-12 lecture blogs)
     const staticBlogSlugs = [
       'online-matematik-ozel-ders-rehberi',
       'geometride-sekilleri-gormek-ve-geometri-taktikleri',
@@ -351,7 +371,22 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
       'yas-problemleri',
       'yuzde-problemleri',
       'tyt-fonksiyonlar',
-      'tyt-matematik-calisma-programi'
+      'tyt-matematik-calisma-programi',
+      '5-sinif-matematik-dogal-sayilar-ve-islemler',
+      '6-sinif-matematik-kesirler-ve-ondalik-gosterim',
+      '7-sinif-matematik-tam-sayilar-ve-rasyonel-sayilar',
+      '8-sinif-lgs-matematik-carpanlar-katlar-uslu-ifadeler',
+      '9-sinif-matematik-kumeler-ve-mantik-konu-anlatimi',
+      '10-sinif-matematik-sayma-ve-olasilik-permutasyon-kombinasyon',
+      '11-sinif-matematik-trigonometri-konu-anlatimi',
+      '12-sinif-ayt-matematik-turev-ve-integral-temelleri',
+      '5-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+      '6-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+      '7-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+      '8-sinif-lgs-matematik-tum-konulari-ve-lgs-mufredati',
+      '10-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+      '11-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
+      '12-sinif-ayt-matematik-tum-konulari-ve-yks-mufredati'
     ];
 
     let blogPostsMap = new Map();
