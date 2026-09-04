@@ -404,6 +404,7 @@ const Home = () => {
               preload="auto"
               className="h-full w-full object-cover"
             >
+              <source src="/gemini_generated_video_78A3F1F4.mp4" type="video/mp4" />
               <source src="/math-bg.mp4" type="video/mp4" />
               <source src="/math-background.mp4" type="video/mp4" />
               <source src="/math-background.mov" type="video/quicktime" />
