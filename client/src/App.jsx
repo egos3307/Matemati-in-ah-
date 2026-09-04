@@ -78,6 +78,7 @@ const AppContent = () => {
         <Route path="/" element={<Home />} />
         <Route path="/derslerimiz" element={<Derslerimiz />} />
         <Route path="/kontenjan-dersleri" element={<QuotaCourseSelection />} />
+        <Route path="/kontenjan-kurslari" element={<QuotaCourseSelection />} />
         <Route path="/pdf-notlari" element={<PdfNotes />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPostDetail />} />

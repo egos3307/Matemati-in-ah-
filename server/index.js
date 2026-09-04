@@ -343,6 +343,7 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
       { url: '/pdf-notlari', priority: '0.8', changefreq: 'weekly' },
       { url: '/camps', priority: '0.7', changefreq: 'weekly' },
       { url: '/kontenjan-kurslari', priority: '0.7', changefreq: 'weekly' },
+      { url: '/kontenjan-dersleri', priority: '0.7', changefreq: 'weekly' },
       { url: '/iletisim', priority: '0.5', changefreq: 'monthly' },
       { url: '/kvkk', priority: '0.3', changefreq: 'monthly' }
     ];

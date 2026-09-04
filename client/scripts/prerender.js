@@ -93,6 +93,17 @@ const STATIC_PAGES = [
     changefreq: 'weekly'
   },
   {
+    path: '/kontenjan-dersleri',
+    title: 'Kontenjanlı Matematik Ders Seçimi | Fullematematiği',
+    description: 'LGS, YKS, KPSS ve Lise matematik seviyenize uygun sınırlı kontenjanlı canlı ders grupları.',
+    keywords: 'kontenjanlı ders seçimi, online matematik canlı ders, lgs ders seçimi',
+    heading: 'Kontenjanlı Canlı Ders Grupları',
+    intro: 'Sınıf seviyenize en uygun butik grubu seçerek derslerinize hemen başlayın.',
+    type: 'website',
+    priority: '0.7',
+    changefreq: 'weekly'
+  },
+  {
     path: '/iletisim',
     title: 'İletişim & Ücretsiz Tanışma Dersi Başvurusu | Fullematematiği',
     description: 'Fullematematiği online matematik özel ders platformu iletişim bilgileri, telefon numarası ve WhatsApp randevu hattı.',
