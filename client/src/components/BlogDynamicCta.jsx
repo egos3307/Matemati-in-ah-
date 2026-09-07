@@ -105,7 +105,7 @@ const BlogDynamicCta = ({ post, position = 'mid_content' }) => {
       source: `blog_${position}`
     });
 
-    const targetUrl = appendUtmToUrl(`/kontenjan-dersleri?kategori=${encodeURIComponent(cta.targetQuotaCategory)}&ref=blog_${position}`);
+    const targetUrl = appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(cta.targetQuotaCategory)}&ref=blog_${position}`);
     navigate(targetUrl);
   };
 

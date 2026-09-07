@@ -26,7 +26,7 @@ const BlogEndConversion = ({ post }) => {
     });
 
     const categoryParam = post?.category?.includes('LGS') ? 'LGS 2027' : post?.category?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027';
-    navigate(appendUtmToUrl(`/kontenjan-dersleri?kategori=${encodeURIComponent(categoryParam)}&ref=blog_end`));
+    navigate(appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(categoryParam)}&ref=blog_end`));
   };
 
   const handleSecondaryCta = () => {

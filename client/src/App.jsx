@@ -16,6 +16,7 @@ import PdfNotes from './pages/PdfNotes';
 import QuotaCourseSelection from './pages/QuotaCourseSelection';
 import WatchRecording from './pages/WatchRecording';
 import StudentRegistrationForm from './pages/StudentRegistrationForm';
+import TrialLessonBooking from './pages/TrialLessonBooking';
 import KVKK from './pages/KVKK';
 import NotFound from './pages/NotFound';
 import AnalyticsTracker from './components/AnalyticsTracker';
@@ -87,6 +88,9 @@ const AppContent = () => {
         <Route path="/giris" element={<Login />} />
         <Route path="/ogrenci-kayit" element={<StudentRegistrationForm />} />
         <Route path="/kayit-formu" element={<StudentRegistrationForm />} />
+        <Route path="/ucretsiz-tanisma-dersi" element={<TrialLessonBooking />} />
+        <Route path="/tanisma-dersi" element={<TrialLessonBooking />} />
+        <Route path="/ucretsiz-ders-planla" element={<TrialLessonBooking />} />
         <Route 
           path="/ogretmen" 
           element={

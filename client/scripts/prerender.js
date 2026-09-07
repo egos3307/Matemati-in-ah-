@@ -49,6 +49,17 @@ const STATIC_PAGES = [
     changefreq: 'daily'
   },
   {
+    path: '/ucretsiz-tanisma-dersi',
+    title: 'Ücretsiz Canlı Tanışma Dersi Planla | Fullematematiği',
+    description: '15 Dakikada matematik seviyenizi belirleyelim, hedefinize özel çalışma haritanızı ve en uygun canlı ders kampını ücretsiz planlayalım.',
+    keywords: 'ücretsiz matematik dersi, ücretsiz tanışma dersi, canlı matematik deneme dersi, online matematik özel ders randevu',
+    heading: 'Ücretsiz Canlı Tanışma Dersi Randevusu',
+    intro: 'Uzman öğretmenimizle birebir canlı tanışma dersine katılın, seviyenizi öğrenin ve hedeflerinize en uygun kamp programını seçin.',
+    type: 'website',
+    priority: '0.9',
+    changefreq: 'weekly'
+  },
+  {
     path: '/derslerimiz',
     title: 'Online Matematik Canlı Ders Kampları & Özel Ders | Fullematematiği',
     description: 'YKS, LGS ve KPSS için online matematik canlı ders paketleri ve geometri kampları. Sınıf seviyenize en uygun canlı dersi seçin, ilk ders ücretsiz!',
