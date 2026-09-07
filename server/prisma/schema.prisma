@@ -405,5 +405,18 @@ model SeoContentCluster {
   updatedAt     DateTime @updatedAt
 }
 
+model BlogConversionLog {
+  id           Int      @id @default(autoincrement())
+  blogSlug     String
+  blogCategory String?
+  eventType    String   // "view", "cta_click", "free_lesson_click", "product_click", "whatsapp_click", "quota_app", "registration"
+  ctaPosition  String?  // "mid_content", "end_content", "sticky_mobile", "footer_cta"
+  productName  String?
+  source       String?  // utm_source or direct
+  utmCampaign  String?
+  createdAt    DateTime @default(now())
+}
+
+
 
 

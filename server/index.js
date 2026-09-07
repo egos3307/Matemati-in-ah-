@@ -2703,6 +2703,108 @@ app.delete('/api/teacher/blog/:id', auth, checkRole('TEACHER'), async (req, res)
   }
 });
 
+// Blog Conversion Analytics Store (In-memory fallback + DB)
+const inMemoryConversions = [];
+
+app.post('/api/analytics/log-conversion', async (req, res) => {
+  const { eventType, blogSlug, blogCategory, ctaPosition, productName, source, utmCampaign } = req.body || {};
+  if (!eventType) return res.status(400).json({ error: 'eventType required' });
+
+  const record = {
+    eventType,
+    blogSlug: blogSlug || 'general',
+    blogCategory: blogCategory || 'Rehberlik',
+    ctaPosition: ctaPosition || 'unknown',
+    productName: productName || null,
+    source: source || 'direct',
+    utmCampaign: utmCampaign || null,
+    createdAt: new Date()
+  };
+
+  inMemoryConversions.push(record);
+  if (inMemoryConversions.length > 5000) inMemoryConversions.shift();
+
+  try {
+    if (prisma.blogConversionLog) {
+      await prisma.blogConversionLog.create({ data: record });
+    }
+  } catch {
+    // Silent DB fallback to memory
+  }
+
+  res.json({ success: true });
+});
+
+app.get('/api/teacher/blog-conversions', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    let logs = [];
+    try {
+      if (prisma.blogConversionLog) {
+        logs = await prisma.blogConversionLog.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 2000
+        });
+      }
+    } catch {
+      logs = inMemoryConversions;
+    }
+
+    if (!logs || logs.length === 0) {
+      logs = inMemoryConversions;
+    }
+
+    const views = logs.filter(l => l.eventType === 'blog_cta_view').length;
+    const ctaClicks = logs.filter(l => l.eventType === 'blog_cta_click').length;
+    const freeLessonClicks = logs.filter(l => l.eventType === 'free_lesson_click').length;
+    const productClicks = logs.filter(l => l.eventType === 'product_cta_click').length;
+    const whatsappClicks = logs.filter(l => l.eventType === 'whatsapp_click').length;
+    const conversions = logs.filter(l => ['registration', 'quota_app', 'purchase', 'form_submit_success'].includes(l.eventType)).length;
+
+    // Per-blog stats map
+    const blogStatsMap = {};
+    logs.forEach(l => {
+      const slug = l.blogSlug || 'genel';
+      if (!blogStatsMap[slug]) {
+        blogStatsMap[slug] = {
+          slug,
+          category: l.blogCategory || 'Rehberlik',
+          views: 0,
+          ctaClicks: 0,
+          freeLessonClicks: 0,
+          productClicks: 0,
+          conversions: 0
+        };
+      }
+      if (l.eventType === 'blog_cta_view') blogStatsMap[slug].views++;
+      if (l.eventType === 'blog_cta_click') blogStatsMap[slug].ctaClicks++;
+      if (l.eventType === 'free_lesson_click') blogStatsMap[slug].freeLessonClicks++;
+      if (l.eventType === 'product_cta_click') blogStatsMap[slug].productClicks++;
+      if (['registration', 'quota_app', 'purchase', 'form_submit_success'].includes(l.eventType)) blogStatsMap[slug].conversions++;
+    });
+
+    const topBlogs = Object.values(blogStatsMap)
+      .sort((a, b) => (b.ctaClicks + b.conversions) - (a.ctaClicks + a.conversions))
+      .slice(0, 15);
+
+    res.json({
+      summary: {
+        totalViews: views,
+        ctaClicks,
+        freeLessonClicks,
+        productClicks,
+        whatsappClicks,
+        totalConversions: conversions,
+        conversionRate: views > 0 ? ((conversions / views) * 100).toFixed(1) + '%' : '0.0%'
+      },
+      topBlogs
+    });
+  } catch (err) {
+    console.error('Error fetching blog conversion report:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 let DEFAULT_PDF_NOTES = [];
 
 // PDF Note Routes

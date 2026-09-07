@@ -5,7 +5,26 @@ import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 import Breadcrumb from '../components/Breadcrumb';
 import RelatedPosts from '../components/RelatedPosts';
+import BlogDynamicCta from '../components/BlogDynamicCta';
+import BlogProductCard from '../components/BlogProductCard';
+import BlogEndConversion from '../components/BlogEndConversion';
+import BlogMobileStickyCta from '../components/BlogMobileStickyCta';
 import { FALLBACK_BLOGS } from '../data/staticBlogs';
+import { captureUtmParams } from '../utils/utm';
+
+const splitContentForMidCta = (htmlContent) => {
+  if (!htmlContent) return { firstPart: '', secondPart: '' };
+  const blockMatches = [...htmlContent.matchAll(/(<\/h2>|<\/h3>|<\/p>)/gi)];
+  if (blockMatches.length < 3) {
+    return { firstPart: htmlContent, secondPart: '' };
+  }
+  const targetIndex = Math.max(1, Math.floor(blockMatches.length * 0.35));
+  const splitPoint = blockMatches[targetIndex].index + blockMatches[targetIndex][0].length;
+  return {
+    firstPart: htmlContent.slice(0, splitPoint),
+    secondPart: htmlContent.slice(splitPoint)
+  };
+};
 
 const BlogPostDetail = () => {
   const { slug } = useParams();
@@ -14,6 +33,7 @@ const BlogPostDetail = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    captureUtmParams();
     const fetchPost = async () => {
       try {
         const res = await axios.get(`/api/blog/${slug}`);
@@ -185,11 +205,31 @@ const BlogPostDetail = () => {
             </div>
           )}
 
-          {/* Main Content Body */}
-          <div 
-            className="prose max-w-none text-slate-700 text-base leading-relaxed space-y-4 [&_h2]:text-2xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-6 [&_h3]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1.5"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
-          />
+          {/* Main Content Body with Mid-Content Dynamic CTA */}
+          {(() => {
+            const { firstPart, secondPart } = splitContentForMidCta(post.content);
+            return (
+              <>
+                <div 
+                  className="prose max-w-none text-slate-700 text-base leading-relaxed space-y-4 [&_h2]:text-2xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-6 [&_h3]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1.5"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(firstPart) }}
+                />
+
+                {/* 30-40% Position Dynamic CTA */}
+                <BlogDynamicCta post={post} position="mid_content" />
+
+                {secondPart && (
+                  <div 
+                    className="prose max-w-none text-slate-700 text-base leading-relaxed space-y-4 [&_h2]:text-2xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-6 [&_h3]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(secondPart) }}
+                  />
+                )}
+              </>
+            );
+          })()}
+
+          {/* Automatic Product Recommendation Card */}
+          <BlogProductCard post={post} />
 
           {/* FAQ Section if available */}
           {parsedFaq && parsedFaq.length > 0 && (
@@ -232,23 +272,14 @@ const BlogPostDetail = () => {
           )}
         </article>
 
-        {/* CTA Section */}
-        <section className="mt-12 rounded-3xl border border-primary/20 bg-primary/5 p-8 md:p-10 text-center">
-          <h2 className="text-xl font-black text-slate-900 mb-2">Ücretsiz Canlı Matematik Tanışma Dersi!</h2>
-          <p className="text-slate-600 text-sm max-w-xl mx-auto mb-6">
-            LGS, TYT, AYT veya KPSS sınavlarında hedeflediğin dereceye ulaşmak için uzman kadromuzla hemen canlı tanışma dersine katıl.
-          </p>
-          <Link
-            to="/derslerimiz"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-8 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/95 hover:shadow-xl"
-          >
-            Canlı Dersleri İncele
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-          </Link>
-        </section>
+        {/* End of Post High-Conversion Hook Section */}
+        <BlogEndConversion post={post} />
 
         {/* Related Posts Section */}
         <RelatedPosts currentSlug={slug} category={post.category} />
+
+        {/* Mobile Sticky Bottom CTA */}
+        <BlogMobileStickyCta post={post} />
       </div>
     </main>
   );

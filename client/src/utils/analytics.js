@@ -71,6 +71,29 @@ export const getButtonText = (element) => {
   return text.trim().replace(/\s+/g, ' ').slice(0, 100);
 };
 
+// Send conversion log to local server (non-blocking)
+const logBackendConversion = (eventName, params) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const utmParams = JSON.parse(sessionStorage.getItem('fulle_utm_params') || '{}');
+    fetch('/api/analytics/log-conversion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: eventName,
+        blogSlug: params.blog_slug || (window.location.pathname.startsWith('/blog/') ? window.location.pathname.replace('/blog/', '') : null),
+        blogCategory: params.blog_category || null,
+        ctaPosition: params.cta_position || params.button_location || null,
+        productName: params.product || null,
+        source: utmParams.utm_source || document.referrer || 'direct',
+        utmCampaign: utmParams.utm_campaign || null
+      })
+    }).catch(() => {});
+  } catch {
+    // Ignore fetch errors
+  }
+};
+
 export const trackEvent = (eventName, params = {}) => {
   if (typeof window === 'undefined') return;
 
@@ -92,7 +115,6 @@ export const trackEvent = (eventName, params = {}) => {
 
   if (isDevEnvironment() && !isDebugRequested) {
     console.log('[GA4 Dev Event]', eventName, enrichedParams);
-    return;
   }
 
   if (isDebugRequested) {
@@ -107,6 +129,9 @@ export const trackEvent = (eventName, params = {}) => {
       window.gtag('event', eventName, enrichedParams);
     }
   }
+
+  // Also record conversion in backend for dashboard report
+  logBackendConversion(eventName, enrichedParams);
 };
 
 export const trackPageView = (path, title) => {
@@ -133,7 +158,6 @@ export const trackPageView = (path, title) => {
 
   if (isDevEnvironment() && !isDebugRequested) {
     console.log('[GA4 Dev PageView]', pagePath, params);
-    return;
   }
 
   if (isDebugRequested) {
@@ -147,5 +171,9 @@ export const trackPageView = (path, title) => {
     if (window.gtag) {
       window.gtag('event', 'page_view', params);
     }
+  }
+
+  if (pagePath.startsWith('/blog/')) {
+    logBackendConversion('blog_cta_view', { blog_slug: pagePath.replace('/blog/', '').split('?')[0] });
   }
 };

@@ -5,6 +5,8 @@ import LiveMeeting from '../components/LiveMeeting';
 import ZoomMeeting from '../components/ZoomMeeting';
 import StudentRegistrationForm from './StudentRegistrationForm';
 import SeoAiManager from '../components/SeoAiManager';
+import BlogConversionDashboard from '../components/BlogConversionDashboard';
+
 
 const parseZoomUrl = (url) => {
   if (!url) return { meetingNumber: '', password: '' };
@@ -1369,6 +1371,13 @@ const TeacherDashboard = () => {
                 >
                   <span className="material-symbols-outlined">auto_awesome</span>
                   <span>SEO & AI Blog</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('blog-conversions'); setSelectedStudent(null); }}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === 'blog-conversions' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'hover:bg-primary/10 text-slate-500'}`}
+                >
+                  <span className="material-symbols-outlined">trending_up</span>
+                  <span>Blog Dönüşümleri</span>
                 </button>
                 <button 
                   onClick={() => { setActiveTab('camps'); setSelectedStudent(null); }}
@@ -3343,6 +3352,12 @@ const TeacherDashboard = () => {
           {activeTab === 'seo-ai' && user?.role === 'HEAD_TEACHER' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <SeoAiManager />
+            </div>
+          )}
+
+          {activeTab === 'blog-conversions' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <BlogConversionDashboard />
             </div>
           )}
 

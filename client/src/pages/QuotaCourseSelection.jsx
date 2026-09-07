@@ -183,11 +183,19 @@ const QuotaCourseSelection = () => {
         email: formData.email.trim().toLowerCase()
       };
 
-      await axios.post('/api/quota-applications', payload);
+      const res = await axios.post('/api/quota-applications', payload);
       trackEvent('form_submit_success', {
         form_name: 'quota_course_application_form',
         button_location: 'quota_course_page',
         button_text: 'Yeri Ayırt & Öğretmene Gönder'
+      });
+      trackEvent('purchase', {
+        transaction_id: res.data?.application?.id || `QA_${Date.now()}`,
+        value: 0,
+        currency: 'TRY',
+        category: selectedCategory,
+        course_title: selectedCourse?.title || 'Kontenjan Dersi',
+        source: 'quota_course_application'
       });
       setSubmitSuccess(true);
       setStep(4);
