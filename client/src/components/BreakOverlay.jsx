@@ -6,6 +6,23 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
 
   const mainVideoRef = useRef(null);
   const endingVideoRef = useRef(null);
+  const audioRef = useRef(null);
+
+  // Background Audio Control (pages_turning_slowly.mp3 loops during break)
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.35;
+      audioRef.current.play().catch(() => {});
+    }
+    return () => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   // 1. Timer & Phase Calculation
   useEffect(() => {
@@ -77,6 +94,14 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
+      {/* Background Ambient Audio: pages_turning_slowly.mp3 */}
+      <audio
+        ref={audioRef}
+        src="/pages_turning_slowly.mp3"
+        loop
+        preload="auto"
+      />
+
       {/* Fullscreen Video Container */}
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none">
         {/* Main Background Video: sonvideo.mp4 (Loops from break start until last 10s) */}
