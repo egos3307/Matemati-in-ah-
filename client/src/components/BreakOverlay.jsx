@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const ilkVideoRef = useRef(null);
-  const sonVideoRef = useRef(null);
-  const [showSonVideo, setShowSonVideo] = useState(false);
+  const mainLoopVideoRef = useRef(null);
+  const endingVideoRef = useRef(null);
+  const [showEndingVideo, setShowEndingVideo] = useState(false);
 
   // Remaining time calculation based on server timestamp breakEndsAt
   useEffect(() => {
@@ -18,11 +18,12 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       const diff = Math.max(0, Math.ceil((breakEndsAt - now) / 1000));
       setRemainingSeconds(diff);
 
-      // Son 10 saniyeye girildiğinde sonvideo.mp4'e geç, öncesinde ilkvideo.mp4 loop etsin
+      // Molanın son 10 saniyesine kadar sonvideo.mp4 kesintisiz loop etsin.
+      // Molanın bitmesine TAM 10 saniye kaldığında (diff <= 10) ilkvideo.mp4 oynasın.
       if (diff <= 10) {
-        setShowSonVideo(true);
+        setShowEndingVideo(true);
       } else {
-        setShowSonVideo(false);
+        setShowEndingVideo(false);
       }
     };
 
@@ -31,26 +32,29 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
     return () => clearInterval(interval);
   }, [breakEndsAt]);
 
-  // Video transition logic (ilkvideo.mp4 -> sonvideo.mp4)
+  // Video transition logic: sonvideo.mp4 (main loop) -> ilkvideo.mp4 (ending)
   useEffect(() => {
-    if (showSonVideo) {
-      if (ilkVideoRef.current) {
-        ilkVideoRef.current.pause();
+    if (showEndingVideo) {
+      if (mainLoopVideoRef.current) {
+        mainLoopVideoRef.current.pause();
       }
-      if (sonVideoRef.current) {
-        sonVideoRef.current.currentTime = 0;
-        sonVideoRef.current
+      if (endingVideoRef.current) {
+        endingVideoRef.current.currentTime = 0;
+        endingVideoRef.current
           .play()
-          .catch((e) => console.warn('Son video oynatma hatası:', e));
+          .catch((e) => console.warn('Ending video play error:', e));
       }
     } else {
-      if (ilkVideoRef.current) {
-        ilkVideoRef.current
+      if (endingVideoRef.current) {
+        endingVideoRef.current.pause();
+      }
+      if (mainLoopVideoRef.current && mainLoopVideoRef.current.paused) {
+        mainLoopVideoRef.current
           .play()
-          .catch((e) => console.warn('İlk video oynatma hatası:', e));
+          .catch((e) => console.warn('Main loop video play error:', e));
       }
     }
-  }, [showSonVideo]);
+  }, [showEndingVideo]);
 
   // Format MM:SS
   const formatTime = (totalSeconds) => {
@@ -60,31 +64,43 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans break-overlay-container">
+    <div
+      className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans break-overlay-container touch-none"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
       {/* Video Container (Fullscreen 16:9 object-fit cover) */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-        {/* Main background video (sonvideo.mp4 - loops until last 10s) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none">
+        {/* Main background video: sonvideo.mp4 (loops continuously until last 10s) */}
         <video
-          ref={ilkVideoRef}
+          ref={mainLoopVideoRef}
           src="/sonvideo.mp4"
           autoPlay
           loop
           muted
           playsInline
+          controls={false}
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
           className={`w-full h-full object-cover transition-opacity duration-500 ${
-            showSonVideo ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            showEndingVideo ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
         />
 
-        {/* Ending video (ilkvideo.mp4 - preloaded, single play in last 10s) */}
+        {/* Ending video: ilkvideo.mp4 (plays once in last 10s) */}
         <video
-          ref={sonVideoRef}
+          ref={endingVideoRef}
           src="/ilkvideo.mp4"
           preload="auto"
           muted
           playsInline
+          controls={false}
+          disablePictureInPicture
+          onContextMenu={(e) => e.preventDefault()}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-            showSonVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            showEndingVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         />
       </div>
@@ -123,7 +139,12 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
 
       {/* Bottom Floating Control for Teacher ONLY */}
       {isTeacher && (
-        <div className="relative z-10 p-4 sm:p-6 flex justify-center pointer-events-auto">
+        <div
+          className="relative z-10 p-4 sm:p-6 flex justify-center pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
           <button
             onClick={onEndBreak}
             className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl shadow-2xl border border-red-400/40 flex items-center gap-2 transition-all cursor-pointer backdrop-blur-md"
