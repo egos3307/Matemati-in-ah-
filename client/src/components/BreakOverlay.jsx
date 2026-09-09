@@ -10,18 +10,26 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   useEffect(() => {
     const updateRemaining = () => {
       const now = Date.now();
+      if (!breakEndsAt || breakEndsAt <= now) {
+        setRemainingSeconds(0);
+        return;
+      }
+
       const diff = Math.max(0, Math.ceil((breakEndsAt - now) / 1000));
       setRemainingSeconds(diff);
 
-      if (diff <= 10 && !showSonVideo) {
+      // Son 10 saniyeye girildiğinde sonvideo.mp4'e geç, öncesinde ilkvideo.mp4 loop etsin
+      if (diff <= 10) {
         setShowSonVideo(true);
+      } else {
+        setShowSonVideo(false);
       }
     };
 
     updateRemaining();
-    const interval = setInterval(updateRemaining, 500);
+    const interval = setInterval(updateRemaining, 250);
     return () => clearInterval(interval);
-  }, [breakEndsAt, showSonVideo]);
+  }, [breakEndsAt]);
 
   // Video transition logic (ilkvideo.mp4 -> sonvideo.mp4)
   useEffect(() => {
