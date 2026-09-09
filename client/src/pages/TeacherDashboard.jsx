@@ -96,7 +96,10 @@ const TeacherDashboard = () => {
   const [creatingRecurring, setCreatingRecurring] = useState(false);
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [blogs, setBlogs] = useState([]);
-  const [newBlog, setNewBlog] = useState({ title: '', content: '', excerpt: '', coverImage: '' });
+  const [newBlog, setNewBlog] = useState({ title: '', content: '', excerpt: '', coverImage: '', relatedCourseId: '', relatedCourseType: '', secondaryCourseId: '', secondaryCourseType: '', grade: '', category: '' });
+  const [editingBlogId, setEditingBlogId] = useState(null);
+  const [activeCoursesList, setActiveCoursesList] = useState([]);
+  const [matchingAiPackage, setMatchingAiPackage] = useState(false);
   const [blogView, setBlogView] = useState('list');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [insertImgOpen, setInsertImgOpen] = useState(false);
@@ -889,6 +892,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     if (activeTab === 'blog') {
       fetchBlogs();
+      fetchActiveCourses();
     } else if (activeTab === 'camps') {
       fetchCamps();
     } else if (activeTab === 'forms') {
@@ -902,6 +906,15 @@ const TeacherDashboard = () => {
       fetchQuotaApplications();
     }
   }, [activeTab]);
+
+  const fetchActiveCourses = async () => {
+    try {
+      const res = await axios.get('/api/active-courses');
+      setActiveCoursesList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching active courses:', err);
+    }
+  };
 
   const fetchPdfNotes = async () => {
     try {
@@ -1231,17 +1244,72 @@ const TeacherDashboard = () => {
     setCampView('create');
   };
 
-  const handleCreateBlog = async (e) => {
-    e.preventDefault();
+  const handleSaveBlog = async (e) => {
+    if (e) e.preventDefault();
     try {
-      await axios.post('/api/teacher/blog', newBlog);
-      setNewBlog({ title: '', content: '', excerpt: '', coverImage: '' });
+      if (editingBlogId) {
+        await axios.put(`/api/teacher/blog/${editingBlogId}`, newBlog);
+        alert('Blog yazısı başarıyla güncellendi!');
+      } else {
+        await axios.post('/api/teacher/blog', newBlog);
+        alert('Blog yazısı başarıyla yayınlandı!');
+      }
+      setNewBlog({ title: '', content: '', excerpt: '', coverImage: '', relatedCourseId: '', relatedCourseType: '', secondaryCourseId: '', secondaryCourseType: '', grade: '', category: '' });
+      setEditingBlogId(null);
       setBlogView('list');
       fetchBlogs();
-      alert('Blog yazısı başarıyla yayınlandı!');
     } catch (err) {
       const errMsg = err.response?.data?.error || err.response?.data?.message || err.message;
-      alert(`Blog yazısı yayınlanırken hata oluştu: ${errMsg}`);
+      alert(`Blog yazısı kaydedilirken hata oluştu: ${errMsg}`);
+    }
+  };
+
+  const handleEditBlog = (post) => {
+    setEditingBlogId(post.id);
+    setNewBlog({
+      title: post.title || '',
+      content: post.content || '',
+      excerpt: post.excerpt || '',
+      coverImage: post.coverImage || '',
+      relatedCourseId: post.relatedCourseId ? String(post.relatedCourseId) : '',
+      relatedCourseType: post.relatedCourseType || '',
+      secondaryCourseId: post.secondaryCourseId ? String(post.secondaryCourseId) : '',
+      secondaryCourseType: post.secondaryCourseType || '',
+      grade: post.grade || '',
+      category: post.topic || post.category || ''
+    });
+    setBlogView('create');
+  };
+
+  const handleAiPackageMatch = async () => {
+    if (!newBlog.title.trim()) {
+      alert('Lütfen önce bir yazı başlığı girin.');
+      return;
+    }
+    setMatchingAiPackage(true);
+    try {
+      const res = await axios.post('/api/teacher/match-course-ai', {
+        title: newBlog.title,
+        content: newBlog.content,
+        grade: newBlog.grade,
+        category: newBlog.category
+      });
+      if (res.data?.primary) {
+        setNewBlog(prev => ({
+          ...prev,
+          relatedCourseId: String(res.data.primary.id),
+          relatedCourseType: res.data.primary.type,
+          secondaryCourseId: res.data.secondary ? String(res.data.secondary.id) : '',
+          secondaryCourseType: res.data.secondary ? res.data.secondary.type : ''
+        }));
+        alert(`🤖 Gemini AI Seçimi Tamamlandı!\nBirincil Paket: ${res.data.primary.title}\nİkincil (Yedek) Paket: ${res.data.secondary ? res.data.secondary.title : 'Yok'}`);
+      } else {
+        alert('AI eşleşen bir paket bulamadı veya aktif paket bulunmuyor.');
+      }
+    } catch (err) {
+      alert('AI eşleştirme hatası: ' + err.message);
+    } finally {
+      setMatchingAiPackage(false);
     }
   };
 
@@ -3372,7 +3440,11 @@ const TeacherDashboard = () => {
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Yayınlanmış içeriklerinizi buradan yönetin</p>
                     </div>
                     <button 
-                      onClick={() => setBlogView('create')}
+                      onClick={() => {
+                        setEditingBlogId(null);
+                        setNewBlog({ title: '', content: '', excerpt: '', coverImage: '', relatedCourseId: '', relatedCourseType: '', secondaryCourseId: '', secondaryCourseType: '', grade: '', category: '' });
+                        setBlogView('create');
+                      }}
                       className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-lg">add</span>
@@ -3391,38 +3463,66 @@ const TeacherDashboard = () => {
                     ) : (
                       blogs.map(post => (
                         <div key={post.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all flex flex-col justify-between gap-4">
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex justify-between items-start gap-4">
                               <h4 className="font-black text-slate-900 text-lg line-clamp-2">{post.title}</h4>
-                              {deleteConfirmId !== post.id ? (
-                                <button 
-                                  onClick={() => setDeleteConfirmId(post.id)}
-                                  className="text-red-500 hover:text-red-700 p-2 flex items-center justify-center rounded-xl hover:bg-red-50 transition-colors shrink-0"
-                                  title="Yazıyı Sil"
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleEditBlog(post)}
+                                  className="text-primary hover:text-primary/80 p-2 flex items-center justify-center rounded-xl hover:bg-primary/5 transition-colors"
+                                  title="Yazıyı Düzenle"
                                 >
-                                  <span className="material-symbols-outlined">delete</span>
+                                  <span className="material-symbols-outlined text-lg">edit</span>
                                 </button>
-                              ) : (
-                                <div className="flex gap-2 items-center shrink-0">
+                                {deleteConfirmId !== post.id ? (
                                   <button 
-                                    onClick={() => handleDeleteBlog(post.id)}
-                                    className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-red-600 transition-colors"
+                                    onClick={() => setDeleteConfirmId(post.id)}
+                                    className="text-red-500 hover:text-red-700 p-2 flex items-center justify-center rounded-xl hover:bg-red-50 transition-colors"
+                                    title="Yazıyı Sil"
                                   >
-                                    Sil
+                                    <span className="material-symbols-outlined text-lg">delete</span>
                                   </button>
-                                  <button 
-                                    onClick={() => setDeleteConfirmId(null)}
-                                    className="bg-slate-100 text-slate-500 text-xs px-3 py-1.5 rounded-xl font-bold hover:bg-slate-200 transition-colors"
-                                  >
-                                    İptal
-                                  </button>
-                                </div>
-                              )}
+                                ) : (
+                                  <div className="flex gap-1.5 items-center">
+                                    <button 
+                                      onClick={() => handleDeleteBlog(post.id)}
+                                      className="bg-red-500 text-white text-xs px-2.5 py-1 rounded-xl font-bold hover:bg-red-600 transition-colors"
+                                    >
+                                      Sil
+                                    </button>
+                                    <button 
+                                      onClick={() => setDeleteConfirmId(null)}
+                                      className="bg-slate-100 text-slate-500 text-xs px-2.5 py-1 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                    >
+                                      İptal
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                            
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">
                               Slug: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 lowercase font-normal">{post.slug}</code> • {new Date(post.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </p>
-                            <p className="text-sm text-slate-500 line-clamp-3">{post.excerpt}</p>
+
+                            {/* Active Course Package Badges */}
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1">
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                                <span className="material-symbols-outlined text-sm text-primary">local_mall</span>
+                                <span>İlgili Paket:</span>
+                                <span className="text-primary font-black truncate">
+                                  {post.matchedCourse ? post.matchedCourse.title : 'Yapay Zeka Otomatik (Gemini)'}
+                                </span>
+                              </div>
+                              {post.isSecondaryActive && (
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                  <span className="material-symbols-outlined text-xs">info</span>
+                                  <span>Birincil paket silindiği için İKİNCİL YEDEK PAKET aktif!</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="text-sm text-slate-500 line-clamp-2">{post.excerpt}</p>
                           </div>
                         </div>
                       ))
@@ -3435,35 +3535,35 @@ const TeacherDashboard = () => {
                   <div className="flex justify-between items-center border-b border-slate-100 pb-6 mb-8">
                     <div className="flex items-center gap-4">
                       <button 
-                        onClick={() => { setBlogView('list'); setDeleteConfirmId(null); }}
+                        onClick={() => { setBlogView('list'); setEditingBlogId(null); setDeleteConfirmId(null); }}
                         className="h-12 w-12 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/20 transition-all"
                       >
                         <span className="material-symbols-outlined">arrow_back</span>
                       </button>
                       <div>
-                        <h3 className="text-2xl font-black text-slate-900">Yeni Blog Yazısı</h3>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Tam ekran editör deneyimi</p>
+                        <h3 className="text-2xl font-black text-slate-900">{editingBlogId ? 'Blog Yazısını Düzenle' : 'Yeni Blog Yazısı'}</h3>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Görsel, İlgili Ders Paketi ve Tam İçerik Editörü</p>
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => { setBlogView('list'); setDeleteConfirmId(null); }}
+                        onClick={() => { setBlogView('list'); setEditingBlogId(null); setDeleteConfirmId(null); }}
                         className="px-6 py-3 border border-slate-200 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-all"
                       >
                         Vazgeç
                       </button>
                       <button 
-                        onClick={handleCreateBlog}
+                        onClick={handleSaveBlog}
                         className="bg-primary text-white px-8 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
                       >
                         <span className="material-symbols-outlined text-lg">publish</span>
-                        Yayınla
+                        {editingBlogId ? 'Güncelle ve Kaydet' : 'Yayınla'}
                       </button>
                     </div>
                   </div>
 
                   {/* Form Fields */}
-                  <form onSubmit={handleCreateBlog} className="space-y-6">
+                  <form onSubmit={handleSaveBlog} className="space-y-6">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Yazı Başlığı</label>
                       <input 
@@ -3483,6 +3583,82 @@ const TeacherDashboard = () => {
                         value={newBlog.excerpt} 
                         onChange={(e) => setNewBlog({...newBlog, excerpt: e.target.value})}
                       />
+                    </div>
+
+                    {/* Course Package Selector Block */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                        <div>
+                          <h4 className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-primary text-base">local_mall</span>
+                            İlgili Ders Paketi Seçimi (Yapay Zeka Gemini / Özel)
+                          </h4>
+                          <p className="text-xs text-slate-500">Blog sayfasındaki tavsiye kartında gösterilecek olan aktif ders paketini belirleyin.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAiPackageMatch}
+                          disabled={matchingAiPackage}
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-sm">{matchingAiPackage ? 'sync' : 'auto_awesome'}</span>
+                          <span>{matchingAiPackage ? 'Eşleştiriliyor...' : 'Gemini AI İle Otomatik Paket Seç'}</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Birincil İlgili Ders Paketi (En Uygun Paket)
+                          </label>
+                          <select
+                            value={newBlog.relatedCourseId && newBlog.relatedCourseType ? `${newBlog.relatedCourseType}:${newBlog.relatedCourseId}` : ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) {
+                                setNewBlog({ ...newBlog, relatedCourseId: '', relatedCourseType: '' });
+                              } else {
+                                const [type, id] = val.split(':');
+                                setNewBlog({ ...newBlog, relatedCourseId: id, relatedCourseType: type });
+                              }
+                            }}
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-primary cursor-pointer"
+                          >
+                            <option value="">🤖 Yapay Zeka Otomatik (Gemini AI Seçimi)</option>
+                            {activeCoursesList.map(c => (
+                              <option key={`${c.type}:${c.id}`} value={`${c.type}:${c.id}`}>
+                                [{c.category}] {c.title} ({c.type === 'QUOTA_COURSE' ? 'Kontenjan Kursu' : 'Kamp'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            İkincil Ders Paketi (Birincil Paket Silinirse / Pasifleşirse Kullanılacak)
+                          </label>
+                          <select
+                            value={newBlog.secondaryCourseId && newBlog.secondaryCourseType ? `${newBlog.secondaryCourseType}:${newBlog.secondaryCourseId}` : ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) {
+                                setNewBlog({ ...newBlog, secondaryCourseId: '', secondaryCourseType: '' });
+                              } else {
+                                const [type, id] = val.split(':');
+                                setNewBlog({ ...newBlog, secondaryCourseId: id, secondaryCourseType: type });
+                              }
+                            }}
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-primary cursor-pointer"
+                          >
+                            <option value="">🤖 Yapay Zeka Otomatik (Gemini AI Seçimi)</option>
+                            {activeCoursesList.map(c => (
+                              <option key={`sec-${c.type}:${c.id}`} value={`${c.type}:${c.id}`}>
+                                [{c.category}] {c.title} ({c.type === 'QUOTA_COURSE' ? 'Kontenjan Kursu' : 'Kamp'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-3">

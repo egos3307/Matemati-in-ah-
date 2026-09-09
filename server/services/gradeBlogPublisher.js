@@ -620,6 +620,32 @@ async function publishAllGradeBlogs() {
         continue;
       }
 
+      // Match active course packages with Gemini
+      let relatedCourseId = null;
+      let relatedCourseType = null;
+      let secondaryCourseId = null;
+      let secondaryCourseType = null;
+      try {
+        const { matchCoursePackagesWithGemini } = require('./courseMatcher');
+        const aiMatch = await matchCoursePackagesWithGemini({
+          title: item.title,
+          grade: item.grade,
+          topic: item.topic,
+          targetKeyword: item.targetKeyword,
+          content: item.content
+        });
+        if (aiMatch.primary) {
+          relatedCourseId = aiMatch.primary.id;
+          relatedCourseType = aiMatch.primary.type;
+        }
+        if (aiMatch.secondary) {
+          secondaryCourseId = aiMatch.secondary.id;
+          secondaryCourseType = aiMatch.secondary.type;
+        }
+      } catch (mErr) {
+        console.warn('[Grade Blog Publisher] Package match warning:', mErr.message);
+      }
+
       // Create new blog post
       const blogPost = await db.blogPost.create({
         data: {
@@ -635,6 +661,10 @@ async function publishAllGradeBlogs() {
           grade: item.grade,
           topic: item.topic,
           internalLinks: JSON.stringify(item.internalLinks),
+          relatedCourseId,
+          relatedCourseType,
+          secondaryCourseId,
+          secondaryCourseType,
           authorId
         }
       });

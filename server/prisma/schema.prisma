@@ -145,6 +145,10 @@ model BlogPost {
   grade             String?
   topic             String?
   internalLinks     String?
+  relatedCourseId     Int?
+  relatedCourseType   String?
+  secondaryCourseId   Int?
+  secondaryCourseType String?
   authorId          Int
   author            User     @relation(fields: [authorId], references: [id])
   createdAt         DateTime @default(now())
@@ -307,6 +311,10 @@ model AiBlogDraft {
   content              String
   faq                  String?  // JSON string array of {question, answer}
   internalLinks        String?  // JSON string array of {anchor, url}
+  relatedCourseId      Int?
+  relatedCourseType    String?
+  secondaryCourseId    Int?
+  secondaryCourseType  String?
   verificationRequired Boolean  @default(false)
   aiProvider           String?  // "gemini" or "openrouter"
   aiModel              String?

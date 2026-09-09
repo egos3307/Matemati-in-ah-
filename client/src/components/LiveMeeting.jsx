@@ -15,6 +15,7 @@ import {
 } from '@livekit/components-react';
 import { Track, ConnectionState, LocalVideoTrack } from 'livekit-client';
 import '@livekit/components-styles';
+import BreakOverlay from './BreakOverlay.jsx';
 
 const checkIsTeacher = (participant) => {
   try {
@@ -424,6 +425,35 @@ const Whiteboard = ({ role, whiteboardCanvasRef }) => {
 const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
   const containerRef = useRef(null);
   const apiRef = useRef(null);
+  const isTeacherRole = role === 'TEACHER' || role === 'HEAD_TEACHER';
+  const [breakActive, setBreakActive] = useState(false);
+  const [breakEndsAt, setBreakEndsAt] = useState(0);
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await axios.get('/api/livekit/break-status', { params: { roomName } });
+        if (res.data && res.data.breakActive && res.data.breakEndsAt > Date.now()) {
+          setBreakEndsAt(res.data.breakEndsAt);
+          setBreakActive(true);
+        } else {
+          setBreakActive(false);
+        }
+      } catch (e) {}
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [roomName]);
+
+  const endBreakTeacher = async () => {
+    try {
+      await axios.post('/api/livekit/end-break', { roomName });
+      setBreakActive(false);
+    } catch (e) {
+      setBreakActive(false);
+    }
+  };
 
   useEffect(() => {
     const originalStyle = document.body.style.overflow;
@@ -504,6 +534,14 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
       
       {/* Jitsi Iframe Container */}
       <div ref={containerRef} className="flex-1 w-full bg-slate-900" />
+
+      {breakActive && (
+        <BreakOverlay
+          breakEndsAt={breakEndsAt}
+          isTeacher={isTeacherRole}
+          onEndBreak={endBreakTeacher}
+        />
+      )}
     </div>
   );
 };
@@ -536,6 +574,154 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const showChatRef = useRef(false);
   const chatEndRef = useRef(null);
+
+  // Break Mode (Mola Modu) state
+  const [breakActive, setBreakActive] = useState(false);
+  const [breakEndsAt, setBreakEndsAt] = useState(0);
+  const [breakDuration, setBreakDuration] = useState(0);
+  const [showBreakMenu, setShowBreakMenu] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState(5);
+
+  const applyStartBreak = async (endsAt, duration) => {
+    console.log('[MOLA] applyStartBreak triggered. EndsAt:', new Date(endsAt).toISOString());
+    setBreakEndsAt(endsAt);
+    setBreakDuration(duration);
+    setBreakActive(true);
+    setShowBreakMenu(false);
+
+    // 1. Mute & stop local microphone
+    if (localParticipant) {
+      try {
+        await localParticipant.setMicrophoneEnabled(false);
+      } catch (e) {
+        console.warn('Break mic mute error:', e);
+      }
+    }
+
+    // 2. Mute & stop local camera (or virtual background)
+    if (localParticipant) {
+      try {
+        if (virtualBgEnabledRef.current) {
+          await disableVirtualBackground();
+        } else {
+          await localParticipant.setCameraEnabled(false);
+        }
+      } catch (e) {
+        console.warn('Break camera mute error:', e);
+      }
+    }
+
+    // 3. Stop screen share if active
+    if (localParticipant && localParticipant.isScreenShareEnabled) {
+      try {
+        await localParticipant.setScreenShareEnabled(false);
+      } catch (e) {
+        console.warn('Break screen share stop error:', e);
+      }
+    }
+  };
+
+  const applyEndBreak = () => {
+    console.log('[MOLA] applyEndBreak triggered.');
+    setBreakActive(false);
+    setBreakEndsAt(0);
+    setBreakDuration(0);
+    // ÖNEMLİ: Kamera ve mikrofon mola bittiğinde otomatik açılmaz! Kapalı kalır.
+  };
+
+  const { send: sendBreakData } = useDataChannel('break_status', (msg) => {
+    try {
+      const text = new TextDecoder().decode(msg.payload);
+      const packet = JSON.parse(text);
+      if (packet.type === 'START_BREAK') {
+        applyStartBreak(packet.breakEndsAt, packet.breakDuration);
+      } else if (packet.type === 'END_BREAK') {
+        applyEndBreak();
+      }
+    } catch (err) {
+      console.error('Break data packet error:', err);
+    }
+  });
+
+  const startBreakTeacher = async (minutes) => {
+    const mins = Number(minutes);
+    if (!mins || isNaN(mins) || mins <= 0) {
+      alert('Lütfen geçerli bir mola süresi girin.');
+      return;
+    }
+    const roomName = `lesson_${lessonId}`;
+    try {
+      const res = await axios.post('/api/livekit/start-break', {
+        roomName,
+        durationMinutes: mins
+      });
+      if (res.data && res.data.success) {
+        const packet = {
+          type: 'START_BREAK',
+          breakEndsAt: res.data.breakEndsAt,
+          breakDuration: res.data.breakDuration
+        };
+        const encoder = new TextEncoder();
+        sendBreakData(encoder.encode(JSON.stringify(packet)), { reliable: true });
+        applyStartBreak(res.data.breakEndsAt, res.data.breakDuration);
+      }
+    } catch (err) {
+      console.error('Mola başlatma hatası:', err);
+      alert('Mola başlatılamadı: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const endBreakTeacher = async () => {
+    const roomName = `lesson_${lessonId}`;
+    try {
+      const res = await axios.post('/api/livekit/end-break', { roomName });
+      if (res.data && res.data.success) {
+        const packet = { type: 'END_BREAK' };
+        const encoder = new TextEncoder();
+        sendBreakData(encoder.encode(JSON.stringify(packet)), { reliable: true });
+        applyEndBreak();
+      }
+    } catch (err) {
+      console.error('Mola bitirme hatası:', err);
+      applyEndBreak();
+    }
+  };
+
+  // Poll room break status from backend (supports late joiners & reconnects)
+  useEffect(() => {
+    const roomName = `lesson_${lessonId}`;
+    const pollBreakStatus = async () => {
+      try {
+        const res = await axios.get('/api/livekit/break-status', { params: { roomName } });
+        if (res.data && res.data.breakActive) {
+          if (res.data.breakEndsAt > Date.now()) {
+            setBreakEndsAt(res.data.breakEndsAt);
+            setBreakDuration(res.data.breakDuration);
+            setBreakActive(true);
+
+            // Force turn off active mic/cam during break
+            if (localParticipant && isMicrophoneEnabled) {
+              localParticipant.setMicrophoneEnabled(false).catch(() => {});
+            }
+            if (localParticipant && isCameraEnabled) {
+              localParticipant.setCameraEnabled(false).catch(() => {});
+            }
+          } else {
+            setBreakActive(false);
+          }
+        } else {
+          setBreakActive(false);
+        }
+      } catch (err) {
+        console.warn('Break status polling error:', err);
+      }
+    };
+
+    pollBreakStatus();
+    const interval = setInterval(pollBreakStatus, 3000);
+    return () => clearInterval(interval);
+  }, [lessonId, localParticipant, isMicrophoneEnabled, isCameraEnabled]);
 
   const muteParticipantTrack = async (participant, trackType) => {
     const tracks = trackType === 'audio' ? micTracks : cameraTracks;
@@ -1606,6 +1792,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
   const toggleMicrophone = async () => {
     if (!localParticipant) return;
+    if (breakActive) {
+      alert('Mola esnasında mikrofon açılamaz.');
+      return;
+    }
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
@@ -1620,6 +1810,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
   const toggleCamera = async () => {
     if (!localParticipant) return;
+    if (breakActive) {
+      alert('Mola esnasında kamera açılamaz.');
+      return;
+    }
     try {
       if (virtualBgEnabled) {
         await disableVirtualBackground();
@@ -2596,6 +2790,91 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </button>
           )}
 
+          {/* Teacher Mola (Break) Controls */}
+          {isTeacherRole && (
+            <div className="relative device-menu-container">
+              <button
+                onClick={() => setShowBreakMenu(!showBreakMenu)}
+                className="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400 font-extrabold hover:scale-102"
+                title="Mola Modu"
+              >
+                <span className="material-symbols-outlined text-base">free_breakfast</span>
+                <span className="hidden md:inline">Mola</span>
+              </button>
+
+              {/* Mola Selection Popover */}
+              {showBreakMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                    <h6 className="font-extrabold text-xs text-slate-100 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-amber-400 text-base">free_breakfast</span>
+                      Mola Süresi Seçin
+                    </h6>
+                    <button
+                      onClick={() => setShowBreakMenu(false)}
+                      className="text-slate-400 hover:text-slate-200"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => { setSelectedDuration(5); setCustomMinutes(''); }}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          selectedDuration === 5 && !customMinutes
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-extrabold'
+                            : 'bg-slate-800 text-slate-300 border-slate-750 hover:bg-slate-750'
+                        }`}
+                      >
+                        5 Dakika
+                      </button>
+                      <button
+                        onClick={() => { setSelectedDuration(10); setCustomMinutes(''); }}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          selectedDuration === 10 && !customMinutes
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-extrabold'
+                            : 'bg-slate-800 text-slate-300 border-slate-750 hover:bg-slate-750'
+                        }`}
+                      >
+                        10 Dakika
+                      </button>
+                    </div>
+
+                    {/* Custom Duration Input */}
+                    <div className="flex flex-col gap-1 mt-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Özel Süre (Dakika)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        placeholder="Örn: 7"
+                        value={customMinutes}
+                        onChange={(e) => {
+                          setCustomMinutes(e.target.value);
+                          if (e.target.value) setSelectedDuration(null);
+                        }}
+                        className="bg-slate-800 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const dur = customMinutes ? Number(customMinutes) : selectedDuration;
+                        startBreakTeacher(dur);
+                      }}
+                      className="mt-2 w-full py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-base">play_arrow</span>
+                      MOLAYI BAŞLAT
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Screen Share Button */}
           <button 
             onClick={toggleScreenShare}
@@ -2670,6 +2949,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         width={1280} 
         height={720} 
       />
+
+      {/* Fullscreen Break Overlay */}
+      {breakActive && (
+        <BreakOverlay
+          breakEndsAt={breakEndsAt}
+          isTeacher={isTeacherRole}
+          onEndBreak={endBreakTeacher}
+        />
+      )}
     </div>
   );
 };

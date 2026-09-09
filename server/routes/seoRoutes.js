@@ -151,6 +151,16 @@ router.post('/generate-draft', auth, checkRole('HEAD_TEACHER'), aiLimiter, async
       existingSitePages: ['/blog', '/derslerimiz', '/pdf-notlar', '/9-sinif-matematik']
     });
 
+    // 3b. Match course packages with Gemini AI
+    const { matchCoursePackagesWithGemini } = require('../services/courseMatcher');
+    const aiMatch = await matchCoursePackagesWithGemini({
+      title: draftContent.title,
+      grade: draftContent.grade,
+      topic: draftContent.topic,
+      targetKeyword: draftContent.targetKeyword,
+      content: draftContent.content
+    });
+
     // 4. Save into AiBlogDraft database table
     const draft = await prisma.aiBlogDraft.create({
       data: {
@@ -167,6 +177,10 @@ router.post('/generate-draft', auth, checkRole('HEAD_TEACHER'), aiLimiter, async
         content: draftContent.content,
         faq: JSON.stringify(draftContent.faq),
         internalLinks: JSON.stringify(draftContent.internalLinks),
+        relatedCourseId: aiMatch.primary ? aiMatch.primary.id : null,
+        relatedCourseType: aiMatch.primary ? aiMatch.primary.type : null,
+        secondaryCourseId: aiMatch.secondary ? aiMatch.secondary.id : null,
+        secondaryCourseType: aiMatch.secondary ? aiMatch.secondary.type : null,
         verificationRequired: draftContent.verificationRequired,
         aiProvider: draftContent.aiProvider,
         aiModel: draftContent.aiModel,
@@ -252,7 +266,7 @@ router.get('/drafts', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
  */
 router.put('/drafts/:id', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { title, slug, metaTitle, metaDescription, excerpt, targetKeyword, secondaryKeywords, grade, topic, content, faq, internalLinks, verificationRequired } = req.body;
+  const { title, slug, metaTitle, metaDescription, excerpt, targetKeyword, secondaryKeywords, grade, topic, content, faq, internalLinks, relatedCourseId, relatedCourseType, secondaryCourseId, secondaryCourseType, verificationRequired } = req.body;
 
   try {
     const updated = await prisma.aiBlogDraft.update({
@@ -270,6 +284,10 @@ router.put('/drafts/:id', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
         content,
         faq: typeof faq === 'string' ? faq : JSON.stringify(faq || []),
         internalLinks: typeof internalLinks === 'string' ? internalLinks : JSON.stringify(internalLinks || []),
+        relatedCourseId: relatedCourseId ? parseInt(relatedCourseId) : null,
+        relatedCourseType: relatedCourseType || null,
+        secondaryCourseId: secondaryCourseId ? parseInt(secondaryCourseId) : null,
+        secondaryCourseType: secondaryCourseType || null,
         verificationRequired: Boolean(verificationRequired),
         updatedAt: new Date()
       }
@@ -376,6 +394,10 @@ router.post('/drafts/:id/publish', auth, checkRole('HEAD_TEACHER'), async (req, 
         grade: draft.grade,
         topic: draft.topic,
         internalLinks: draft.internalLinks,
+        relatedCourseId: draft.relatedCourseId,
+        relatedCourseType: draft.relatedCourseType,
+        secondaryCourseId: draft.secondaryCourseId,
+        secondaryCourseType: draft.secondaryCourseType,
         authorId: req.user.id
       }
     });

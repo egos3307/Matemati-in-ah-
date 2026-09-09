@@ -2599,17 +2599,45 @@ function slugify(text) {
     .replace(/-+$/, '');
 }
 
+const { getActiveCourses, matchCoursePackagesWithGemini, resolveBlogPackages } = require('./services/courseMatcher');
+
+app.get('/api/active-courses', async (req, res) => {
+  try {
+    const courses = await getActiveCourses();
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/teacher/match-course-ai', auth, checkRole('TEACHER'), async (req, res) => {
+  try {
+    const { title, grade, topic, category, targetKeyword, content } = req.body;
+    const match = await matchCoursePackagesWithGemini({ title, grade, topic, category, targetKeyword, content });
+    res.json(match);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/blog', async (req, res) => {
   try {
     const posts = await prisma.blogPost.findMany({
       orderBy: { createdAt: 'desc' },
       include: { author: { select: { name: true } } }
     });
-    const formatted = posts.map(p => ({
-      ...p,
-      author: {
-        name: (!p.author?.name || p.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : p.author.name
-      }
+    const formatted = await Promise.all(posts.map(async (p) => {
+      const resolved = await resolveBlogPackages(p);
+      return {
+        ...p,
+        author: {
+          name: (!p.author?.name || p.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : p.author.name
+        },
+        matchedCourse: resolved.displayCourse,
+        primaryCourse: resolved.primaryCourse,
+        secondaryCourse: resolved.secondaryCourse,
+        isSecondaryActive: resolved.isSecondaryActive
+      };
     }));
     res.json(formatted);
   } catch (err) {
@@ -2628,11 +2656,16 @@ app.get('/api/blog/:slug', async (req, res) => {
     if (!post) {
       return res.status(404).json({ message: 'Yazı bulunamadı' });
     }
+    const resolved = await resolveBlogPackages(post);
     const formatted = {
       ...post,
       author: {
         name: (!post.author?.name || post.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : post.author.name
-      }
+      },
+      matchedCourse: resolved.displayCourse,
+      primaryCourse: resolved.primaryCourse,
+      secondaryCourse: resolved.secondaryCourse,
+      isSecondaryActive: resolved.isSecondaryActive
     };
     res.json(formatted);
   } catch (err) {
@@ -2642,7 +2675,7 @@ app.get('/api/blog/:slug', async (req, res) => {
 });
 
 app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, content, excerpt, coverImage } = req.body;
+  const { title, content, excerpt, coverImage, relatedCourseId, relatedCourseType, secondaryCourseId, secondaryCourseType, grade, category, topic } = req.body;
   
   if (!title || !content) {
     return res.status(400).json({ error: 'Başlık ve içerik alanları zorunludur.' });
@@ -2666,6 +2699,24 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
       }
     }
 
+    let finalPrimaryId = relatedCourseId ? parseInt(relatedCourseId) : null;
+    let finalPrimaryType = relatedCourseType || null;
+    let finalSecondaryId = secondaryCourseId ? parseInt(secondaryCourseId) : null;
+    let finalSecondaryType = secondaryCourseType || null;
+
+    // If teacher didn't select manually, run Gemini AI match automatically
+    if (!finalPrimaryId || !finalPrimaryType) {
+      const aiMatch = await matchCoursePackagesWithGemini({ title, grade, topic, category, content });
+      if (aiMatch.primary) {
+        finalPrimaryId = aiMatch.primary.id;
+        finalPrimaryType = aiMatch.primary.type;
+      }
+      if (aiMatch.secondary) {
+        finalSecondaryId = aiMatch.secondary.id;
+        finalSecondaryType = aiMatch.secondary.type;
+      }
+    }
+
     const post = await prisma.blogPost.create({
       data: {
         title,
@@ -2673,6 +2724,12 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
         excerpt: excerpt || content.substring(0, 150) + '...',
         coverImage: coverImage || null,
         slug: finalSlug,
+        grade: grade || null,
+        topic: topic || category || null,
+        relatedCourseId: finalPrimaryId,
+        relatedCourseType: finalPrimaryType,
+        secondaryCourseId: finalSecondaryId,
+        secondaryCourseType: finalSecondaryType,
         authorId: req.user.id
       }
     });
@@ -2689,6 +2746,57 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
     res.json(post);
   } catch (err) {
     console.error('Error creating blog post:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/teacher/blog/:id', auth, checkRole('TEACHER'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { title, content, excerpt, coverImage, relatedCourseId, relatedCourseType, secondaryCourseId, secondaryCourseType, grade, category, topic, autoMatch } = req.body;
+
+  try {
+    const existing = await prisma.blogPost.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Yazı bulunamadı.' });
+    }
+
+    let finalPrimaryId = relatedCourseId !== undefined ? (relatedCourseId ? parseInt(relatedCourseId) : null) : existing.relatedCourseId;
+    let finalPrimaryType = relatedCourseType !== undefined ? (relatedCourseType || null) : existing.relatedCourseType;
+    let finalSecondaryId = secondaryCourseId !== undefined ? (secondaryCourseId ? parseInt(secondaryCourseId) : null) : existing.secondaryCourseId;
+    let finalSecondaryType = secondaryCourseType !== undefined ? (secondaryCourseType || null) : existing.secondaryCourseType;
+
+    if (autoMatch) {
+      const aiMatch = await matchCoursePackagesWithGemini({ title: title || existing.title, grade: grade || existing.grade, topic: topic || category || existing.topic, content: content || existing.content });
+      if (aiMatch.primary) {
+        finalPrimaryId = aiMatch.primary.id;
+        finalPrimaryType = aiMatch.primary.type;
+      }
+      if (aiMatch.secondary) {
+        finalSecondaryId = aiMatch.secondary.id;
+        finalSecondaryType = aiMatch.secondary.type;
+      }
+    }
+
+    const updated = await prisma.blogPost.update({
+      where: { id },
+      data: {
+        title: title || existing.title,
+        content: content || existing.content,
+        excerpt: excerpt !== undefined ? excerpt : existing.excerpt,
+        coverImage: coverImage !== undefined ? coverImage : existing.coverImage,
+        grade: grade !== undefined ? grade : existing.grade,
+        topic: topic || category || existing.topic,
+        relatedCourseId: finalPrimaryId,
+        relatedCourseType: finalPrimaryType,
+        secondaryCourseId: finalSecondaryId,
+        secondaryCourseType: finalSecondaryType,
+        updatedAt: new Date()
+      }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating blog post:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -3847,6 +3955,72 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
     console.error('LiveKit mute error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MOLA MODU (BREAK MODE) ODA SEYİYESİ STATE YÖNETİMİ
+// ═══════════════════════════════════════════════════════════
+const LESSON_BREAK_STATES = new Map();
+
+// Öğretmenin mola başlatması (Server-side onay ve senkronizasyon)
+app.post('/api/livekit/start-break', auth, checkRole('TEACHER'), async (req, res) => {
+  const { roomName, durationMinutes } = req.body;
+  if (!roomName || !durationMinutes || isNaN(durationMinutes) || Number(durationMinutes) <= 0) {
+    return res.status(400).json({ error: 'Geçerli oda adı (roomName) ve mola süresi (dakika) gereklidir.' });
+  }
+
+  const durationSec = Math.round(Number(durationMinutes) * 60);
+  const now = Date.now();
+  const breakEndsAt = now + durationSec * 1000;
+
+  const breakState = {
+    breakActive: true,
+    breakStartedAt: now,
+    breakEndsAt,
+    breakDuration: durationSec,
+    breakStartedBy: req.user ? req.user.id : 'TEACHER'
+  };
+
+  LESSON_BREAK_STATES.set(roomName, breakState);
+  console.log(`[MOLA] Oda: ${roomName} için ${durationMinutes} dakikalık mola başlatıldı. Bitiş: ${new Date(breakEndsAt).toISOString()}`);
+  res.json({ success: true, ...breakState });
+});
+
+// Öğretmenin molayı erken bitirmesi
+app.post('/api/livekit/end-break', auth, checkRole('TEACHER'), async (req, res) => {
+  const { roomName } = req.body;
+  if (!roomName) {
+    return res.status(400).json({ error: 'Oda adı (roomName) gereklidir.' });
+  }
+
+  LESSON_BREAK_STATES.delete(roomName);
+  console.log(`[MOLA] Oda: ${roomName} için mola sonlandırıldı.`);
+  res.json({ success: true, breakActive: false });
+});
+
+// Derse yeni katılan / yenileyen kullanıcının mola durumunu sorgulaması
+app.get('/api/livekit/break-status', auth, async (req, res) => {
+  const { roomName } = req.query;
+  if (!roomName) {
+    return res.status(400).json({ error: 'Oda adı (roomName) gereklidir.' });
+  }
+
+  const state = LESSON_BREAK_STATES.get(roomName);
+  if (!state || !state.breakActive) {
+    return res.json({ breakActive: false });
+  }
+
+  const now = Date.now();
+  if (now >= state.breakEndsAt) {
+    LESSON_BREAK_STATES.delete(roomName);
+    return res.json({ breakActive: false });
+  }
+
+  const remainingSeconds = Math.max(0, Math.ceil((state.breakEndsAt - now) / 1000));
+  res.json({
+    ...state,
+    remainingSeconds
+  });
 });
 
 // ═══════════════════════════════════════════════════════════

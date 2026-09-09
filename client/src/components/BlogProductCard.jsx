@@ -47,26 +47,77 @@ const BlogProductCard = ({ post }) => {
 
   useEffect(() => {
     const fetchAndMatchProduct = async () => {
-      let campsList = [];
+      let activeCourses = [];
       try {
-        const res = await axios.get('/api/camps');
-        if (res.data && res.data.length > 0) {
-          campsList = res.data;
+        const res = await axios.get('/api/active-courses');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          activeCourses = res.data;
         }
       } catch {
-        campsList = [];
+        try {
+          const campsRes = await axios.get('/api/camps');
+          if (campsRes.data && Array.isArray(campsRes.data)) {
+            activeCourses = campsRes.data.map(c => ({
+              id: c.id,
+              type: 'CAMP',
+              title: c.title,
+              badge: c.badge,
+              category: c.category || c.badge,
+              subtitle: c.subtitle,
+              description: c.description,
+              price: c.price,
+              image: c.image
+            }));
+          }
+        } catch {
+          activeCourses = [];
+        }
       }
 
-      const textToAnalyze = `${post?.title || ''} ${post?.category || ''} ${post?.slug || ''}`.toLowerCase();
+      // 1. If post already has resolved matchedCourse from server, check if active
+      if (post?.matchedCourse) {
+        setMatchedProduct(post.matchedCourse);
+        return;
+      }
 
-      // Find matching product from live backend camps or fallback list
+      // 2. Check explicitly assigned primary course
       let selected = null;
-      if (textToAnalyze.includes('lgs') || textToAnalyze.includes('8. sınıf') || textToAnalyze.includes('ortaokul')) {
-        selected = campsList.find(c => (c.title || c.badge || '').toLowerCase().includes('lgs') || (c.title || '').toLowerCase().includes('ortaokul')) || FALLBACK_PRODUCTS[0];
-      } else if (textToAnalyze.includes('kpss') || textToAnalyze.includes('lisans') || textToAnalyze.includes('ön lisans')) {
-        selected = campsList.find(c => (c.title || c.badge || '').toLowerCase().includes('kpss')) || FALLBACK_PRODUCTS[1];
-      } else {
-        selected = campsList.find(c => (c.title || c.badge || '').toLowerCase().includes('yks') || (c.title || '').toLowerCase().includes('tyt')) || FALLBACK_PRODUCTS[2];
+      if (post?.relatedCourseId && post?.relatedCourseType) {
+        selected = activeCourses.find(c => c.id === post.relatedCourseId && (c.type === post.relatedCourseType || !c.type));
+      }
+
+      // 3. Fallback to secondary course if primary is deleted or not found!
+      if (!selected && post?.secondaryCourseId && post?.secondaryCourseType) {
+        selected = activeCourses.find(c => c.id === post.secondaryCourseId && (c.type === post.secondaryCourseType || !c.type));
+      }
+
+      // 4. Dynamic keyword match on remaining active courses
+      if (!selected && activeCourses.length > 0) {
+        const textToAnalyze = `${post?.title || ''} ${post?.category || ''} ${post?.slug || ''} ${post?.grade || ''}`.toLowerCase();
+
+        if (textToAnalyze.includes('lgs') || textToAnalyze.includes('8. sınıf') || textToAnalyze.includes('ortaokul') || textToAnalyze.includes('5. sınıf') || textToAnalyze.includes('6. sınıf') || textToAnalyze.includes('7. sınıf')) {
+          selected = activeCourses.find(c => (c.title || c.category || c.badge || '').toLowerCase().includes('lgs') || (c.title || '').toLowerCase().includes('ortaokul'));
+        } else if (textToAnalyze.includes('kpss') || textToAnalyze.includes('lisans') || textToAnalyze.includes('ön lisans')) {
+          selected = activeCourses.find(c => (c.title || c.category || c.badge || '').toLowerCase().includes('kpss'));
+        } else if (textToAnalyze.includes('yks') || textToAnalyze.includes('tyt') || textToAnalyze.includes('ayt') || textToAnalyze.includes('9. sınıf') || textToAnalyze.includes('10. sınıf') || textToAnalyze.includes('11. sınıf') || textToAnalyze.includes('12. sınıf')) {
+          selected = activeCourses.find(c => (c.title || c.category || c.badge || '').toLowerCase().includes('yks') || (c.title || '').toLowerCase().includes('tyt') || (c.title || '').toLowerCase().includes('ayt'));
+        }
+
+        if (!selected) {
+          selected = activeCourses[0];
+        }
+      }
+
+      // 5. Ultimate fallback if no active courses exist at all
+      if (!selected) {
+        const textToAnalyze = `${post?.title || ''} ${post?.category || ''} ${post?.slug || ''}`.toLowerCase();
+        if (textToAnalyze.includes('lgs') || textToAnalyze.includes('8. sınıf') || textToAnalyze.includes('ortaokul')) {
+          selected = FALLBACK_PRODUCTS[0];
+        } else if (textToAnalyze.includes('kpss') || textToAnalyze.includes('lisans')) {
+          selected = FALLBACK_PRODUCTS[1];
+        } else {
+          selected = FALLBACK_PRODUCTS[2];
+        }
       }
 
       setMatchedProduct(selected);

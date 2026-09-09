@@ -54,6 +54,17 @@ const SeoAiManager = () => {
     maxAutoDraftsPerRun: 2
   });
 
+  const [activeCoursesList, setActiveCoursesList] = useState([]);
+
+  const fetchActiveCourses = async () => {
+    try {
+      const res = await axios.get('/api/active-courses');
+      setActiveCoursesList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching active courses:', err);
+    }
+  };
+
   const fetchOverview = async () => {
     try {
       const res = await axios.get('/api/teacher/seo/overview');
@@ -106,7 +117,7 @@ const SeoAiManager = () => {
   const loadAllData = async () => {
     setLoading(true);
     setErrorMsg('');
-    await Promise.all([fetchOverview(), fetchOpportunities(), fetchDrafts(), fetchLogs()]);
+    await Promise.all([fetchOverview(), fetchOpportunities(), fetchDrafts(), fetchLogs(), fetchActiveCourses()]);
     setLoading(false);
   };
 
@@ -758,6 +769,54 @@ const SeoAiManager = () => {
                     onChange={(e) => setEditingDraft({ ...editingDraft, grade: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 outline-none focus:border-primary"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Birincil İlgili Ders Paketi</label>
+                  <select
+                    value={editingDraft.relatedCourseId && editingDraft.relatedCourseType ? `${editingDraft.relatedCourseType}:${editingDraft.relatedCourseId}` : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        setEditingDraft({ ...editingDraft, relatedCourseId: null, relatedCourseType: null });
+                      } else {
+                        const [type, id] = val.split(':');
+                        setEditingDraft({ ...editingDraft, relatedCourseId: parseInt(id), relatedCourseType: type });
+                      }
+                    }}
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">🤖 Yapay Zeka Otomatik (Gemini AI Seçimi)</option>
+                    {activeCoursesList.map(c => (
+                      <option key={`draft-p-${c.type}:${c.id}`} value={`${c.type}:${c.id}`}>
+                        [{c.category}] {c.title} ({c.type === 'QUOTA_COURSE' ? 'Kontenjan Kursu' : 'Kamp'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">İkincil Ders Paketi (Yedek)</label>
+                  <select
+                    value={editingDraft.secondaryCourseId && editingDraft.secondaryCourseType ? `${editingDraft.secondaryCourseType}:${editingDraft.secondaryCourseId}` : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        setEditingDraft({ ...editingDraft, secondaryCourseId: null, secondaryCourseType: null });
+                      } else {
+                        const [type, id] = val.split(':');
+                        setEditingDraft({ ...editingDraft, secondaryCourseId: parseInt(id), secondaryCourseType: type });
+                      }
+                    }}
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">🤖 Yapay Zeka Otomatik (Gemini AI Seçimi)</option>
+                    {activeCoursesList.map(c => (
+                      <option key={`draft-s-${c.type}:${c.id}`} value={`${c.type}:${c.id}`}>
+                        [{c.category}] {c.title} ({c.type === 'QUOTA_COURSE' ? 'Kontenjan Kursu' : 'Kamp'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
