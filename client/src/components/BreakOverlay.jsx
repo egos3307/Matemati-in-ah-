@@ -63,10 +63,10 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
     <div className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans break-overlay-container">
       {/* Video Container (Fullscreen 16:9 object-fit cover) */}
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-        {/* Main background video (ilkvideo.mp4) */}
+        {/* Main background video (sonvideo.mp4 - loops until last 10s) */}
         <video
           ref={ilkVideoRef}
-          src="/ilkvideo.mp4"
+          src="/sonvideo.mp4"
           autoPlay
           loop
           muted
@@ -76,10 +76,10 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
           }`}
         />
 
-        {/* Ending video (sonvideo.mp4 - preloaded, single play) */}
+        {/* Ending video (ilkvideo.mp4 - preloaded, single play in last 10s) */}
         <video
           ref={sonVideoRef}
-          src="/sonvideo.mp4"
+          src="/ilkvideo.mp4"
           preload="auto"
           muted
           playsInline
