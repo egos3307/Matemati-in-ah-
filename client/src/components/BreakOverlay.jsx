@@ -52,7 +52,7 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans">
+    <div className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans break-overlay-container">
       {/* Video Container (Fullscreen 16:9 object-fit cover) */}
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
         {/* Main background video (ilkvideo.mp4) */}

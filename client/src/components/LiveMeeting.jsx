@@ -583,6 +583,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const [customMinutes, setCustomMinutes] = useState('');
   const [selectedDuration, setSelectedDuration] = useState(5);
 
+  const breakActiveRef = useRef(false);
+  const breakEndsAtRef = useRef(0);
+
+  useEffect(() => {
+    breakActiveRef.current = breakActive;
+  }, [breakActive]);
+
+  useEffect(() => {
+    breakEndsAtRef.current = breakEndsAt;
+  }, [breakEndsAt]);
+
   const applyStartBreak = async (endsAt, duration) => {
     console.log('[MOLA] applyStartBreak triggered. EndsAt:', new Date(endsAt).toISOString());
     setBreakEndsAt(endsAt);
@@ -1177,7 +1188,42 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             return video.readyState >= 2 && !video.paused;
           });
 
-          if (showWhiteboardRef.current && whiteboardCanvasRef.current) {
+          if (breakActiveRef.current) {
+            // MOLA MODU KAYDI: Mola videosunu ve retro pixel başlık/sayacı ders kaydına dahil et
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const breakVideo = document.querySelector('.break-overlay-container video:not(.pointer-events-none)');
+            if (breakVideo && breakVideo.readyState >= 2 && !breakVideo.paused) {
+              try {
+                ctx.drawImage(breakVideo, 0, 0, canvas.width, canvas.height);
+              } catch (e) {}
+            }
+
+            const now = Date.now();
+            const diff = Math.max(0, Math.ceil((breakEndsAtRef.current - now) / 1000));
+            const m = Math.floor(diff / 60);
+            const s = diff % 60;
+            const timerStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+            ctx.save();
+            ctx.font = '36px "Press Start 2P", cursive, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 6;
+            ctx.strokeText('MOLA', canvas.width / 2, 30);
+            ctx.fillStyle = '#ff6600';
+            ctx.fillText('MOLA', canvas.width / 2, 30);
+
+            ctx.textAlign = 'right';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 6;
+            ctx.strokeText(timerStr, canvas.width - 40, 30);
+            ctx.fillStyle = '#ff6600';
+            ctx.fillText(timerStr, canvas.width - 40, 30);
+            ctx.restore();
+          } else if (showWhiteboardRef.current && whiteboardCanvasRef.current) {
             // Draw whiteboard canvas first
             ctx.drawImage(whiteboardCanvasRef.current, 0, 0, canvas.width, canvas.height);
             
