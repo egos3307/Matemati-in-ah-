@@ -135,6 +135,39 @@ const STATIC_PAGES = [
     type: 'website',
     priority: '0.3',
     changefreq: 'monthly'
+  },
+  {
+    path: '/tarsus-matematik-ozel-ders',
+    title: 'Tarsus Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Rehberi | Fullematematiği',
+    description: 'Tarsus yüz yüze matematik özel ders rehberi. Ortaokul LGS, lise 9-12. sınıf, TYT ve AYT matematik konularında birebir yüz yüze eğitim metodolojimiz.',
+    keywords: 'Tarsus matematik özel ders, Tarsus özel ders, Tarsus yüz yüze matematik özel ders, Tarsus TYT matematik özel ders, Tarsus AYT matematik özel ders, Tarsus LGS matematik özel ders',
+    heading: 'Tarsus Matematik Özel Ders & Yüz Yüze Başarı Rehberi',
+    intro: 'Tarsus bölgesinde LGS, TYT, AYT ve okul derslerine hazırlanan öğrenciler için tasarlanmış yüz yüze matematik özel ders rehberi.',
+    type: 'website',
+    priority: '0.9',
+    changefreq: 'weekly'
+  },
+  {
+    path: '/malatya-matematik-ozel-ders',
+    title: 'Malatya Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Eğitimi | Fullematematiği',
+    description: 'Malatya yüz yüze matematik özel ders rehberi. LGS, YKS TYT-AYT ve ortaokul-lise müfredatına uygun birebir yüz yüze matematik ders çalışma metodolojisi ve sınav hazırlığı.',
+    keywords: 'Malatya matematik özel ders, Malatya özel ders, Malatya yüz yüze matematik özel ders, Malatya TYT matematik özel ders, Malatya AYT matematik özel ders, Malatya LGS matematik özel ders',
+    heading: 'Malatya Matematik Özel Ders & Yüz Yüze Başarı Rehberi',
+    intro: 'Malatya\'da LGS, YKS TYT/AYT ve okul derslerinde matematik başarısını artırmak isteyen öğrenciler için hazırlanan yüz yüze birebir özel ders çalışma rehberi.',
+    type: 'website',
+    priority: '0.9',
+    changefreq: 'weekly'
+  },
+  {
+    path: '/malatya-fen-ozel-ders',
+    title: 'Malatya Fen Özel Ders | Ortaokul & LGS Yüz Yüze Fen Bilimleri Eğitimi | Fullematematiği',
+    description: 'Malatya yüz yüze fen özel ders ve LGS fen bilimleri rehberi. 5, 6, 7 ve 8. sınıf ortaokul öğrencileri için birebir yüz yüze fen bilimleri ders çalışma yöntemleri.',
+    keywords: 'Malatya fen özel ders, Malatya fen bilimleri özel ders, Malatya ortaokul fen özel ders, Malatya LGS fen özel ders, Malatya yüz yüze fen özel ders',
+    heading: 'Malatya Ortaokul Fen Özel Ders & LGS Fen Bilimleri Rehberi',
+    intro: 'Malatya\'da 5, 6, 7 ve 8. sınıf ortaokul öğrencileri için yüz yüze verilen fen bilimleri özel ders hazırlık rehberi.',
+    type: 'website',
+    priority: '0.9',
+    changefreq: 'weekly'
   }
 ];
 

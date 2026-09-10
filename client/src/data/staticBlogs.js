@@ -30,8 +30,11 @@ export const FALLBACK_BLOGS = [
       <h3>Matematik Netlerini Artırmak İçin Nasıl Çalışılmalı?</h3>
       <p>Online derste öğrenilen bilgilerin kalıcı olması için ders sonrası ilk 24 saat içinde soru çözümü yapılmalıdır. Özellikle <a href="/blog/tyt-temel-kavramlar" class="text-primary font-bold hover:underline">TYT Temel Kavramlar</a> ve <a href="/blog/tyt-problemler" class="text-primary font-bold hover:underline">TYT Problemler</a> gibi temel yapı taşlarında bol soru çözümü şarttır.</p>
 
+      <h3>Fullematematiği Yüz Yüze ve Online Ders Seçenekleri</h3>
+      <p>Online derslerimizin yanı sıra belirli şehirlerimizde yüz yüze özel ders rehberliği sunulmaktadır. Çukurova ve Doğu Anadolu bölgelerinde ders talebi olan öğrencilerimiz için <a href="/tarsus-matematik-ozel-ders" class="text-primary font-bold hover:underline">Tarsus matematik özel ders</a> ve <a href="/malatya-matematik-ozel-ders" class="text-primary font-bold hover:underline">Malatya matematik özel ders</a> sayfalarımızdan yüz yüze ders metodolojilerimizi inceleyebilirsiniz.</p>
+
       <h3>Fullematematiği ile İlk Adımı Atın</h3>
-      <p>Siz de YKS, LGS veya KPSS yolculuğunda matematikten çekinmeyi bırakıp netlerinizi yükseltmek istiyorsanız, sitemiz üzerinden hemen <strong>Ücretsiz Tanışma Dersi</strong> randevusu oluşturabilirsiniz!</p>
+      <p>Siz de YKS, LGS veya KPSS yolculuğunda matematikten çekinmeyi bırakıp netlerinizi yükseltmek istiyorsanız, sitemiz üzerinden rehberlerimizi takip edebilirsiniz!</p>
     `,
     faq: [
       {
@@ -1487,6 +1490,7 @@ export const FALLBACK_BLOGS = [
     content: `
       <h2>2026-2027 LGS Matematik Tüm Konuları ve Soru Dağılımı</h2>
       <p>LGS hazırlığında başarılı olmanın ilk kuralı, sınavda karşılaşacağınız 20 matematik sorusunun hangi ünitelerden geleceğini bilmektir.</p>
+      <p>LGS sınavmaratonunda sayısal derslerde net artırmak için matematik kadar Fen Bilimleri dersi de kritik bir yere sahiptir. Malatya'da ortaokul hazırlığı yapan LGS adayları için <a href="/malatya-fen-ozel-ders" class="text-primary font-bold hover:underline">Malatya ortaokul fen özel ders</a> rehberimizden fen net artırma taktiklerini inceleyebilirsiniz.</p>
     `,
     faq: [{ question: 'LGS Matematik sorularında en çok hangi üniteden soru gelir?', answer: 'Genellikle Kareköklü İfadeler, Doğrusal Denklemler ve Cebirsel İfadeler ünitesinden 3-4 soru gelmektedir.' }]
   },

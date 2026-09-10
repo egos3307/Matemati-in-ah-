@@ -18,6 +18,9 @@ import WatchRecording from './pages/WatchRecording';
 import StudentRegistrationForm from './pages/StudentRegistrationForm';
 import TrialLessonBooking from './pages/TrialLessonBooking';
 import KVKK from './pages/KVKK';
+import TarsusMatematikOzelDers from './pages/TarsusMatematikOzelDers';
+import MalatyaMatematikOzelDers from './pages/MalatyaMatematikOzelDers';
+import MalatyaFenOzelDers from './pages/MalatyaFenOzelDers';
 import NotFound from './pages/NotFound';
 import AnalyticsTracker from './components/AnalyticsTracker';
 
@@ -85,6 +88,9 @@ const AppContent = () => {
         <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/iletisim" element={<Contact />} />
         <Route path="/kvkk" element={<KVKK />} />
+        <Route path="/tarsus-matematik-ozel-ders" element={<TarsusMatematikOzelDers />} />
+        <Route path="/malatya-matematik-ozel-ders" element={<MalatyaMatematikOzelDers />} />
+        <Route path="/malatya-fen-ozel-ders" element={<MalatyaFenOzelDers />} />
         <Route path="/giris" element={<Login />} />
         <Route path="/ogrenci-kayit" element={<StudentRegistrationForm />} />
         <Route path="/kayit-formu" element={<StudentRegistrationForm />} />
