@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { trackEvent } from '../utils/analytics';
 import { appendUtmToUrl } from '../utils/utm';
 
@@ -81,7 +81,6 @@ const getCtaContent = (post) => {
 };
 
 const BlogDynamicCta = ({ post, position = 'mid_content' }) => {
-  const navigate = useNavigate();
   const cta = getCtaContent(post);
 
   useEffect(() => {
@@ -104,10 +103,9 @@ const BlogDynamicCta = ({ post, position = 'mid_content' }) => {
       blog_slug: post?.slug,
       source: `blog_${position}`
     });
-
-    const targetUrl = appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(cta.targetQuotaCategory)}&ref=blog_${position}`);
-    navigate(targetUrl);
   };
+
+  const targetUrl = appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(cta.targetQuotaCategory)}&ref=blog_${position}`);
 
   return (
     <div className={`my-8 overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-indigo-50/40 to-slate-50 p-6 md:p-8 shadow-sm ${position === 'mid_content' ? 'relative' : ''}`}>
@@ -126,13 +124,14 @@ const BlogDynamicCta = ({ post, position = 'mid_content' }) => {
         </div>
 
         <div className="w-full md:w-auto flex-shrink-0">
-          <button
+          <Link
+            to={targetUrl}
             onClick={handleCtaClick}
             className="w-full md:w-auto inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:bg-primary/95 hover:scale-102 transition-all cursor-pointer"
           >
             <span>{cta.buttonText}</span>
             <span className="material-symbols-outlined text-base">arrow_forward</span>
-          </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { trackEvent } from '../utils/analytics';
 import { getDynamicWhatsAppLink } from '../utils/whatsapp';
@@ -128,16 +128,15 @@ const BlogProductCard = ({ post }) => {
 
   if (!matchedProduct) return null;
 
+  const categoryParam = matchedProduct?.targetCategory || matchedProduct?.badge || 'YKS 2027';
+  const targetUrl = appendUtmToUrl(`/kontenjan-dersleri?kategori=${encodeURIComponent(categoryParam)}&ref=blog_product_card`);
+
   const handleProductClick = () => {
     trackEvent('product_cta_click', {
       blog_slug: post?.slug,
       product: matchedProduct.title,
       price: matchedProduct.price
     });
-
-    const categoryParam = matchedProduct.targetCategory || matchedProduct.badge || 'YKS 2027';
-    const targetUrl = appendUtmToUrl(`/kontenjan-dersleri?kategori=${encodeURIComponent(categoryParam)}&ref=blog_product_card`);
-    navigate(targetUrl);
   };
 
   const handleWhatsAppClick = () => {
@@ -201,13 +200,14 @@ const BlogProductCard = ({ post }) => {
             </div>
 
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
-              <button
+              <Link
+                to={targetUrl}
                 onClick={handleProductClick}
                 className="flex-1 sm:flex-none inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md shadow-primary/20 hover:bg-primary/95 transition-all cursor-pointer"
               >
                 <span>İncele ve Başla</span>
                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </button>
+              </Link>
 
               <a
                 href={waUrl}

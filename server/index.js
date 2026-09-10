@@ -2599,7 +2599,7 @@ function slugify(text) {
     .replace(/-+$/, '');
 }
 
-const { getActiveCourses, matchCoursePackagesWithGemini, resolveBlogPackages } = require('./services/courseMatcher');
+const { getActiveCourses, matchCoursePackagesWithGemini, resolveBlogPackages, resolveBlogPackagesSync } = require('./services/courseMatcher');
 
 app.get('/api/active-courses', async (req, res) => {
   try {
@@ -2626,8 +2626,16 @@ app.get('/api/blog', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: { select: { name: true } } }
     });
-    const formatted = await Promise.all(posts.map(async (p) => {
-      const resolved = await resolveBlogPackages(p);
+
+    let activeCourses = [];
+    try {
+      activeCourses = await getActiveCourses();
+    } catch {
+      activeCourses = [];
+    }
+
+    const formatted = posts.map((p) => {
+      const resolved = resolveBlogPackagesSync(p, activeCourses);
       return {
         ...p,
         author: {
@@ -2638,7 +2646,7 @@ app.get('/api/blog', async (req, res) => {
         secondaryCourse: resolved.secondaryCourse,
         isSecondaryActive: resolved.isSecondaryActive
       };
-    }));
+    });
     res.json(formatted);
   } catch (err) {
     console.error('Error fetching blogs:', err);
@@ -2656,7 +2664,13 @@ app.get('/api/blog/:slug', async (req, res) => {
     if (!post) {
       return res.status(404).json({ message: 'Yazı bulunamadı' });
     }
-    const resolved = await resolveBlogPackages(post);
+    let activeCourses = [];
+    try {
+      activeCourses = await getActiveCourses();
+    } catch {
+      activeCourses = [];
+    }
+    const resolved = resolveBlogPackagesSync(post, activeCourses);
     const formatted = {
       ...post,
       author: {

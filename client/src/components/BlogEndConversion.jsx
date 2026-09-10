@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { trackEvent } from '../utils/analytics';
 import { appendUtmToUrl } from '../utils/utm';
 
@@ -11,7 +11,9 @@ const REAL_TRUST_ELEMENTS = [
 ];
 
 const BlogEndConversion = ({ post }) => {
-  const navigate = useNavigate();
+  const categoryParam = post?.category?.includes('LGS') ? 'LGS 2027' : post?.category?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027';
+  const primaryTargetUrl = appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(categoryParam)}&ref=blog_end`);
+  const secondaryTargetUrl = appendUtmToUrl('/derslerimiz?ref=blog_end');
 
   const handlePrimaryCta = () => {
     trackEvent('blog_cta_click', {
@@ -24,9 +26,6 @@ const BlogEndConversion = ({ post }) => {
       blog_slug: post?.slug,
       source: 'blog_end_conversion'
     });
-
-    const categoryParam = post?.category?.includes('LGS') ? 'LGS 2027' : post?.category?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027';
-    navigate(appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(categoryParam)}&ref=blog_end`));
   };
 
   const handleSecondaryCta = () => {
@@ -35,8 +34,6 @@ const BlogEndConversion = ({ post }) => {
       product: 'Matematik Paketleri',
       button_location: 'blog_end_conversion'
     });
-
-    navigate(appendUtmToUrl('/derslerimiz?ref=blog_end'));
   };
 
   return (
@@ -60,21 +57,23 @@ const BlogEndConversion = ({ post }) => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-          <button
+          <Link
+            to={primaryTargetUrl}
             onClick={handlePrimaryCta}
             className="w-full sm:w-auto inline-flex h-13 items-center justify-center gap-2.5 rounded-2xl bg-primary px-8 text-sm font-black text-white shadow-lg shadow-primary/40 hover:bg-primary/90 hover:scale-102 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-lg">calendar_month</span>
             <span>Ücretsiz Dersimi Planla</span>
-          </button>
+          </Link>
 
-          <button
+          <Link
+            to={secondaryTargetUrl}
             onClick={handleSecondaryCta}
             className="w-full sm:w-auto inline-flex h-13 items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/5 backdrop-blur-xs px-7 text-sm font-bold text-white hover:bg-white/15 transition-all cursor-pointer"
           >
             <span>Matematik Paketlerini İncele</span>
             <span className="material-symbols-outlined text-base">arrow_forward</span>
-          </button>
+          </Link>
         </div>
 
         {/* Real Trust Elements */}

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { trackEvent } from '../utils/analytics';
 import { appendUtmToUrl } from '../utils/utm';
 
 const BlogMobileStickyCta = ({ post }) => {
-  const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -33,6 +32,9 @@ const BlogMobileStickyCta = ({ post }) => {
     trackEvent('blog_cta_dismiss', { blog_slug: post?.slug, cta_position: 'mobile_sticky' });
   };
 
+  const categoryParam = post?.category?.includes('LGS') ? 'LGS 2027' : post?.category?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027';
+  const targetUrl = appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(categoryParam)}&ref=sticky_cta`);
+
   const handleCtaClick = () => {
     trackEvent('blog_cta_click', {
       blog_slug: post?.slug,
@@ -44,9 +46,6 @@ const BlogMobileStickyCta = ({ post }) => {
       blog_slug: post?.slug,
       source: 'mobile_sticky_cta'
     });
-
-    const categoryParam = post?.category?.includes('LGS') ? 'LGS 2027' : post?.category?.includes('KPSS') ? 'KPSS 2027' : 'YKS 2027';
-    navigate(appendUtmToUrl(`/ucretsiz-tanisma-dersi?kategori=${encodeURIComponent(categoryParam)}&ref=sticky_cta`));
   };
 
   return (
@@ -61,12 +60,13 @@ const BlogMobileStickyCta = ({ post }) => {
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button
+          <Link
+            to={targetUrl}
             onClick={handleCtaClick}
             className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-xs font-bold text-white shadow-md shadow-primary/30 hover:bg-primary/90 transition-all cursor-pointer whitespace-nowrap"
           >
             Planla
-          </button>
+          </Link>
           
           <button
             onClick={handleClose}

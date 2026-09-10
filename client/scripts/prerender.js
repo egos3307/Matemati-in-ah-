@@ -255,7 +255,9 @@ function generatePageHtml(meta) {
   // Render meaningful body content inside #root for SSR / SEO crawlers
   let bodyContentHtml = '';
 
-  if (isArticle) {
+  if (meta.customBodyHtml) {
+    bodyContentHtml = meta.customBodyHtml;
+  } else if (isArticle) {
     bodyContentHtml = `
       <main className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
         <nav aria-label="Breadcrumb" className="mx-auto max-w-4xl px-6 my-4 text-xs font-semibold text-slate-500">
@@ -298,26 +300,6 @@ function generatePageHtml(meta) {
             </div>
           </section>
         </article>
-      </main>
-    `;
-  } else if (meta.path === '/blog') {
-    const blogListHtml = FALLBACK_BLOGS.map(b => `
-      <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">
-          <a href="/blog/${b.slug}" className="hover:text-primary">${b.title}</a>
-        </h2>
-        <p className="text-sm text-slate-600 mb-4">${b.excerpt}</p>
-        <a href="/blog/${b.slug}" className="text-xs font-bold text-primary">Devamını Oku &rarr;</a>
-      </article>
-    `).join('\n');
-
-    bodyContentHtml = `
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <h1 className="text-4xl font-black text-slate-900 mb-4">${meta.heading}</h1>
-        <p className="text-lg text-slate-600 mb-8">${meta.intro}</p>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          ${blogListHtml}
-        </div>
       </main>
     `;
   } else {
@@ -398,94 +380,159 @@ function generatePageHtml(meta) {
   return renderedHtml;
 }
 
-// 2. Pre-render process
-console.log('🚀 Starting Antigravity SSG & Pre-rendering engine...');
-
-let prerenderedCount = 0;
-
-// Render static main site pages
-for (const page of STATIC_PAGES) {
-  const pageHtml = generatePageHtml(page);
-  let targetFilePath;
-  if (page.path === '/') {
-    targetFilePath = path.join(DIST_DIR, 'index.html');
-  } else {
-    const routeDir = path.join(DIST_DIR, page.path.slice(1));
-    fs.mkdirSync(routeDir, { recursive: true });
-    targetFilePath = path.join(routeDir, 'index.html');
+async function main() {
+  let allBlogsForPrerender = [...FALLBACK_BLOGS];
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const dbPosts = await prisma.blogPost.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { name: true } } }
+    });
+    if (dbPosts && dbPosts.length > 0) {
+      const dbSlugs = new Set(dbPosts.map(p => p.slug));
+      allBlogsForPrerender = [
+        ...dbPosts.map(p => ({
+          ...p,
+          authorName: p.author?.name || 'Burak Çelik'
+        })),
+        ...FALLBACK_BLOGS.filter(b => !dbSlugs.has(b.slug))
+      ];
+    }
+    await prisma.$disconnect();
+  } catch {
+    // Silent fallback to FALLBACK_BLOGS
   }
-  fs.writeFileSync(targetFilePath, pageHtml, 'utf8');
-  prerenderedCount++;
-  console.log(`  ✓ Pre-rendered static page: ${page.path} -> ${targetFilePath}`);
+
+  // 2. Pre-render process
+  console.log(`🚀 Starting SSG & Pre-rendering engine for ${allBlogsForPrerender.length} blogs...`);
+
+  let prerenderedCount = 0;
+
+  // Render static main site pages
+  for (const page of STATIC_PAGES) {
+    let pageMeta = page;
+    if (page.path === '/blog') {
+      const blogListHtml = allBlogsForPrerender.map(b => `
+        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            <a href="/blog/${b.slug}" className="hover:text-primary">${b.title}</a>
+          </h2>
+          <p className="text-sm text-slate-600 mb-4">${b.excerpt || ''}</p>
+          <a href="/blog/${b.slug}" className="text-xs font-bold text-primary">Devamını Oku &rarr;</a>
+        </article>
+      `).join('\n');
+
+      pageMeta = {
+        ...page,
+        customBodyHtml: `
+          <main className="mx-auto max-w-7xl px-6 py-12">
+            <h1 className="text-4xl font-black text-slate-900 mb-4">${page.heading}</h1>
+            <p className="text-lg text-slate-600 mb-8">${page.intro}</p>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              ${blogListHtml}
+            </div>
+          </main>
+        `
+      };
+    }
+
+    const pageHtml = generatePageHtml(pageMeta);
+    let targetFilePath;
+    if (page.path === '/') {
+      targetFilePath = path.join(DIST_DIR, 'index.html');
+    } else {
+      const routeDir = path.join(DIST_DIR, page.path.slice(1));
+      fs.mkdirSync(routeDir, { recursive: true });
+      targetFilePath = path.join(routeDir, 'index.html');
+    }
+    fs.writeFileSync(targetFilePath, pageHtml, 'utf8');
+    prerenderedCount++;
+    console.log(`  ✓ Pre-rendered static page: ${page.path} -> ${targetFilePath}`);
+  }
+
+  // Render all blog pages
+  for (const post of allBlogsForPrerender) {
+    let parsedFaq = [];
+    if (post.faq) {
+      if (typeof post.faq === 'string') {
+        try { parsedFaq = JSON.parse(post.faq); } catch { parsedFaq = []; }
+      } else if (Array.isArray(post.faq)) {
+        parsedFaq = post.faq;
+      }
+    }
+
+    const blogMeta = {
+      path: `/blog/${post.slug}`,
+      title: post.metaTitle || `${post.title} | Fullematematiği`,
+      h1Title: post.title,
+      description: post.description || post.excerpt || post.title,
+      keywords: post.targetKeyword ? `${post.targetKeyword}, ${post.relatedKeywords ? post.relatedKeywords.join(', ') : ''}` : 'matematik konuları, Fullematematiği',
+      type: 'article',
+      category: post.category,
+      coverImage: post.coverImage,
+      publishedAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      authorName: post.authorName || post.author?.name || 'Burak Çelik',
+      articleBodyHtml: post.content,
+      faq: parsedFaq,
+      priority: '0.8',
+      changefreq: 'weekly'
+    };
+
+    const blogHtml = generatePageHtml(blogMeta);
+    const blogRouteDir = path.join(DIST_DIR, 'blog', post.slug);
+    fs.mkdirSync(blogRouteDir, { recursive: true });
+    const targetFilePath = path.join(blogRouteDir, 'index.html');
+    fs.writeFileSync(targetFilePath, blogHtml, 'utf8');
+    prerenderedCount++;
+    console.log(`  ✓ Pre-rendered blog post: /blog/${post.slug}`);
+  }
+
+  console.log(`🎉 Pre-rendering complete! Generated ${prerenderedCount} HTML files with full SEO metadata.`);
+
+  // 3. Generate sitemap.xml
+  console.log('🗺️ Generating clean sitemap.xml...');
+
+  let sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  sitemapXml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  for (const page of STATIC_PAGES) {
+    sitemapXml += `  <url>\n`;
+    sitemapXml += `    <loc>${BASE_URL}${page.path === '/' ? '' : page.path}</loc>\n`;
+    sitemapXml += `    <changefreq>${page.changefreq}</changefreq>\n`;
+    sitemapXml += `    <priority>${page.priority}</priority>\n`;
+    sitemapXml += `  </url>\n`;
+  }
+
+  for (const post of allBlogsForPrerender) {
+    const lastMod = post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    sitemapXml += `  <url>\n`;
+    sitemapXml += `    <loc>${BASE_URL}/blog/${post.slug}</loc>\n`;
+    sitemapXml += `    <lastmod>${lastMod}</lastmod>\n`;
+    sitemapXml += `    <changefreq>weekly</changefreq>\n`;
+    sitemapXml += `    <priority>0.8</priority>\n`;
+    sitemapXml += `  </url>\n`;
+  }
+
+  sitemapXml += `</urlset>`;
+
+  // Write sitemap to dist and public
+  fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapXml, 'utf8');
+  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), sitemapXml, 'utf8');
+  console.log(`  ✓ Written sitemap.xml to dist/sitemap.xml and public/sitemap.xml with ${STATIC_PAGES.length + allBlogsForPrerender.length} URLs.`);
+
+  // 4. Copy robots.txt to dist/robots.txt
+  const robotsPublicPath = path.join(PUBLIC_DIR, 'robots.txt');
+  if (fs.existsSync(robotsPublicPath)) {
+    fs.copyFileSync(robotsPublicPath, path.join(DIST_DIR, 'robots.txt'));
+    console.log(`  ✓ Copied robots.txt to dist/robots.txt`);
+  }
+
+  console.log('✅ SSG & SEO pre-rendering process completed successfully!');
 }
 
-// Render all static blog pages from FALLBACK_BLOGS
-for (const post of FALLBACK_BLOGS) {
-  const blogMeta = {
-    path: `/blog/${post.slug}`,
-    title: post.metaTitle || `${post.title} | Fullematematiği`,
-    h1Title: post.title,
-    description: post.description || post.excerpt || post.title,
-    keywords: post.targetKeyword ? `${post.targetKeyword}, ${post.relatedKeywords ? post.relatedKeywords.join(', ') : ''}` : 'matematik konuları, Fullematematiği',
-    type: 'article',
-    category: post.category,
-    coverImage: post.coverImage,
-    publishedAt: post.createdAt,
-    updatedAt: post.updatedAt,
-    authorName: post.author?.name,
-    articleBodyHtml: post.content,
-    faq: post.faq || [],
-    priority: '0.8',
-    changefreq: 'weekly'
-  };
-
-  const blogHtml = generatePageHtml(blogMeta);
-  const blogRouteDir = path.join(DIST_DIR, 'blog', post.slug);
-  fs.mkdirSync(blogRouteDir, { recursive: true });
-  const targetFilePath = path.join(blogRouteDir, 'index.html');
-  fs.writeFileSync(targetFilePath, blogHtml, 'utf8');
-  prerenderedCount++;
-  console.log(`  ✓ Pre-rendered blog post: /blog/${post.slug}`);
-}
-
-console.log(`🎉 Pre-rendering complete! Generated ${prerenderedCount} HTML files with full SEO metadata.`);
-
-// 3. Generate sitemap.xml
-console.log('🗺️ Generating clean sitemap.xml...');
-
-let sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-sitemapXml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-for (const page of STATIC_PAGES) {
-  sitemapXml += `  <url>\n`;
-  sitemapXml += `    <loc>${BASE_URL}${page.path === '/' ? '' : page.path}</loc>\n`;
-  sitemapXml += `    <changefreq>${page.changefreq}</changefreq>\n`;
-  sitemapXml += `    <priority>${page.priority}</priority>\n`;
-  sitemapXml += `  </url>\n`;
-}
-
-for (const post of FALLBACK_BLOGS) {
-  const lastMod = post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-  sitemapXml += `  <url>\n`;
-  sitemapXml += `    <loc>${BASE_URL}/blog/${post.slug}</loc>\n`;
-  sitemapXml += `    <lastmod>${lastMod}</lastmod>\n`;
-  sitemapXml += `    <changefreq>weekly</changefreq>\n`;
-  sitemapXml += `    <priority>0.8</priority>\n`;
-  sitemapXml += `  </url>\n`;
-}
-
-sitemapXml += `</urlset>`;
-
-// Write sitemap to dist and public
-fs.writeFileSync(path.join(DIST_DIR, 'sitemap.xml'), sitemapXml, 'utf8');
-fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), sitemapXml, 'utf8');
-console.log(`  ✓ Written sitemap.xml to dist/sitemap.xml and public/sitemap.xml with ${STATIC_PAGES.length + FALLBACK_BLOGS.length} URLs.`);
-
-// 4. Copy robots.txt to dist/robots.txt
-const robotsPublicPath = path.join(PUBLIC_DIR, 'robots.txt');
-if (fs.existsSync(robotsPublicPath)) {
-  fs.copyFileSync(robotsPublicPath, path.join(DIST_DIR, 'robots.txt'));
-  console.log(`  ✓ Copied robots.txt to dist/robots.txt`);
-}
-
-console.log('✅ SSG & SEO pre-rendering process completed successfully!');
+main().catch(err => {
+  console.error('Prerender error:', err);
+  process.exit(1);
+});

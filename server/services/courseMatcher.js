@@ -165,32 +165,30 @@ function fallbackHeuristicMatch(title, grade, topic, category, activeCourses) {
 
 /**
  * Helper to resolve the active primary or secondary course package for a blog post.
- * Checks if primary exists and is active; if deleted, switches to secondary; if secondary deleted, switches to dynamic best match.
+ * Fast, local, and reliable without calling external AI APIs during GET requests.
  */
-async function resolveBlogPackages(blogPost) {
-  const activeCourses = await getActiveCourses();
-
+function resolveBlogPackagesSync(blogPost, activeCourses = []) {
   let activePrimary = null;
   let activeSecondary = null;
   let isSecondaryActive = false;
 
-  if (blogPost.relatedCourseId && blogPost.relatedCourseType) {
+  if (blogPost?.relatedCourseId && blogPost?.relatedCourseType) {
     activePrimary = activeCourses.find(c => c.id === blogPost.relatedCourseId && c.type === blogPost.relatedCourseType);
   }
 
-  if (blogPost.secondaryCourseId && blogPost.secondaryCourseType) {
+  if (blogPost?.secondaryCourseId && blogPost?.secondaryCourseType) {
     activeSecondary = activeCourses.find(c => c.id === blogPost.secondaryCourseId && c.type === blogPost.secondaryCourseType);
   }
 
-  // If primary course is deleted/unpublished or not set, fallback to secondary course!
+  // If primary course is deleted/unpublished or not set, fallback to secondary course or heuristic match
   let displayCourse = activePrimary;
   if (!displayCourse) {
     if (activeSecondary) {
       displayCourse = activeSecondary;
       isSecondaryActive = true;
     } else {
-      // Dynamic fallback match
-      const dynamicMatch = await matchCoursePackagesWithGemini(blogPost);
+      // Fast local heuristic fallback match
+      const dynamicMatch = fallbackHeuristicMatch(blogPost?.title, blogPost?.grade, blogPost?.topic, blogPost?.category, activeCourses);
       displayCourse = dynamicMatch.primary;
       activeSecondary = dynamicMatch.secondary;
     }
@@ -205,8 +203,19 @@ async function resolveBlogPackages(blogPost) {
   };
 }
 
+async function resolveBlogPackages(blogPost) {
+  let activeCourses = [];
+  try {
+    activeCourses = await getActiveCourses();
+  } catch (err) {
+    console.warn('[CourseMatcher] getActiveCourses warning:', err.message);
+  }
+  return resolveBlogPackagesSync(blogPost, activeCourses);
+}
+
 module.exports = {
   getActiveCourses,
   matchCoursePackagesWithGemini,
-  resolveBlogPackages
+  resolveBlogPackages,
+  resolveBlogPackagesSync
 };
