@@ -101,37 +101,37 @@ let blogsSeeded = false;
 async function seedMissingStaticBlogs() {
   if (blogsSeeded) return;
   try {
-    const existingPosts = await prisma.blogPost.findMany({ select: { slug: true } });
+    const existingPosts = await prisma.blogPost.findMany({ select: { slug: true, authorId: true } });
     const existingSlugs = new Set(existingPosts.map(p => p.slug));
 
     const missingPosts = FALLBACK_BLOGS.filter(b => !existingSlugs.has(b.slug));
 
     if (missingPosts.length > 0) {
-      let teacher = await prisma.user.findFirst({ where: { role: 'TEACHER' } });
-      if (!teacher) {
-        teacher = await prisma.user.findFirst();
-      }
-      const authorId = teacher ? teacher.id : 1;
+      const validAuthorId = (existingPosts.length > 0 && existingPosts[0].authorId) ? existingPosts[0].authorId : 1;
 
       for (const blog of missingPosts) {
-        await prisma.blogPost.create({
-          data: {
-            title: blog.title,
-            slug: blog.slug,
-            content: blog.content,
-            excerpt: blog.excerpt || blog.description || blog.title,
-            coverImage: blog.coverImage || null,
-            metaTitle: blog.metaTitle || blog.title,
-            metaDescription: blog.description || blog.excerpt || blog.title,
-            targetKeyword: blog.targetKeyword || null,
-            secondaryKeywords: Array.isArray(blog.relatedKeywords) ? JSON.stringify(blog.relatedKeywords) : (blog.relatedKeywords || null),
-            faq: Array.isArray(blog.faq) ? JSON.stringify(blog.faq) : (blog.faq || null),
-            topic: blog.category || null,
-            authorId: authorId,
-            createdAt: blog.createdAt ? new Date(blog.createdAt) : new Date(),
-            updatedAt: blog.updatedAt ? new Date(blog.updatedAt) : new Date()
-          }
-        });
+        try {
+          await prisma.blogPost.create({
+            data: {
+              title: blog.title,
+              slug: blog.slug,
+              content: blog.content,
+              excerpt: blog.excerpt || blog.description || blog.title,
+              coverImage: blog.coverImage || null,
+              metaTitle: blog.metaTitle || blog.title,
+              metaDescription: blog.description || blog.excerpt || blog.title,
+              targetKeyword: blog.targetKeyword || null,
+              secondaryKeywords: Array.isArray(blog.relatedKeywords) ? JSON.stringify(blog.relatedKeywords) : (blog.relatedKeywords || null),
+              faq: Array.isArray(blog.faq) ? JSON.stringify(blog.faq) : (blog.faq || null),
+              topic: blog.category || null,
+              authorId: validAuthorId,
+              createdAt: blog.createdAt ? new Date(blog.createdAt) : new Date(),
+              updatedAt: blog.updatedAt ? new Date(blog.updatedAt) : new Date()
+            }
+          });
+        } catch (itemErr) {
+          console.warn(`[SeedBlog] Failed item ${blog.slug}:`, itemErr.message);
+        }
       }
     }
     blogsSeeded = true;
