@@ -61,6 +61,37 @@ const fs = require('fs');
 const app = express();
 const prisma = new PrismaClient();
 
+// Safely ensure production Postgres DB schema has new nullable columns (zero data loss)
+async function ensureDbColumnsExist() {
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "relatedCourseId" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "relatedCourseType" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "secondaryCourseId" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "secondaryCourseType" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "AiBlogDraft" ADD COLUMN IF NOT EXISTS "relatedCourseId" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "AiBlogDraft" ADD COLUMN IF NOT EXISTS "relatedCourseType" TEXT;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "AiBlogDraft" ADD COLUMN IF NOT EXISTS "secondaryCourseId" INTEGER;`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "AiBlogDraft" ADD COLUMN IF NOT EXISTS "secondaryCourseType" TEXT;`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "BlogConversionLog" (
+        "id" SERIAL NOT NULL,
+        "blogSlug" TEXT NOT NULL,
+        "blogCategory" TEXT,
+        "eventType" TEXT NOT NULL,
+        "ctaPosition" TEXT,
+        "productName" TEXT,
+        "source" TEXT,
+        "utmCampaign" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "BlogConversionLog_pkey" PRIMARY KEY ("id")
+      );
+    `);
+  } catch (err) {
+    console.warn('[DbMigration] Schema column check:', err.message);
+  }
+}
+ensureDbColumnsExist();
+
 // Seed camps if none exist
 async function seedCamps() {
   try {
