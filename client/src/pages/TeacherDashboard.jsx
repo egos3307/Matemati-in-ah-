@@ -492,7 +492,7 @@ const TeacherDashboard = () => {
     }
     if (ids.length === 0) return lesson.student?.name || 'Tüm Sınıf';
     const names = ids
-      .map(id => students.find(s => s.id === id)?.name)
+      .map(id => students.find(s => String(s.id) === String(id))?.name)
       .filter(Boolean);
     return names.length > 0 ? names.join(', ') : (lesson.student?.name || 'Tüm Sınıf');
   };
@@ -569,9 +569,11 @@ const TeacherDashboard = () => {
   };
 
   const toggleClassroomStudents = (classroomStudentIds, currentSelectedIds, setSelectedFn) => {
-    const allSelected = classroomStudentIds.length > 0 && classroomStudentIds.every(id => currentSelectedIds.includes(id));
+    const allSelected = classroomStudentIds.length > 0 && classroomStudentIds.every(id =>
+      currentSelectedIds.some(sid => String(sid) === String(id))
+    );
     if (allSelected) {
-      setSelectedFn(prev => prev.filter(id => !classroomStudentIds.includes(id)));
+      setSelectedFn(prev => prev.filter(id => !classroomStudentIds.some(cid => String(cid) === String(id))));
     } else {
       setSelectedFn(prev => Array.from(new Set([...prev, ...classroomStudentIds])));
     }
@@ -2115,12 +2117,20 @@ const TeacherDashboard = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {classrooms.map(cls => {
                           const classStudentNames = (cls.studentIds || [])
-                            .map(id => students.find(s => s.id === id)?.name)
+                            .map(id => {
+                              const found = students.find(s => String(s.id) === String(id));
+                              if (found) return found.name;
+                              const fallback = (cls.students || []).find(s => String(s.id) === String(id));
+                              return fallback ? fallback.name : null;
+                            })
                             .filter(Boolean);
                           const classTeacherNames = (cls.teacherIds || (cls.teacherId ? [cls.teacherId] : []))
                             .map(id => {
-                              if (user && user.id === id) return user.name;
-                              return teachers.find(t => t.id === id)?.name;
+                              if (user && String(user.id) === String(id)) return user.name;
+                              const found = teachers.find(t => String(t.id) === String(id));
+                              if (found) return found.name;
+                              const fallback = (cls.teachers || []).find(t => String(t.id) === String(id));
+                              return fallback ? fallback.name : null;
                             })
                             .filter(Boolean);
                           return (
@@ -2300,7 +2310,7 @@ const TeacherDashboard = () => {
                             {students.filter(student =>
                               student.name.toLowerCase().includes(classStudentSearch.toLowerCase())
                             ).map(student => {
-                              const isChecked = classStudentIdsInput.includes(student.id);
+                              const isChecked = classStudentIdsInput.some(id => String(id) === String(student.id));
                               return (
                                 <label key={student.id} className="flex items-center gap-3 px-3 py-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-slate-100 select-none">
                                   <input
@@ -2308,8 +2318,8 @@ const TeacherDashboard = () => {
                                     checked={isChecked}
                                     onChange={() => {
                                       setClassStudentIdsInput(prev =>
-                                        prev.includes(student.id)
-                                          ? prev.filter(id => id !== student.id)
+                                        prev.some(id => String(id) === String(student.id))
+                                          ? prev.filter(id => String(id) !== String(student.id))
                                           : [...prev, student.id]
                                       );
                                     }}
@@ -3156,7 +3166,7 @@ const TeacherDashboard = () => {
                           <div className="flex flex-wrap gap-1.5">
                             {classrooms.map(cls => {
                               const clsStudentIds = cls.studentIds || [];
-                              const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => selectedStudentIds.includes(id));
+                              const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => selectedStudentIds.some(sid => String(sid) === String(id)));
                               return (
                                 <button
                                   key={cls.id}
@@ -3337,7 +3347,7 @@ const TeacherDashboard = () => {
                       <div className="flex flex-wrap gap-1.5">
                         {classrooms.map(cls => {
                           const clsStudentIds = cls.studentIds || [];
-                          const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => recurringStudentIds.includes(id));
+                          const isAllSelected = clsStudentIds.length > 0 && clsStudentIds.every(id => recurringStudentIds.some(sid => String(sid) === String(id)));
                           return (
                             <button
                               key={cls.id}

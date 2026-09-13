@@ -11,7 +11,7 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   // Background Audio Control (pages_turning_slowly.mp3 loops during break)
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.35;
+      audioRef.current.volume = 0.25;
       audioRef.current.play().catch(() => {});
     }
     return () => {

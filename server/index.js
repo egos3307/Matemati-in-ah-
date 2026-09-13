@@ -1019,27 +1019,66 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
 
 // ─── CLASSROOM (SINIFLAR) ROUTES ──────────────────────────────────────────
 
+const helperPopulateClassrooms = async (classrooms) => {
+  const allStudentIds = [...new Set(classrooms.flatMap(c => {
+    try { return JSON.parse(c.studentIds || '[]'); } catch { return []; }
+  }))].map(Number).filter(id => !isNaN(id));
+
+  const allTeacherIds = [...new Set(classrooms.flatMap(c => {
+    try {
+      const tIds = c.teacherIds ? JSON.parse(c.teacherIds) : [];
+      return c.teacherId ? [...tIds, c.teacherId] : tIds;
+    } catch { return c.teacherId ? [c.teacherId] : []; }
+  }))].map(Number).filter(id => !isNaN(id));
+
+  const studentUsers = allStudentIds.length > 0 ? await prisma.user.findMany({
+    where: { id: { in: allStudentIds } },
+    select: { id: true, name: true, grade: true, studentCode: true }
+  }) : [];
+
+  const teacherUsers = allTeacherIds.length > 0 ? await prisma.user.findMany({
+    where: { id: { in: allTeacherIds } },
+    select: { id: true, name: true }
+  }) : [];
+
+  const studentMap = new Map(studentUsers.map(s => [s.id, s]));
+  const teacherMap = new Map(teacherUsers.map(t => [t.id, t]));
+
+  return classrooms.map(c => {
+    let studentIds = [];
+    try { studentIds = JSON.parse(c.studentIds || '[]'); } catch {}
+    studentIds = Array.isArray(studentIds) ? studentIds.map(Number).filter(id => !isNaN(id)) : [];
+
+    let teacherIds = [];
+    try { teacherIds = c.teacherIds ? JSON.parse(c.teacherIds) : (c.teacherId ? [c.teacherId] : []); } catch {}
+    teacherIds = Array.isArray(teacherIds) ? teacherIds.map(Number).filter(id => !isNaN(id)) : [];
+
+    const students = studentIds.map(id => studentMap.get(id)).filter(Boolean);
+    const teachers = teacherIds.map(id => teacherMap.get(id)).filter(Boolean);
+
+    return {
+      ...c,
+      studentIds,
+      teacherIds,
+      students,
+      teachers
+    };
+  });
+};
+
 app.get('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res) => {
   try {
     const classrooms = await prisma.classroom.findMany({
       orderBy: { createdAt: 'desc' }
     });
-    const parsed = classrooms.map(c => {
-      const studentIds = JSON.parse(c.studentIds || '[]');
-      const teacherIds = c.teacherIds ? JSON.parse(c.teacherIds) : (c.teacherId ? [c.teacherId] : []);
-      return {
-        ...c,
-        studentIds,
-        teacherIds
-      };
-    });
+    const parsed = await helperPopulateClassrooms(classrooms);
 
     if (req.user.role === 'HEAD_TEACHER') {
       return res.json(parsed);
     }
 
     const filtered = parsed.filter(c => 
-      c.teacherId === req.user.id || c.teacherIds.includes(req.user.id)
+      c.teacherId === req.user.id || (c.teacherIds && c.teacherIds.includes(req.user.id))
     );
     res.json(filtered);
   } catch (err) {
@@ -1065,7 +1104,8 @@ app.post('/api/teacher/classrooms', auth, checkRole('TEACHER'), async (req, res)
         studentIds: JSON.stringify(sIds)
       }
     });
-    res.json({ ...classroom, studentIds: sIds, teacherIds: tIds });
+    const populated = await helperPopulateClassrooms([classroom]);
+    res.json(populated[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1090,11 +1130,8 @@ app.put('/api/teacher/classrooms/:id', auth, checkRole('TEACHER'), async (req, r
       where: { id },
       data: updateData
     });
-    res.json({
-      ...classroom,
-      studentIds: JSON.parse(classroom.studentIds || '[]'),
-      teacherIds: JSON.parse(classroom.teacherIds || '[]')
-    });
+    const populated = await helperPopulateClassrooms([classroom]);
+    res.json(populated[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2048,8 +2085,26 @@ app.get('/api/teacher/students', auth, checkRole('TEACHER'), async (req, res) =>
       return res.json(parsed);
     }
 
+    let allowedClassroomStudentIds = [];
+    try {
+      const teacherClassrooms = await prisma.classroom.findMany();
+      allowedClassroomStudentIds = teacherClassrooms
+        .filter(c => {
+          let tIds = [];
+          try { tIds = c.teacherIds ? JSON.parse(c.teacherIds) : (c.teacherId ? [c.teacherId] : []); } catch {}
+          return c.teacherId === req.user.id || tIds.includes(req.user.id);
+        })
+        .flatMap(c => {
+          try { return JSON.parse(c.studentIds || '[]'); } catch { return []; }
+        })
+        .map(Number)
+        .filter(id => !isNaN(id));
+    } catch (e) {}
+
     const filtered = parsed.filter(s =>
-      s.teacherId === req.user.id || s.teacherIds.includes(req.user.id)
+      s.teacherId === req.user.id ||
+      s.teacherIds.includes(req.user.id) ||
+      allowedClassroomStudentIds.includes(s.id)
     );
     res.json(filtered);
   } catch (err) {
