@@ -1477,7 +1477,7 @@ async function verifyDriveFolder(accessToken, folderId) {
   }
 }
 
-async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
+async function uploadFileToGoogleDrive(filePath, fileName, folderId, mimeType = 'video/webm') {
   const authData = await getGoogleDriveAccessToken();
   if (!authData || !authData.token) {
     console.warn('[Drive] Access token alınamadı. Yükleme atlanıyor.');
@@ -1486,7 +1486,6 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
 
   const { token: accessToken, type: authType } = authData;
 
-  // Klasör erişilebilir mi kontrol et
   let resolvedFolderId = folderId;
   if (folderId) {
     const folderOk = await verifyDriveFolder(accessToken, folderId);
@@ -1496,7 +1495,6 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
     }
   }
 
-  // Service Account root yüklemesi yapamaz (Google Kota Kısıtlaması). Klasör zorunludur.
   if (authType === 'ServiceAccount' && !resolvedFolderId) {
     const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     console.error(`[Drive HATA] Service Account ile yükleme yapabilmek için Google Drive'da bir klasör oluşturup ` +
@@ -1505,90 +1503,119 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
     throw new Error(`Google Drive yükleme hatası: Service Account için paylaşılan klasör izni eksik veya klasör ID geçersiz.`);
   }
 
+  const stats = fs.statSync(filePath);
+  const fileSize = stats.size;
+
   const metadata = {
     name: fileName,
     parents: resolvedFolderId ? [resolvedFolderId] : []
   };
 
-  console.log(`Uploading assembled video (${assembledBuffer.length} bytes) to Google Drive (${authType})${resolvedFolderId ? ` (klasör: ${resolvedFolderId})` : ' (root)'}...`);
+  console.log(`[Drive] Yükleme başlatılıyor: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB), Mod: Resumable Chunked...`);
 
-  // Büyük dosyalar (>5MB) için Resumable Upload kullanımı (daha kararlı ve kesintisiz aktarım)
-  if (assembledBuffer.length > 5 * 1024 * 1024) {
-    try {
-      console.log(`[Drive] Büyük dosya tespit edildi (${(assembledBuffer.length / 1024 / 1024).toFixed(2)} MB). Resumable Upload başlatılıyor...`);
-      const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json; charset=UTF-8',
-          'X-Upload-Content-Type': mimeType,
-          'X-Upload-Content-Length': String(assembledBuffer.length)
-        },
-        body: JSON.stringify(metadata)
-      });
-
-      if (!initRes.ok) {
-        const errText = await initRes.text();
-        throw new Error(`Resumable upload başlatılamadı (${initRes.status}): ${errText}`);
-      }
-
-      const uploadUrl = initRes.headers.get('location');
-      if (!uploadUrl) {
-        throw new Error('Google Drive resumable upload URL alınamadı.');
-      }
-
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': mimeType,
-          'Content-Length': String(assembledBuffer.length)
-        },
-        body: assembledBuffer
-      });
-
-      if (!uploadRes.ok) {
-        const errText = await uploadRes.text();
-        throw new Error(`Büyük dosya aktarımı başarısız (${uploadRes.status}): ${errText}`);
-      }
-
-      const fileData = await uploadRes.json();
-      console.log(`Successfully uploaded large video to Google Drive (Resumable). File ID: ${fileData.id}`);
-      return `drive:${fileData.id}`;
-    } catch (resumableErr) {
-      console.warn(`Resumable upload başarısız oldu, multipart deneniyor: ${resumableErr.message}`);
-    }
-  }
-
-  // Küçük dosyalar veya yedek yöntem (<5MB) için Multipart Upload
-  const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-  const parts = [];
-  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`));
-  parts.push(Buffer.from(`--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`));
-  parts.push(assembledBuffer);
-  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-  
-  const payload = Buffer.concat(parts);
-  
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+  // Resumable upload session başlat
+  const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
-      'Content-Length': String(payload.length)
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': mimeType,
+      'X-Upload-Content-Length': String(fileSize)
     },
-    body: payload
+    body: JSON.stringify(metadata)
   });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Google Drive upload API failed (${response.status}): ${errorText}`);
+
+  if (!initRes.ok) {
+    const errText = await initRes.text();
+    throw new Error(`Google Drive resumable upload başlatılamadı (${initRes.status}): ${errText}`);
   }
-  
-  const fileData = await response.json();
-  const fileId = fileData.id;
-  console.log(`Successfully uploaded to Google Drive. File ID: ${fileId}`);
-  
-  return `drive:${fileId}`;
+
+  const uploadUrl = initRes.headers.get('location');
+  if (!uploadUrl) {
+    throw new Error('Google Drive resumable upload URL alınamadı.');
+  }
+
+  // 16 MB'lık dilimlerle parçalı yükleme (Google Drive 256KB katı gereksinimi)
+  const CHUNK_SIZE = 16 * 1024 * 1024;
+  const fd = fs.openSync(filePath, 'r');
+  let offset = 0;
+  let fileId = null;
+
+  try {
+    while (offset < fileSize) {
+      const currentChunkSize = Math.min(CHUNK_SIZE, fileSize - offset);
+      const buffer = Buffer.alloc(currentChunkSize);
+      fs.readSync(fd, buffer, 0, currentChunkSize, offset);
+
+      const start = offset;
+      const end = offset + currentChunkSize - 1;
+      const contentRange = `bytes ${start}-${end}/${fileSize}`;
+
+      let attempts = 0;
+      let uploaded = false;
+      let lastErr = null;
+
+      while (attempts < 3 && !uploaded) {
+        attempts++;
+        try {
+          const uploadRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': mimeType,
+              'Content-Length': String(currentChunkSize),
+              'Content-Range': contentRange
+            },
+            body: buffer
+          });
+
+          if (uploadRes.status === 308 || uploadRes.ok) {
+            uploaded = true;
+            if (uploadRes.ok) {
+              const fileData = await uploadRes.json();
+              fileId = fileData.id;
+            }
+          } else {
+            const errText = await uploadRes.text();
+            lastErr = new Error(`Drive chunk HTTP ${uploadRes.status}: ${errText}`);
+          }
+        } catch (e) {
+          lastErr = e;
+          console.warn(`[Drive Upload Retry] Chunk ${start}-${end} deneme ${attempts} başarısız: ${e.message}`);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+
+      if (!uploaded) {
+        throw new Error(`Google Drive aktarımı durdu: ${lastErr?.message || 'Bilinmeyen hata'}`);
+      }
+
+      offset += currentChunkSize;
+      const pct = Math.round((offset / fileSize) * 100);
+      console.log(`[Drive Upload Progress] ${fileName}: %${pct} (${(offset / 1024 / 1024).toFixed(1)} MB / ${(fileSize / 1024 / 1024).toFixed(1)} MB)`);
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+
+  if (fileId) {
+    console.log(`[Drive Success] Başarıyla yüklendi! File ID: ${fileId}`);
+    return `drive:${fileId}`;
+  }
+
+  throw new Error('Google Drive yüklemesi tamamlandı ancak dosya ID alınamadı.');
+}
+
+async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType = 'video/webm') {
+  // Bellek yükünü sıfırlamak için tamponu geçici bir dosyaya yazıp parça parça yüklüyoruz
+  const tempPath = path.join(os.tmpdir(), `temp_drive_${Date.now()}_${fileName}`);
+  try {
+    fs.writeFileSync(tempPath, assembledBuffer);
+    return await uploadFileToGoogleDrive(tempPath, fileName, folderId, mimeType);
+  } finally {
+    if (fs.existsSync(tempPath)) {
+      try { fs.unlinkSync(tempPath); } catch (e) {}
+    }
+  }
 }
 
 // 🔒 Güvenli Drive Video Endpoint'i (Site İçi Oynatıcı İçin)
@@ -1776,6 +1803,123 @@ async function getDriveFolderVideos(driveUrl, packageName = 'Ders Kaydı') {
   ];
 }
 
+async function processLessonVideo(lessonId, mimeType, fileExt) {
+  const tempFilePath = path.join(os.tmpdir(), `lesson_${lessonId}_${Date.now()}.${fileExt}`);
+  try {
+    console.log(`[Assembly] Lesson ${lessonId} için video parçaları diskte birleştiriliyor... (${tempFilePath})`);
+    
+    const totalChunks = await prisma.lessonChunk.count({ where: { lessonId } });
+    if (totalChunks === 0) {
+      console.warn(`[Assembly] Lesson ${lessonId} için veritabanında parça bulunamadı.`);
+      return;
+    }
+
+    const writeStream = fs.createWriteStream(tempFilePath);
+    const BATCH_SIZE = 50;
+
+    for (let offset = 0; offset < totalChunks; offset += BATCH_SIZE) {
+      const chunks = await prisma.lessonChunk.findMany({
+        where: { lessonId },
+        orderBy: { index: 'asc' },
+        skip: offset,
+        take: BATCH_SIZE,
+        select: { data: true }
+      });
+
+      for (const chunk of chunks) {
+        writeStream.write(chunk.data);
+      }
+    }
+
+    await new Promise((resolve, reject) => {
+      writeStream.end((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    const stats = fs.statSync(tempFilePath);
+    console.log(`[Assembly Complete] Lesson ${lessonId} diskte birleştirildi. Toplam Boyut: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+
+    let uploadSuccess = false;
+    let finalUrl = "";
+
+    // 0. Öncelikli Yöntem: Google Drive Upload
+    try {
+      const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+      const driveUrl = await uploadFileToGoogleDrive(tempFilePath, `lesson_${lessonId}.${fileExt}`, driveFolderId, mimeType);
+      if (driveUrl) {
+        uploadSuccess = true;
+        finalUrl = driveUrl;
+        console.log(`[Drive Success] Lesson ${lessonId} Google Drive'a yüklendi: ${finalUrl}`);
+      }
+    } catch (driveErr) {
+      console.error("[Drive Error] Google Drive yüklemesi başarısız, alternatif servislere geçiliyor...", driveErr);
+    }
+
+    // Yedek Servisler (Drive başarısız olursa)
+    if (!uploadSuccess) {
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+      if (cloudName && uploadPreset) {
+        try {
+          console.log("[Cloudinary Backup] Cloudinary yüklemesi deneniyor...");
+          const assembledBuffer = fs.readFileSync(tempFilePath);
+          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+          const parts = [];
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
+          parts.push(assembledBuffer);
+          parts.push(Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="upload_preset"\r\n\r\n${uploadPreset}\r\n`));
+          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="resource_type"\r\n\r\nvideo\r\n`));
+          parts.push(Buffer.from(`--${boundary}--\r\n`));
+          const payload = Buffer.concat(parts);
+
+          const cdnRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': String(payload.length) },
+            body: payload,
+            signal: AbortSignal.timeout(300000)
+          });
+          const cdnJson = await cdnRes.json();
+          if (cdnRes.ok && cdnJson.secure_url) {
+            uploadSuccess = true;
+            finalUrl = cdnJson.secure_url;
+            console.log(`[Cloudinary Success] Yüklendi: ${finalUrl}`);
+          }
+        } catch (cdnErr) {
+          console.error("[Cloudinary Error] Yükleme hatası:", cdnErr);
+        }
+      }
+    }
+
+    if (uploadSuccess) {
+      await prisma.lesson.update({
+        where: { id: lessonId },
+        data: {
+          recordingUrl: finalUrl,
+          recordingRequested: true
+        }
+      });
+
+      // Veritabanındaki parçaları temizle
+      await prisma.lessonChunk.deleteMany({
+        where: { lessonId }
+      });
+      console.log(`[Cleanup Complete] Lesson ${lessonId} veritabanı dilimleri temizlendi.`);
+    } else {
+      console.error(`[Process Error] Lesson ${lessonId} yükleme servislerinin tamamı başarısız oldu.`);
+    }
+  } catch (err) {
+    console.error(`[Process Error] Lesson ${lessonId} işlenirken hata oluştu:`, err);
+  } finally {
+    if (fs.existsSync(tempFilePath)) {
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (e) {}
+    }
+  }
+}
+
 app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
@@ -1799,7 +1943,7 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
     }
     const chunkData = Buffer.concat(buffers);
 
-    // Save this chunk into our PostgreSQL database table
+    // Save this chunk into our database table
     await prisma.lessonChunk.create({
       data: {
         lessonId,
@@ -1808,252 +1952,29 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
       }
     });
 
-    console.log(`Saved chunk ${chunkIndex + 1}/${totalChunks} to DB for lesson ${lessonId}`);
-
     // Verify if all chunks have been uploaded
     const count = await prisma.lessonChunk.count({
       where: { lessonId }
     });
 
     if (count === totalChunks) {
-      console.log(`All chunks received for lesson ${lessonId}. Assembling in memory...`);
-      
-      // Fetch all chunks, sorted by index
-      const chunks = await prisma.lessonChunk.findMany({
-        where: { lessonId },
-        orderBy: { index: 'asc' }
+      console.log(`All chunks received for lesson ${lessonId} (${totalChunks} chunks). Starting async assembly & Drive upload...`);
+
+      // Arka planda birleştirme ve Drive'a yüklemeyi başlat (Zaman aşımını önlemek için asenkron)
+      setImmediate(() => {
+        processLessonVideo(lessonId, mimeType, fileExt);
       });
 
-      // Concat the chunks buffer in memory
-      const buffersToConcat = chunks.map(c => c.data);
-      let assembledBuffer = Buffer.concat(buffersToConcat);
-
-      // WebM → MP4 dönüştürme (Safari uyumluluğu için)
-      const isWebm = mimeType.includes('webm');
-      if (isWebm) {
-        if (assembledBuffer.length > 40 * 1024 * 1024) {
-          console.log(`Büyük video (${(assembledBuffer.length / 1024 / 1024).toFixed(2)} MB), CPU ve zaman aşımını önlemek için doğrudan WebM olarak yükleniyor.`);
-        } else {
-          try {
-            console.log(`Converting WebM (${assembledBuffer.length} bytes) to MP4 for Safari compatibility...`);
-            assembledBuffer = await convertToMp4(assembledBuffer);
-            mimeType = 'video/mp4';
-            fileExt = 'mp4';
-            console.log(`Conversion done. MP4 size: ${assembledBuffer.length} bytes.`);
-          } catch (convErr) {
-            console.error('WebM→MP4 conversion failed, uploading original WebM:', convErr);
-          }
-        }
-      }
-
-      console.log(`Assembled video buffer size: ${assembledBuffer.length} bytes. Starting upload chain...`);
-
-      const verifyUploadedUrl = async (url) => {
-        try {
-          const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) });
-          return res.ok;
-        } catch {
-          return false;
-        }
-      };
-
-      let uploadSuccess = false;
-      let finalUrl = "";
-
-      // Attempt 0: Google Drive Upload (Priority)
-      try {
-        const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        const driveUrl = await uploadToGoogleDrive(assembledBuffer, `lesson_${lessonId}.${fileExt}`, driveFolderId, mimeType);
-        if (driveUrl) {
-          uploadSuccess = true;
-          finalUrl = driveUrl;
-          console.log(`Successfully uploaded to Google Drive: ${finalUrl}`);
-        }
-      } catch (driveErr) {
-        console.error("Google Drive upload failed, falling back to other providers...", driveErr);
-      }
-
-      // Attempt 1: Cloudinary (Türkiye'de erişilebilir, kalıcı depolama, unsigned upload)
-      if (!uploadSuccess) {
-        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-        const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
-        if (cloudName && uploadPreset) {
-          try {
-            console.log("Attempting Cloudinary upload...");
-            const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-            const parts = [];
-            parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-            parts.push(assembledBuffer);
-            parts.push(Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="upload_preset"\r\n\r\n${uploadPreset}\r\n`));
-            parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="resource_type"\r\n\r\nvideo\r\n`));
-            parts.push(Buffer.from(`--${boundary}--\r\n`));
-            const payload = Buffer.concat(parts);
-
-            const cdnRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-              method: 'POST',
-              headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': String(payload.length) },
-              body: payload,
-              signal: AbortSignal.timeout(300000)
-            });
-            const cdnJson = await cdnRes.json();
-            if (cdnRes.ok && cdnJson.secure_url) {
-              const reachable = await verifyUploadedUrl(cdnJson.secure_url);
-              if (reachable) {
-                uploadSuccess = true;
-                finalUrl = cdnJson.secure_url;
-                console.log(`Successfully uploaded to Cloudinary: ${finalUrl}`);
-              }
-            } else {
-              console.warn(`Cloudinary upload failed: ${JSON.stringify(cdnJson)}`);
-            }
-          } catch (cdnErr) {
-            console.error("Cloudinary upload failed:", cdnErr);
-          }
-        }
-      }
-
-      // Attempt 2: Pixeldrain (yedek)
-      if (!uploadSuccess) {
-        try {
-          console.log("Attempting Pixeldrain upload...");
-          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-          const parts = [];
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-          parts.push(assembledBuffer);
-          parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-          const payload = Buffer.concat(parts);
-
-          const pdRes = await fetch('https://pixeldrain.com/api/file', {
-            method: 'POST',
-            headers: {
-              'Content-Type': `multipart/form-data; boundary=${boundary}`,
-              'Content-Length': String(payload.length),
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            },
-            body: payload
-          });
-
-          const pdJson = await pdRes.json();
-          if (pdRes.ok && pdJson.success && pdJson.id) {
-            const url = `https://pixeldrain.com/api/file/${pdJson.id}`;
-            const reachable = await verifyUploadedUrl(url);
-            if (reachable) {
-              uploadSuccess = true;
-              finalUrl = url;
-              console.log(`Successfully uploaded to Pixeldrain: ${finalUrl}`);
-            } else {
-              console.warn(`Pixeldrain URL not reachable: ${url}`);
-            }
-          } else {
-            console.warn(`Pixeldrain upload failed: ${JSON.stringify(pdJson)}`);
-          }
-        } catch (pdErr) {
-          console.error("Pixeldrain upload failed with error:", pdErr);
-        }
-      }
-
-      // Attempt 3: transfer.sh (14 gün)
-      if (!uploadSuccess) {
-        try {
-          console.log("Attempting transfer.sh upload fallback...");
-          const transferRes = await fetch(`https://transfer.sh/lesson_${lessonId}.${fileExt}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': mimeType,
-              'Content-Length': String(assembledBuffer.length),
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            },
-            body: assembledBuffer
-          });
-
-          const resText = await transferRes.text();
-          if (transferRes.ok && resText.trim().startsWith('https://')) {
-            const trimmed = resText.trim();
-            const reachable = await verifyUploadedUrl(trimmed);
-            if (reachable) {
-              uploadSuccess = true;
-              finalUrl = trimmed;
-              console.log(`Successfully uploaded to transfer.sh: ${finalUrl}`);
-            } else {
-              console.warn(`transfer.sh URL not reachable: ${trimmed}`);
-            }
-          } else {
-            console.warn(`transfer.sh returned non-OK status: ${transferRes.status}. Response: ${resText}`);
-          }
-        } catch (transferErr) {
-          console.error("transfer.sh fallback upload failed with error:", transferErr);
-        }
-      }
-
-      // Attempt 4: Uguu.se (48 saat)
-      if (!uploadSuccess) {
-        try {
-          console.log("Attempting Uguu.se upload fallback...");
-          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-          const parts = [];
-          parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="files[]"; filename="lesson_${lessonId}.${fileExt}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-          parts.push(assembledBuffer);
-          parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-
-          const payload = Buffer.concat(parts);
-
-          const uguuRes = await fetch('https://uguu.se/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': `multipart/form-data; boundary=${boundary}`,
-              'Content-Length': String(payload.length),
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': '*/*'
-            },
-            body: payload
-          });
-
-          const resJson = await uguuRes.json();
-          if (uguuRes.ok && resJson.success && resJson.files && resJson.files[0]) {
-            const url = resJson.files[0].url;
-            const reachable = await verifyUploadedUrl(url);
-            if (reachable) {
-              uploadSuccess = true;
-              finalUrl = url;
-              console.log(`Successfully uploaded to Uguu.se: ${finalUrl}`);
-            } else {
-              console.warn(`Uguu.se URL not reachable: ${url}`);
-            }
-          } else {
-            console.warn(`Uguu.se returned non-OK status: ${uguuRes.status}. Response: ${JSON.stringify(resJson)}`);
-          }
-        } catch (uguuErr) {
-          console.error("Uguu.se fallback upload failed with error:", uguuErr);
-        }
-      }
-
-      if (!uploadSuccess) {
-        throw new Error('Dosya bulut sunucusuna yüklenemedi. Tüm servis denemeleri başarısız oldu.');
-      }
-
-      const cleanUrl = finalUrl;
-      console.log(`Assembled file successfully uploaded to cloud: ${cleanUrl}`);
-
-      // Update the database URL
-      await prisma.lesson.update({
-        where: { id: lessonId },
-        data: {
-          recordingUrl: cleanUrl,
-          recordingRequested: true
-        }
+      return res.json({
+        success: true,
+        status: 'completed',
+        message: 'Tüm video parçaları sunucuya ulaştı, arka planda Google Drive\'a işleniyor.'
       });
-
-      // Clear chunks from database to free database space
-      await prisma.lessonChunk.deleteMany({
-        where: { lessonId }
-      });
-
-      res.json({ success: true, recordingUrl: cleanUrl });
     } else {
-      res.json({ success: true, status: 'chunk_saved' });
+      return res.json({ success: true, status: 'chunk_saved' });
     }
   } catch (err) {
-    console.error('Error saving/assembling chunk:', err);
+    console.error('Error saving chunk:', err);
     res.status(500).json({ error: err.message });
   }
 });

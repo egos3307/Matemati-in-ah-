@@ -1381,7 +1381,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
           const tokenVal = localStorage.getItem('token');
           
-          const CHUNK_SIZE = 512 * 1024; // 512KB chunks
+          const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (daha hızlı aktarım)
           const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
           
           console.log(`Uploading video blob of size ${blob.size} bytes in ${totalChunks} chunks...`);
@@ -1413,7 +1413,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           }
           
           setUploadProgress(100);
-          alert('Ders kaydı başarıyla kaydedildi ve sisteme yüklendi!');
+          alert('Ders kaydı başarıyla sunucuya iletildi! Arka planda Google Drive\'a işleniyor. Kısa süre içinde ders listenizde hazır olacaktır.');
         } catch (err) {
           console.error('Error saving recording:', err);
           alert('Ders kaydı yüklenirken bir hata oluştu: ' + err.message);
