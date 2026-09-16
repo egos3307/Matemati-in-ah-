@@ -851,6 +851,22 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const audioDestinationRef = useRef(null);
   const connectedTrackIdsRef = useRef(new Set());
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [failedRecordingBlob, setFailedRecordingBlob] = useState(null);
+  const [failedRecordingName, setFailedRecordingName] = useState('');
+  const isStoppingRef = useRef(false);
+
+  // Sayfa yenileme veya sekme kapatmada kaydın korunması
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (recordingStatus === 'recording' || recordingStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = 'Ders kaydı devam ediyor veya sisteme aktarılıyor. Sayfadan ayrılırsanız kayıt kaybolabilir!';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [recordingStatus]);
 
   // Virtual background
   const [virtualBgEnabled, setVirtualBgEnabled] = useState(false);
@@ -1128,6 +1144,161 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
+  const uploadRecordingToDrive = async (blob, actualMime = 'video/webm') => {
+    setRecordingStatus('saving');
+    setUploadProgress(0);
+
+    const tokenVal = localStorage.getItem('token');
+    const isMp4 = actualMime.includes('mp4');
+    const fileExt = isMp4 ? 'mp4' : 'webm';
+    const fallbackFileName = `Ders_${lessonId}_Kayit.${fileExt}`;
+
+    try {
+      console.log(`[Drive Upload] Yükleme oturumu başlatılıyor: Boyut ${(blob.size / 1024 / 1024).toFixed(2)} MB, MIME: ${actualMime}`);
+
+      const initRes = await fetch(`/api/teacher/lessons/${lessonId}/recording/init-upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${tokenVal}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileSize: blob.size,
+          mimeType: actualMime
+        })
+      });
+
+      if (!initRes.ok) {
+        const errData = await initRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Google Drive oturumu başlatılamadı (${initRes.status}).`);
+      }
+
+      const sessionData = await initRes.json();
+      const { uploadUrl, chunkSize: serverChunkSize } = sessionData;
+
+      // Google Drive 256KB katı gereksinimi: 4MB (4 * 1024 * 1024 = 4194304 bayt)
+      const CHUNK_SIZE = serverChunkSize || (4 * 1024 * 1024);
+      const totalBytes = blob.size;
+      let offset = 0;
+      let directUploadDisabled = false;
+      let completedFileId = null;
+
+      console.log(`[Drive Upload] Oturum URL alındı, dilimler aktarılıyor (Dilim boyutu: ${(CHUNK_SIZE / 1024 / 1024).toFixed(0)} MB)...`);
+
+      while (offset < totalBytes) {
+        const chunkEnd = Math.min(offset + CHUNK_SIZE, totalBytes);
+        const currentChunkBlob = blob.slice(offset, chunkEnd);
+
+        let chunkUploaded = false;
+        let lastChunkError = null;
+
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          try {
+            // Seviye A: Tarayıcıdan doğrudan Google Drive'a PUT
+            if (!directUploadDisabled) {
+              try {
+                const directRes = await fetch(uploadUrl, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': actualMime,
+                    'Content-Range': `bytes ${offset}-${chunkEnd - 1}/${totalBytes}`
+                  },
+                  body: currentChunkBlob
+                });
+
+                if (directRes.status === 308 || directRes.ok) {
+                  chunkUploaded = true;
+                  if (directRes.ok) {
+                    const doneData = await directRes.json().catch(() => ({}));
+                    completedFileId = doneData.id;
+                  }
+                  break;
+                } else {
+                  const errTxt = await directRes.text();
+                  throw new Error(`Drive direct error ${directRes.status}: ${errTxt}`);
+                }
+              } catch (directErr) {
+                console.warn("[Drive Direct] Doğrudan bağlantı kullanılamadı, sunucu akış proxy'sine geçiliyor:", directErr.message);
+                directUploadDisabled = true;
+              }
+            }
+
+            // Seviye B: Sunucu üzerinden Google Drive'a akış proxy'si
+            const proxyRes = await fetch(`/api/teacher/lessons/${lessonId}/recording/upload-part`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${tokenVal}`,
+                'Content-Type': 'application/octet-stream',
+                'x-upload-url': uploadUrl,
+                'x-start-byte': offset.toString(),
+                'x-end-byte': (chunkEnd - 1).toString(),
+                'x-total-bytes': totalBytes.toString(),
+                'x-mime-type': actualMime
+              },
+              body: currentChunkBlob
+            });
+
+            if (!proxyRes.ok) {
+              const errData = await proxyRes.json().catch(() => ({}));
+              throw new Error(errData.error || `Dilim aktarımı başarısız (${proxyRes.status}).`);
+            }
+
+            const proxyData = await proxyRes.json();
+            if (proxyData.done || proxyData.status === 200) {
+              completedFileId = proxyData.fileId;
+            }
+            chunkUploaded = true;
+            break;
+          } catch (retryErr) {
+            lastChunkError = retryErr;
+            console.warn(`[Drive Retry] Dilim (${offset}-${chunkEnd}) deneme ${attempt}/4: ${retryErr.message}`);
+            if (attempt < 4) {
+              await new Promise(r => setTimeout(r, attempt * 1500));
+            }
+          }
+        }
+
+        if (!chunkUploaded) {
+          throw new Error(`Kayıt yükleme bağlantısı koptu (İlerleme: %${Math.round((offset / totalBytes) * 100)}): ${lastChunkError?.message || 'Ağ hatası'}`);
+        }
+
+        offset = chunkEnd;
+        const currentPercent = Math.min(99, Math.round((offset / totalBytes) * 100));
+        setUploadProgress(currentPercent);
+      }
+
+      if (completedFileId) {
+        await fetch(`/api/teacher/lessons/${lessonId}/recording/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${tokenVal}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ fileId: completedFileId })
+        }).catch(e => console.warn("Complete bildirim uyarısı:", e));
+      }
+
+      setUploadProgress(100);
+      alert('Ders kaydı başarıyla Google Drive\'a yüklendi! Öğrencileriniz ders listesinden kaydı izleyebilir.');
+      setFailedRecordingBlob(null);
+      setFailedRecordingName('');
+      chunksRef.current = [];
+    } catch (err) {
+      console.error('Error saving recording:', err);
+      setFailedRecordingBlob(blob);
+      setFailedRecordingName(fallbackFileName);
+      alert(`Ders kaydı Google Drive'a aktarılırken hata oluştu: ${err.message}\n\nÖNEMLİ: Ders kaydınız kaybolmadı! Ekranda açılan pencereden videoyu bilgisayarınıza indirebilir veya tekrar yüklemeyi deneyebilirsiniz.`);
+    } finally {
+      setRecordingStatus('idle');
+      setUploadProgress(0);
+      isStoppingRef.current = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    }
+  };
+
   const startScreenRecording = async () => {
     try {
       chunksRef.current = [];
@@ -1369,7 +1540,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           const isMp4 = actualMime.includes('mp4');
           let blob = new Blob(chunksRef.current, { type: actualMime });
 
-          if (!isMp4) {
+          // Bellek koruması: Sadece 80 MB altındaki WebM kayıtlarında süre metadata'sı düzeltilir.
+          // Uzun derslerde (> 80 MB) ArrayBuffer tahsisi tarayıcı sekmesini dondurabilir/çökertebilir.
+          // Google Drive zaten sunucu tarafında video süresini otomatik indekslemektedir.
+          if (!isMp4 && blob.size < 80 * 1024 * 1024) {
             try {
               console.log("Fixing WebM recording duration metadata (Duration:", duration, "ms)...");
               blob = await fixWebmDuration(blob, duration);
@@ -1379,51 +1553,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             }
           }
 
-          const tokenVal = localStorage.getItem('token');
-          
-          const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (daha hızlı aktarım)
-          const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
-          
-          console.log(`Uploading video blob of size ${blob.size} bytes in ${totalChunks} chunks...`);
-
-          for (let index = 0; index < totalChunks; index++) {
-            const percent = Math.round((index / totalChunks) * 100);
-            setUploadProgress(percent);
-            
-            const start = index * CHUNK_SIZE;
-            const end = Math.min(start + CHUNK_SIZE, blob.size);
-            const chunkBlob = blob.slice(start, end);
-            
-            const response = await fetch(`/api/teacher/lessons/${lessonId}/upload-chunk`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${tokenVal}`,
-                'Content-Type': 'application/octet-stream',
-                'x-chunk-index': index.toString(),
-                'x-total-chunks': totalChunks.toString(),
-                'x-mime-type': actualMime,
-              },
-              body: chunkBlob
-            });
-            
-            if (!response.ok) {
-              const errData = await response.json().catch(() => ({}));
-              throw new Error(errData.error || `Yükleme durakladı (Dilim: ${index + 1}/${totalChunks}).`);
-            }
-          }
-          
-          setUploadProgress(100);
-          alert('Ders kaydı başarıyla sunucuya iletildi! Arka planda Google Drive\'a işleniyor. Kısa süre içinde ders listenizde hazır olacaktır.');
-        } catch (err) {
-          console.error('Error saving recording:', err);
-          alert('Ders kaydı yüklenirken bir hata oluştu: ' + err.message);
-        } finally {
+          await uploadRecordingToDrive(blob, actualMime);
+        } catch (prepErr) {
+          console.error("Recording preparation error:", prepErr);
           setRecordingStatus('idle');
-          setUploadProgress(0);
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
-          }
+          isStoppingRef.current = false;
         }
       };
 
@@ -1435,6 +1569,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       console.error('Error starting screen recording:', err);
       alert('Kayıt başlatılamadı: ' + (err.message || err));
       setRecordingStatus('idle');
+      isStoppingRef.current = false;
       
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -1448,14 +1583,20 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   const stopScreenRecording = () => {
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+    setRecordingStatus('saving');
+
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       } else {
+        isStoppingRef.current = false;
         setRecordingStatus('idle');
       }
     } catch (err) {
       console.error("Error stopping MediaRecorder:", err);
+      isStoppingRef.current = false;
       setRecordingStatus('idle');
     }
   };
@@ -2976,6 +3117,52 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 className="bg-slate-850 hover:bg-slate-800 text-slate-350 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 Daha Sonra Başlat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Recording Rescue Modal */}
+      {failedRecordingBlob && (
+        <div className="fixed inset-0 z-[100001] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-200">
+            <div className="h-16 w-16 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <span className="material-symbols-outlined text-4xl">cloud_off</span>
+            </div>
+            <h3 className="font-black text-slate-100 text-lg">Ders Kaydı Güvende!</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Ders kaydınız başarıyla tamamlandı ancak internet veya Google Drive bağlantısındaki bir aksaklık nedeniyle sunucuya iletilemedi.
+              <strong className="block mt-1 text-amber-400">Kaydınız tarayıcınızda güvende, kaybolmadı!</strong>
+              Aşağıdaki butonla videoyu bilgisayarınıza indirebilir veya yüklemeyi tekrar deneyebilirsiniz.
+            </p>
+            <div className="flex flex-col gap-2 pt-2">
+              <a
+                href={URL.createObjectURL(failedRecordingBlob)}
+                download={failedRecordingName || `Ders_${lessonId}_Kayit.webm`}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer no-underline"
+              >
+                <span className="material-symbols-outlined text-base">download</span>
+                Ders Kaydını Bilgisayara İndir
+              </a>
+              <button
+                onClick={() => {
+                  const blobToRetry = failedRecordingBlob;
+                  const mimeToRetry = failedRecordingBlob.type || 'video/webm';
+                  setFailedRecordingBlob(null);
+                  uploadRecordingToDrive(blobToRetry, mimeToRetry);
+                }}
+                disabled={recordingStatus === 'saving'}
+                className="bg-primary hover:bg-primary/90 text-white py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">sync</span>
+                Yüklemeyi Tekrar Dene
+              </button>
+              <button
+                onClick={() => setFailedRecordingBlob(null)}
+                className="bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Pencereyi Kapat
               </button>
             </div>
           </div>

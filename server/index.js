@@ -1815,7 +1815,7 @@ async function processLessonVideo(lessonId, mimeType, fileExt) {
     }
 
     const writeStream = fs.createWriteStream(tempFilePath);
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = 10;
 
     for (let offset = 0; offset < totalChunks; offset += BATCH_SIZE) {
       const chunks = await prisma.lessonChunk.findMany({
@@ -1920,6 +1920,279 @@ async function processLessonVideo(lessonId, mimeType, fileExt) {
   }
 }
 
+// ==========================================
+// RESILIENT GOOGLE DRIVE RESUMABLE UPLOAD API
+// ==========================================
+
+// 1. Upload oturumu başlat (Google Drive Resumable Upload Session)
+app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEACHER'), async (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  if (isNaN(lessonId)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID' });
+  }
+
+  const { fileSize, mimeType = 'video/webm' } = req.body;
+  if (!fileSize || fileSize <= 0) {
+    return res.status(400).json({ error: 'Geçersiz dosya boyutu.' });
+  }
+
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { id: true, title: true, teacherId: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+
+    if (req.user.role !== 'HEAD_TEACHER' && lesson.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Bu ders için kayıt yetkiniz yok.' });
+    }
+
+    // Eski parçaları temizle
+    await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
+
+    // Google Drive access token al
+    const authData = await getGoogleDriveAccessToken();
+    if (!authData || !authData.token) {
+      return res.status(503).json({
+        error: 'Google Drive bağlantısı kurulamadı. Lütfen sunucu ayarlarını kontrol edin.'
+      });
+    }
+
+    const { token: accessToken, type: authType } = authData;
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    let resolvedFolderId = folderId;
+
+    if (folderId) {
+      const folderOk = await verifyDriveFolder(accessToken, folderId);
+      if (!folderOk) {
+        resolvedFolderId = null;
+      }
+    }
+
+    if (authType === 'ServiceAccount' && !resolvedFolderId) {
+      return res.status(500).json({
+        error: 'Google Drive Service Account için GOOGLE_DRIVE_FOLDER_ID geçerli veya erişilebilir değil.'
+      });
+    }
+
+    const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const fileName = `lesson_${lessonId}.${fileExt}`;
+
+    const metadata = {
+      name: fileName,
+      parents: resolvedFolderId ? [resolvedFolderId] : []
+    };
+
+    const origin = req.headers.origin || req.headers.host || '';
+
+    const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mimeType,
+        'X-Upload-Content-Length': String(fileSize),
+        ...(origin ? { 'Origin': origin } : {})
+      },
+      body: JSON.stringify(metadata)
+    });
+
+    if (!initRes.ok) {
+      const errText = await initRes.text();
+      console.error(`[Drive Init Error] ${initRes.status}: ${errText}`);
+      return res.status(initRes.status).json({
+        error: `Google Drive oturumu başlatılamadı (${initRes.status}): ${errText}`
+      });
+    }
+
+    const uploadUrl = initRes.headers.get('location');
+    if (!uploadUrl) {
+      return res.status(500).json({ error: 'Google Drive upload URL alınamadı.' });
+    }
+
+    // Google Drive 256KB katı gereksinimi: 4MB (16 * 256KB)
+    const CHUNK_SIZE = 4 * 1024 * 1024;
+
+    console.log(`[Drive Session Ready] Lesson ${lessonId} için upload oturumu hazır. Dosya: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+
+    return res.json({
+      success: true,
+      uploadUrl,
+      fileName,
+      chunkSize: CHUNK_SIZE,
+      fileSize
+    });
+  } catch (err) {
+    console.error('Init recording upload error:', err);
+    return res.status(500).json({ error: err.message || 'Sunucu hatası.' });
+  }
+});
+
+// 2. Parçalı akış yükleme proxy'si (Streaming chunk direct to Drive)
+app.post('/api/teacher/lessons/:id/recording/upload-part', auth, checkRole('TEACHER'), async (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  if (isNaN(lessonId)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID' });
+  }
+
+  const uploadUrl = req.headers['x-upload-url'];
+  const startByte = parseInt(req.headers['x-start-byte']);
+  const endByte = parseInt(req.headers['x-end-byte']);
+  const totalBytes = parseInt(req.headers['x-total-bytes']);
+  const mimeType = req.headers['x-mime-type'] || 'video/webm';
+
+  if (!uploadUrl || isNaN(startByte) || isNaN(endByte) || isNaN(totalBytes)) {
+    return res.status(400).json({ error: 'Eksik veya geçersiz yükleme başlıkları.' });
+  }
+
+  if (!uploadUrl.startsWith('https://www.googleapis.com/upload/drive/v3/files')) {
+    return res.status(400).json({ error: 'Güvenlik hatası: Geçersiz upload URL.' });
+  }
+
+  try {
+    const buffers = [];
+    for await (const chunk of req) {
+      buffers.push(chunk);
+    }
+    const chunkBuffer = Buffer.concat(buffers);
+    const contentLength = chunkBuffer.length;
+
+    const driveRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': mimeType,
+        'Content-Length': String(contentLength),
+        'Content-Range': `bytes ${startByte}-${endByte}/${totalBytes}`
+      },
+      body: chunkBuffer
+    });
+
+    if (driveRes.status === 308) {
+      const range = driveRes.headers.get('range');
+      return res.json({
+        success: true,
+        status: 308,
+        range
+      });
+    }
+
+    if (driveRes.ok) {
+      const fileData = await driveRes.json();
+      const fileId = fileData.id;
+
+      if (fileId) {
+        await prisma.lesson.update({
+          where: { id: lessonId },
+          data: {
+            recordingUrl: `drive:${fileId}`,
+            recordingRequested: true
+          }
+        });
+        await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
+        console.log(`[Drive Upload Complete] Lesson ${lessonId} Google Drive'a yüklendi! File ID: ${fileId}`);
+      }
+
+      return res.json({
+        success: true,
+        status: 200,
+        done: true,
+        fileId
+      });
+    }
+
+    const errText = await driveRes.text();
+    console.warn(`[Drive Part Upload Error] HTTP ${driveRes.status}: ${errText}`);
+    return res.status(driveRes.status).json({
+      error: `Google Drive yükleme hatası (${driveRes.status}): ${errText}`
+    });
+  } catch (err) {
+    console.error(`[Drive Part Exception] Lesson ${lessonId}:`, err);
+    return res.status(500).json({ error: err.message || 'Dilim aktarım hatası.' });
+  }
+});
+
+// 3. Doğrudan yükleme tamamlandığında kayıt durumunu veritabanında güncelle
+app.post('/api/teacher/lessons/:id/recording/complete', auth, checkRole('TEACHER'), async (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  const { fileId } = req.body;
+
+  if (isNaN(lessonId) || !fileId) {
+    return res.status(400).json({ error: 'Geçersiz parametreler.' });
+  }
+
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { id: true, teacherId: true }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+
+    if (req.user.role !== 'HEAD_TEACHER' && lesson.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
+    }
+
+    await prisma.lesson.update({
+      where: { id: lessonId },
+      data: {
+        recordingUrl: `drive:${fileId}`,
+        recordingRequested: true
+      }
+    });
+
+    await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
+    console.log(`[Recording Finalized] Lesson ${lessonId} Drive File ID: ${fileId}`);
+    return res.json({ success: true, message: 'Ders kaydı başarıyla tamamlandı.' });
+  } catch (err) {
+    console.error('Complete recording error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Bağlantı kopmasında oturum durumunu sorgula
+app.post('/api/teacher/lessons/:id/recording/query-status', auth, checkRole('TEACHER'), async (req, res) => {
+  const { uploadUrl, totalBytes } = req.body;
+  if (!uploadUrl || !uploadUrl.startsWith('https://www.googleapis.com/upload/drive/v3/files')) {
+    return res.status(400).json({ error: 'Geçersiz upload URL' });
+  }
+
+  try {
+    const statusRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Range': `bytes */${totalBytes}`
+      }
+    });
+
+    if (statusRes.status === 308) {
+      const range = statusRes.headers.get('range');
+      let nextByte = 0;
+      if (range) {
+        const match = range.match(/bytes=0-(\d+)/);
+        if (match) {
+          nextByte = parseInt(match[1]) + 1;
+        }
+      }
+      return res.json({ success: true, nextByte });
+    }
+
+    if (statusRes.ok) {
+      const data = await statusRes.json();
+      return res.json({ success: true, done: true, fileId: data.id });
+    }
+
+    return res.json({ success: false, nextByte: 0 });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Legacy chunk endpoint (koruma ve temizleme eklendi)
 app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), async (req, res) => {
   const lessonId = parseInt(req.params.id);
   const chunkIndex = parseInt(req.headers['x-chunk-index']);
@@ -1936,6 +2209,9 @@ app.post('/api/teacher/lessons/:id/upload-chunk', auth, checkRole('TEACHER'), as
   }
 
   try {
+    if (chunkIndex === 0) {
+      await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
+    }
     // Read the binary stream of the chunk request body in full
     const buffers = [];
     for await (const chunk of req) {
