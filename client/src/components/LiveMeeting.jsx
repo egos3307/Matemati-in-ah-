@@ -843,6 +843,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
+  const canvasVideoTrackRef = useRef(null);
+  const silentOscRef = useRef(null);
 
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -1144,7 +1146,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
-  const uploadRecordingToDrive = async (blob, actualMime = 'video/webm') => {
+  const uploadRecordingToDrive = async (blob, actualMime = 'video/webm', meta = {}) => {
     setRecordingStatus('saving');
     setUploadProgress(0);
 
@@ -1154,7 +1156,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     const fallbackFileName = `Ders_${lessonId}_Kayit.${fileExt}`;
 
     try {
-      console.log(`[Drive Upload] Yükleme oturumu başlatılıyor: Boyut ${(blob.size / 1024 / 1024).toFixed(2)} MB, MIME: ${actualMime}`);
+      console.log(`[Drive Upload] Yükleme oturumu başlatılıyor: Boyut ${(blob.size / 1024 / 1024).toFixed(2)} MB (${blob.size} bytes), MIME: ${actualMime}, Süre: ${meta.durationMs || 0} ms, Parça: ${meta.chunkCount || 0}`);
 
       const initRes = await fetch(`/api/teacher/lessons/${lessonId}/recording/init-upload`, {
         method: 'POST',
@@ -1164,7 +1166,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         },
         body: JSON.stringify({
           fileSize: blob.size,
-          mimeType: actualMime
+          mimeType: actualMime,
+          durationMs: meta.durationMs || 0,
+          chunkCount: meta.chunkCount || 0
         })
       });
 
@@ -1268,14 +1272,29 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       }
 
       if (completedFileId) {
-        await fetch(`/api/teacher/lessons/${lessonId}/recording/complete`, {
+        const compRes = await fetch(`/api/teacher/lessons/${lessonId}/recording/complete`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${tokenVal}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fileId: completedFileId })
-        }).catch(e => console.warn("Complete bildirim uyarısı:", e));
+          body: JSON.stringify({
+            fileId: completedFileId,
+            durationMs: meta.durationMs || 0,
+            chunkCount: meta.chunkCount || 0,
+            totalClientSentBytes: totalBytes
+          })
+        }).catch(e => {
+          console.warn("Complete bildirim uyarısı:", e);
+          return null;
+        });
+
+        if (compRes && compRes.ok) {
+          const compData = await compRes.json().catch(() => ({}));
+          if (compData.driveFileSize) {
+            console.log(`[Recording Debug #7] Google Drive API doğrulanan final dosya boyutu: ${compData.driveFileSize} bytes (${(compData.driveFileSize / 1024 / 1024).toFixed(2)} MB)`);
+          }
+        }
       }
 
       setUploadProgress(100);
@@ -1307,10 +1326,37 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       // 1. Initialize Web Audio API context for background mixing
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       const audioCtx = new AudioContextClass();
+      if (audioCtx.state === 'suspended') {
+        try {
+          await audioCtx.resume();
+        } catch (resErr) {
+          console.warn("[Recording Audio] Context resume warning:", resErr);
+        }
+      }
+      audioCtx.onstatechange = () => {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      };
       audioContextRef.current = audioCtx;
       
       const dest = audioCtx.createMediaStreamDestination();
       audioDestinationRef.current = dest;
+
+      // Web Audio quantum ve MediaRecorder ses saatinin durmasını önlemek için aktif sessiz osilatör
+      try {
+        const osc = audioCtx.createOscillator();
+        const silentGain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        silentGain.gain.setValueAtTime(0.00001, audioCtx.currentTime); // İnsan kulağınca duyulamaz (-100 dB)
+        osc.connect(silentGain);
+        silentGain.connect(dest);
+        osc.start();
+        silentOscRef.current = osc;
+      } catch (oscErr) {
+        console.warn("[Recording Audio] Silent keepalive osc error:", oscErr);
+      }
 
       // 2. Connect local microphone audio track to mixer
       if (localParticipant && isMicrophoneEnabled) {
@@ -1448,6 +1494,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           }
         } catch (drawErr) {
           console.warn("Canvas draw frame warning:", drawErr);
+        } finally {
+          if (canvasVideoTrackRef.current && typeof canvasVideoTrackRef.current.requestFrame === 'function') {
+            try {
+              canvasVideoTrackRef.current.requestFrame();
+            } catch (rfErr) {}
+          }
         }
       };
 
@@ -1467,9 +1519,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
       // 5. Build media stream (Canvas 24 FPS + Mixed Audio)
       const canvasStream = canvas.captureStream(24);
+      const canvasVideoTrack = canvasStream.getVideoTracks()[0];
+      canvasVideoTrackRef.current = canvasVideoTrack;
       const combinedStream = new MediaStream();
 
-      canvasStream.getVideoTracks().forEach(t => combinedStream.addTrack(t));
+      if (canvasVideoTrack) {
+        combinedStream.addTrack(canvasVideoTrack);
+      }
       
       const mixedAudioTrack = dest.stream.getAudioTracks()[0];
       if (mixedAudioTrack) {
@@ -1513,13 +1569,38 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
           chunksRef.current.push(e.data);
+          const chunkIdx = chunksRef.current.length;
+          const elapsedMs = Date.now() - recordingStartTimeRef.current;
+          console.log(`[Recording Debug #3] Chunk #${chunkIdx} boyutu: ${e.data.size} bytes (${(e.data.size / 1024).toFixed(1)} KB) | Süre: ${(elapsedMs / 1000).toFixed(1)}s`);
         }
+      };
+
+      recorder.onerror = (e) => {
+        console.error('[Recording Error] MediaRecorder hatası:', e.error || e);
       };
 
       recorder.onstop = async () => {
         setRecordingStatus('saving');
-        const duration = Date.now() - recordingStartTimeRef.current;
+        const durationMs = Date.now() - recordingStartTimeRef.current;
+        const durationSec = (durationMs / 1000).toFixed(2);
+        const chunkCount = chunksRef.current.length;
 
+        console.log(`[Recording Debug #1] Kayıt süresi: ${durationMs} ms (${durationSec} saniye)`);
+        console.log(`[Recording Debug #2] Oluşan chunk sayısı: ${chunkCount}`);
+
+        if (chunksRef.current.length > 0) {
+          chunksRef.current.forEach((c, idx) => {
+            console.log(`[Recording Debug #3 Detay] Chunk [${idx + 1}/${chunkCount}]: ${c.size} bytes`);
+          });
+        }
+
+        if (silentOscRef.current) {
+          try {
+            silentOscRef.current.stop();
+            silentOscRef.current.disconnect();
+          } catch (e) {}
+          silentOscRef.current = null;
+        }
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
@@ -1538,22 +1619,32 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         try {
           const actualMime = recorder.mimeType || 'video/webm';
           const isMp4 = actualMime.includes('mp4');
-          let blob = new Blob(chunksRef.current, { type: actualMime });
+          const rawBlob = new Blob(chunksRef.current, { type: actualMime });
+          let finalBlob = rawBlob;
+
+          console.log(`[Recording Debug #4 Ham] Final Blob (Ham) boyutu: ${rawBlob.size} bytes (${(rawBlob.size / 1024 / 1024).toFixed(2)} MB)`);
 
           // Bellek koruması: Sadece 80 MB altındaki WebM kayıtlarında süre metadata'sı düzeltilir.
           // Uzun derslerde (> 80 MB) ArrayBuffer tahsisi tarayıcı sekmesini dondurabilir/çökertebilir.
           // Google Drive zaten sunucu tarafında video süresini otomatik indekslemektedir.
-          if (!isMp4 && blob.size < 80 * 1024 * 1024) {
+          if (!isMp4 && rawBlob.size < 80 * 1024 * 1024) {
             try {
-              console.log("Fixing WebM recording duration metadata (Duration:", duration, "ms)...");
-              blob = await fixWebmDuration(blob, duration);
-              console.log("WebM duration metadata fixed successfully.");
+              console.log(`[Recording] WebM süre metadata'sı düzeltiliyor (Süre: ${durationMs} ms)...`);
+              const fixed = await fixWebmDuration(rawBlob, durationMs);
+              if (fixed && fixed.size >= rawBlob.size * 0.95) {
+                finalBlob = fixed;
+                console.log(`[Recording] WebM süre metadata başarıyla güncellendi. Yeni boyut: ${finalBlob.size} bytes`);
+              } else {
+                console.warn(`[Recording] WebM metadata boyut anormalliği (Ham: ${rawBlob.size}, Düzeltilmiş: ${fixed?.size}), ham blob korunuyor.`);
+              }
             } catch (fixErr) {
-              console.warn("Failed to fix WebM duration metadata:", fixErr);
+              console.warn("[Recording] WebM metadata düzeltme uyarısı:", fixErr);
             }
           }
 
-          await uploadRecordingToDrive(blob, actualMime);
+          console.log(`[Recording Debug #4] Final Blob boyutu: ${finalBlob.size} bytes (${(finalBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+
+          await uploadRecordingToDrive(finalBlob, actualMime, { durationMs, chunkCount });
         } catch (prepErr) {
           console.error("Recording preparation error:", prepErr);
           setRecordingStatus('idle');
@@ -1571,6 +1662,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       setRecordingStatus('idle');
       isStoppingRef.current = false;
       
+      if (silentOscRef.current) {
+        try {
+          silentOscRef.current.stop();
+          silentOscRef.current.disconnect();
+        } catch (e) {}
+        silentOscRef.current = null;
+      }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -1589,6 +1687,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          if (mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.requestData();
+          }
+        } catch (flushErr) {
+          console.warn("[Recording] mediaRecorder.requestData flush uyarısı:", flushErr);
+        }
         mediaRecorderRef.current.stop();
       } else {
         isStoppingRef.current = false;

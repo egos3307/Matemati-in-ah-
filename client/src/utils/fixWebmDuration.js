@@ -286,16 +286,25 @@ WebmFloat.prototype.getFloatArrayType = function() {
     return this.source && this.source.length === 4 ? Float32Array : Float64Array;
 };
 WebmFloat.prototype.updateBySource = function() {
-    var byteArray = this.source.reverse();
-    var floatArrayType = this.getFloatArrayType();
-    var floatArray = new floatArrayType(byteArray.buffer);
-    this.data = floatArray[0];
+    var view = new DataView(this.source.buffer, this.source.byteOffset, this.source.byteLength);
+    if (this.source.byteLength === 4) {
+        this.data = view.getFloat32(0, false);
+    } else if (this.source.byteLength === 8) {
+        this.data = view.getFloat64(0, false);
+    } else {
+        this.data = 0;
+    }
 };
 WebmFloat.prototype.updateByData = function() {
-    var floatArrayType = this.getFloatArrayType();
-    var floatArray = new floatArrayType([ this.data ]);
-    var byteArray = new Uint8Array(floatArray.buffer);
-    this.source = byteArray.reverse();
+    var is4 = (this.source && this.source.byteLength === 4);
+    var buffer = new ArrayBuffer(is4 ? 4 : 8);
+    var view = new DataView(buffer);
+    if (is4) {
+        view.setFloat32(0, this.data, false);
+    } else {
+        view.setFloat64(0, this.data, false);
+    }
+    this.source = new Uint8Array(buffer);
 };
 WebmFloat.prototype.getValue = function() {
     return this.data;
@@ -430,15 +439,10 @@ WebmFile.prototype.fixDuration = function(duration, options) {
 
     var durationSection = infoSection.getSectionById(0x489);
     if (durationSection) {
-        if (durationSection.getValue() <= 0) {
-            logger(`[fix-webm-duration] Duration section is present, but the value is ${durationSection.getValue()}`);
-            durationSection.setValue(duration);
-        } else {
-            logger(`[fix-webm-duration] Duration section is present, and the value is ${durationSection.getValue()}`);
-            return false;
-        }
+        logger(`[fix-webm-duration] Duration section is present (existing value: ${durationSection.getValue()}), updating to ${duration}`);
+        durationSection.setValue(duration);
     } else {
-        logger('[fix-webm-duration] Duration section is missing');
+        logger('[fix-webm-duration] Duration section is missing, creating new Duration element with ' + duration);
         durationSection = new WebmFloat('Duration', 'Float');
         durationSection.setValue(duration);
         infoSection.data.push({
