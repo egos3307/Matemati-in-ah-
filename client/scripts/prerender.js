@@ -292,44 +292,44 @@ function generatePageHtml(meta) {
     bodyContentHtml = meta.customBodyHtml;
   } else if (isArticle) {
     bodyContentHtml = `
-      <main className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
-        <nav aria-label="Breadcrumb" className="mx-auto max-w-4xl px-6 my-4 text-xs font-semibold text-slate-500">
+      <main class="relative min-h-screen bg-slate-50 pb-20 pt-8">
+        <nav aria-label="Breadcrumb" class="mx-auto max-w-4xl px-6 my-4 text-xs font-semibold text-slate-500">
           <a href="/">Ana Sayfa</a> &gt; <a href="/blog">Blog</a> &gt; <span>${meta.h1Title}</span>
         </nav>
-        <article className="mx-auto max-w-4xl px-6 bg-white rounded-3xl p-8 border border-slate-100 shadow-md">
-          <header className="border-b border-slate-100 pb-6 mb-6">
-            ${meta.category ? `<span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary mb-3">${meta.category}</span>` : ''}
-            <h1 className="text-3xl font-black text-slate-900 md:text-4xl leading-tight mb-4">${meta.h1Title}</h1>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
+        <article class="mx-auto max-w-4xl px-6 bg-white rounded-3xl p-8 border border-slate-100 shadow-md">
+          <header class="border-b border-slate-100 pb-6 mb-6">
+            ${meta.category ? `<span class="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary mb-3">${meta.category}</span>` : ''}
+            <h1 class="text-3xl font-black text-slate-900 md:text-4xl leading-tight mb-4">${meta.h1Title}</h1>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">
               Yazar: ${meta.authorName || 'Fullematematiği Kadrosu'} | Güncelleme: ${new Date(meta.updatedAt || meta.publishedAt || Date.now()).toLocaleDateString('tr-TR')}
             </div>
           </header>
-          ${meta.coverImage ? `<div className="w-full max-h-[400px] overflow-hidden rounded-2xl mb-6"><img src="${meta.coverImage}" alt="${meta.h1Title}" className="w-full h-full object-cover"/></div>` : ''}
-          <div className="prose max-w-none text-slate-700 leading-relaxed space-y-4">
+          ${meta.coverImage ? `<div class="w-full max-h-[400px] overflow-hidden rounded-2xl mb-6"><img src="${meta.coverImage}" alt="${meta.h1Title}" class="w-full h-full object-cover"/></div>` : ''}
+          <div class="prose max-w-none text-slate-700 leading-relaxed space-y-4">
             ${meta.articleBodyHtml || ''}
           </div>
           ${meta.faq && meta.faq.length > 0 ? `
-            <section className="mt-10 rounded-2xl bg-slate-50 p-6 border border-slate-200">
-              <h2 className="text-xl font-black text-slate-900 mb-4">Sıkça Sorulan Sorular</h2>
-              <div className="space-y-4">
+            <section class="mt-10 rounded-2xl bg-slate-50 p-6 border border-slate-200">
+              <h2 class="text-xl font-black text-slate-900 mb-4">Sıkça Sorulan Sorular</h2>
+              <div class="space-y-4">
                 ${meta.faq.map(f => `
-                  <div className="bg-white p-4 rounded-xl border border-slate-100">
-                    <h3 className="font-bold text-slate-900 text-sm mb-1">${f.question}</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">${f.answer}</p>
+                  <div class="bg-white p-4 rounded-xl border border-slate-100">
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">${f.question}</h3>
+                    <p class="text-xs text-slate-600 leading-relaxed">${f.answer}</p>
                   </div>
                 `).join('')}
               </div>
             </section>
           ` : ''}
-          <section className="mt-8 rounded-2xl bg-primary/5 p-6 border border-primary/10">
-            <h3 className="font-extrabold text-slate-900 text-sm mb-3">Diğer Alakalı Matematik Rehberleri &amp; Konular</h3>
-            <div className="flex flex-wrap gap-2">
-              <a href="/blog/oran-oranti" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Oran Orantı Konu Anlatımı</a>
-              <a href="/blog/yas-problemleri" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Yaş Problemleri Konu Anlatımı</a>
-              <a href="/blog/mutlak-deger" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Mutlak Değer Konu Anlatımı</a>
-              <a href="/blog/tyt-matematik-konulari" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">TYT Matematik Konuları</a>
-              <a href="/blog/lgs-matematik-konulari" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">LGS Matematik Konuları</a>
-              <a href="/blog/9-sinif-matematik-konulari" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">9. Sınıf Matematik Konuları</a>
+          <section class="mt-8 rounded-2xl bg-primary/5 p-6 border border-primary/10">
+            <h3 class="font-extrabold text-slate-900 text-sm mb-3">Diğer Alakalı Matematik Rehberleri &amp; Konular</h3>
+            <div class="flex flex-wrap gap-2">
+              <a href="/blog/oran-oranti" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Oran Orantı Konu Anlatımı</a>
+              <a href="/blog/yas-problemleri" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Yaş Problemleri Konu Anlatımı</a>
+              <a href="/blog/mutlak-deger" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">Mutlak Değer Konu Anlatımı</a>
+              <a href="/blog/tyt-matematik-konulari" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">TYT Matematik Konuları</a>
+              <a href="/blog/lgs-matematik-konulari" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">LGS Matematik Konuları</a>
+              <a href="/blog/9-sinif-matematik-konulari" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-primary">9. Sınıf Matematik Konuları</a>
             </div>
           </section>
         </article>
@@ -337,9 +337,9 @@ function generatePageHtml(meta) {
     `;
   } else {
     bodyContentHtml = `
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <h1 className="text-4xl font-black text-slate-900 mb-4">${meta.heading || fullTitle}</h1>
-        <p className="text-lg text-slate-600 mb-8">${meta.intro || meta.description}</p>
+      <main class="mx-auto max-w-7xl px-6 py-12">
+        <h1 class="text-4xl font-black text-slate-900 mb-4">${meta.heading || fullTitle}</h1>
+        <p class="text-lg text-slate-600 mb-8">${meta.intro || meta.description}</p>
       </main>
     `;
   }
@@ -447,22 +447,22 @@ async function main() {
     let pageMeta = page;
     if (page.path === '/blog') {
       const blogListHtml = allBlogsForPrerender.map(b => `
-        <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
-            <a href="/blog/${b.slug}" className="hover:text-primary">${b.title}</a>
+        <article class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-slate-900 mb-2">
+            <a href="/blog/${b.slug}" class="hover:text-primary">${b.title}</a>
           </h2>
-          <p className="text-sm text-slate-600 mb-4">${b.excerpt || ''}</p>
-          <a href="/blog/${b.slug}" className="text-xs font-bold text-primary">Devamını Oku &rarr;</a>
+          <p class="text-sm text-slate-600 mb-4">${b.excerpt || ''}</p>
+          <a href="/blog/${b.slug}" class="text-xs font-bold text-primary">Devamını Oku &rarr;</a>
         </article>
       `).join('\n');
 
       pageMeta = {
         ...page,
         customBodyHtml: `
-          <main className="mx-auto max-w-7xl px-6 py-12">
-            <h1 className="text-4xl font-black text-slate-900 mb-4">${page.heading}</h1>
-            <p className="text-lg text-slate-600 mb-8">${page.intro}</p>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <main class="mx-auto max-w-7xl px-6 py-12">
+            <h1 class="text-4xl font-black text-slate-900 mb-4">${page.heading}</h1>
+            <p class="text-lg text-slate-600 mb-8">${page.intro}</p>
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               ${blogListHtml}
             </div>
           </main>

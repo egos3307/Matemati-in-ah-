@@ -61,7 +61,7 @@ const BlogPostDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center py-24 text-slate-400 font-bold uppercase tracking-wider gap-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-24 text-slate-400 font-bold uppercase tracking-wider gap-4">
         <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
         <span>Yazı Yükleniyor...</span>
       </div>
@@ -70,7 +70,7 @@ const BlogPostDetail = () => {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <span className="material-symbols-outlined text-5xl text-red-400 mb-4 font-fill">error</span>
         <h1 className="text-xl font-bold text-slate-800">Yazı Bulunamadı</h1>
         <p className="text-sm text-slate-500 mt-2 max-w-md">{error || 'İstediğiniz yazıya şu an ulaşılamıyor.'}</p>
@@ -122,7 +122,7 @@ const BlogPostDetail = () => {
   }
 
   return (
-    <main className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
+    <main className="relative min-h-screen bg-slate-50 pb-20 pt-8">
       <SEO
         title={post.metaTitle || `${post.title} | Fullematematiği`}
         description={post.description || post.excerpt || post.title}

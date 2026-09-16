@@ -17,10 +17,11 @@
 
 @layer base {
   html {
-    background-color: var(--color-primary, #ff8c00);
+    background-color: #ffffff;
   }
   body {
     @apply bg-background-light font-display text-slate-900;
+    min-height: 100vh;
   }
 }
 
