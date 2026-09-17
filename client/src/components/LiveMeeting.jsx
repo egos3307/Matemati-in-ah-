@@ -547,6 +547,378 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 };
 
 
+// 1.5 DESKTOP DOCUMENT PICTURE-IN-PICTURE INTERACTIVE PANEL
+const DesktopPipPanel = ({
+  teacherParticipant,
+  studentParticipants,
+  teacherTrackRef,
+  cameraTracks,
+  isMicrophoneEnabled,
+  isCameraEnabled,
+  toggleMicrophone,
+  toggleCamera,
+  toggleScreenShare,
+  muteParticipantTrack,
+  mutingParticipant,
+  chatMessages,
+  sendChatMessage,
+  chatInput,
+  setChatInput,
+  startBreakTeacher,
+  onClosePip,
+}) => {
+  const [activeTab, setActiveTab] = useState('cameras'); // 'cameras' | 'participants' | 'chat'
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, activeTab]);
+
+  return (
+    <div className="w-full h-full flex flex-col select-none text-slate-100" style={{ backgroundColor: '#0a1628', height: '100vh', width: '100vw' }}>
+      {/* Top Header Bar */}
+      <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-800 shrink-0" style={{ backgroundColor: '#0d1e35' }}>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+          <span className="font-extrabold text-[11px] text-slate-200 tracking-wide">Fulle Canlı Ders</span>
+          <span className="text-[8px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 font-bold ml-1">
+            {studentParticipants.length} Öğrenci
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Tab switches */}
+          <button
+            onClick={() => setActiveTab('cameras')}
+            className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'cameras' ? 'bg-primary text-slate-950 shadow-sm' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            Kameralar
+          </button>
+          <button
+            onClick={() => setActiveTab('participants')}
+            className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'participants' ? 'bg-primary text-slate-950 shadow-sm' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            Katılımcılar
+          </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`relative px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'chat' ? 'bg-primary text-slate-950 shadow-sm' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            Sohbet
+            {chatMessages.length > 0 && (
+              <span className="ml-1 text-[8px] bg-red-500 text-white rounded-full px-1 py-0 font-bold">
+                {chatMessages.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={onClosePip}
+            title="Pencereyi Kapat"
+            className="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-all cursor-pointer ml-1"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Body */}
+      <div className="flex-1 min-h-0 relative p-2 overflow-hidden flex flex-col">
+        {activeTab === 'cameras' && (
+          <div className="w-full h-full flex gap-2">
+            {/* SOL YARI: Öğretmen Kamerası */}
+            <div className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center">
+              {teacherTrackRef ? (
+                <VideoTrack
+                  trackRef={teacherTrackRef}
+                  className="w-full h-full object-cover"
+                  style={teacherParticipant?.isLocal ? { transform: 'scaleX(-1)' } : undefined}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-2 text-center">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-sm mb-1">
+                    {teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-300 truncate max-w-full">
+                    {teacherParticipant?.name || 'Öğretmen'}
+                  </span>
+                  <span className="text-[8px] text-slate-500 mt-0.5 flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[10px]">videocam_off</span>
+                    Kamera Kapalı
+                  </span>
+                </div>
+              )}
+
+              {/* Öğretmen Rozeti */}
+              <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider flex items-center gap-0.5 z-10 shadow-sm">
+                <span className="material-symbols-outlined text-[10px]">school</span>
+                <span>ÖĞRETMEN</span>
+              </div>
+
+              {/* Speaking indicator */}
+              {teacherParticipant?.isSpeaking && (
+                <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                  <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
+                </div>
+              )}
+
+              {/* Name tag */}
+              <div className="absolute bottom-1 left-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 truncate z-10">
+                <span className="text-white truncate">
+                  {teacherParticipant?.name || teacherParticipant?.identity || 'Öğretmen'}
+                  {teacherParticipant?.isLocal ? ' (Sen)' : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* SAĞ YARI: Öğrenciler (1-4) */}
+            <div className="w-1/2 h-full flex flex-col">
+              {studentParticipants.length === 0 ? (
+                <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-2 text-center">
+                  <span className="material-symbols-outlined text-slate-600 text-xl mb-1">group</span>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                    Öğrenci Bekleniyor
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className={`w-full h-full gap-1.5 ${
+                    studentParticipants.length === 1
+                      ? 'grid grid-cols-1 grid-rows-1'
+                      : studentParticipants.length === 2
+                      ? 'grid grid-cols-1 grid-rows-2'
+                      : 'grid grid-cols-2 grid-rows-2'
+                  }`}
+                >
+                  {studentParticipants.slice(0, 4).map((student) => {
+                    const trackRef = cameraTracks.find((t) => t.participant.identity === student.identity);
+                    const initial = student.name
+                      ? student.name.charAt(0).toUpperCase()
+                      : student.identity.charAt(0).toUpperCase();
+
+                    return (
+                      <div
+                        key={student.identity}
+                        className="relative w-full h-full rounded-lg overflow-hidden bg-slate-950 border border-slate-800 shadow-sm flex items-center justify-center"
+                      >
+                        {trackRef ? (
+                          <VideoTrack
+                            trackRef={trackRef}
+                            className="w-full h-full object-cover"
+                            style={student.isLocal ? { transform: 'scaleX(-1)' } : undefined}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/80 p-1 text-center">
+                            <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px]">
+                              {initial}
+                            </div>
+                            <span className="text-[8px] text-slate-400 font-medium truncate max-w-full mt-0.5 px-0.5">
+                              {student.name || student.identity}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Speaking indicator */}
+                        {student.isSpeaking && (
+                          <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                            <span className="material-symbols-outlined text-[9px] font-bold">volume_up</span>
+                          </div>
+                        )}
+
+                        {/* Quick Mute button for teacher on student card */}
+                        <button
+                          onClick={() => muteParticipantTrack(student, 'audio')}
+                          disabled={mutingParticipant === `${student.identity}_audio`}
+                          title="Öğrenciyi Sessize Al"
+                          className="absolute top-1 left-1 bg-slate-900/80 hover:bg-red-500/90 text-slate-300 hover:text-white rounded p-0.5 transition-all z-10 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[10px]">mic_off</span>
+                        </button>
+
+                        {/* Name tag */}
+                        <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 backdrop-blur-sm px-1 py-0.5 rounded text-[7px] font-bold flex items-center gap-0.5 border border-white/5 truncate z-10">
+                          <span className="text-white truncate">
+                            {student.name || student.identity}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* KATILIMCILAR TAB */}
+        {activeTab === 'participants' && (
+          <div className="w-full h-full bg-slate-900/90 rounded-xl border border-slate-800 p-2 overflow-y-auto flex flex-col gap-1.5">
+            <div className="text-[10px] font-bold text-slate-400 pb-1 border-b border-slate-800 flex justify-between items-center">
+              <span>Sınıftaki Katılımcılar ({studentParticipants.length + (teacherParticipant ? 1 : 0)})</span>
+            </div>
+
+            {/* Öğretmen */}
+            {teacherParticipant && (
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-slate-950/80 border border-primary/30">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded">HOCA</span>
+                  <span className="text-xs font-bold text-white truncate max-w-[180px]">
+                    {teacherParticipant.name || 'Öğretmen'} {teacherParticipant.isLocal ? '(Sen)' : ''}
+                  </span>
+                </div>
+                <span className="text-[8px] text-primary font-extrabold uppercase">Yönetici</span>
+              </div>
+            )}
+
+            {/* Öğrenciler */}
+            {studentParticipants.map((student) => (
+              <div key={student.identity} className="flex items-center justify-between p-1.5 rounded-lg bg-slate-950/80 border border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[9px]">
+                    {student.name ? student.name.charAt(0).toUpperCase() : 'Ö'}
+                  </span>
+                  <span className="text-xs font-bold text-slate-200 truncate max-w-[180px]">
+                    {student.name || student.identity}
+                  </span>
+                  {student.isSpeaking && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => muteParticipantTrack(student, 'audio')}
+                  disabled={mutingParticipant === `${student.identity}_audio`}
+                  className="px-2 py-1 rounded bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white text-[9px] font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[11px]">mic_off</span>
+                  <span>Sessize Al</span>
+                </button>
+              </div>
+            ))}
+
+            {studentParticipants.length === 0 && (
+              <div className="text-center py-6 text-xs text-slate-500">
+                Henüz odaya katılan öğrenci yok.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SOHBET TAB */}
+        {activeTab === 'chat' && (
+          <div className="w-full h-full bg-slate-900/90 rounded-xl border border-slate-800 p-2 flex flex-col justify-between overflow-hidden">
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+              {chatMessages.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-500">
+                  Henüz mesaj yazılmadı.
+                </div>
+              ) : (
+                chatMessages.map((msg, idx) => (
+                  <div key={idx} className="p-1.5 rounded-lg bg-slate-950/70 border border-slate-800/80 text-[10px]">
+                    <div className="flex justify-between items-center text-[8px] text-slate-400 mb-0.5">
+                      <span className="font-bold text-primary">{msg.senderName || msg.senderIdentity}</span>
+                      <span>{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-slate-200">{msg.text}</p>
+                  </div>
+                ))
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendChatMessage();
+              }}
+              className="flex gap-1.5 mt-2 pt-1.5 border-t border-slate-800"
+            >
+              <input
+                type="text"
+                placeholder="Öğrencilere yazın..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-750 rounded-lg px-2 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                className="px-2.5 py-1 bg-primary text-slate-950 rounded-lg font-black text-xs hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-sm">send</span>
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Controls Bar (Teacher Action Bar) */}
+      <div className="px-2.5 py-1.5 border-t border-slate-800 flex items-center justify-between gap-1.5 shrink-0" style={{ backgroundColor: '#0d1e35' }}>
+        <div className="flex items-center gap-1.5">
+          {/* Mic toggle */}
+          <button
+            onClick={toggleMicrophone}
+            title={isMicrophoneEnabled ? "Mikrofonu Kapat" : "Mikrofonu Aç"}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all cursor-pointer ${
+              isMicrophoneEnabled
+                ? 'bg-slate-800 text-slate-200 hover:bg-red-500 hover:text-white border border-slate-700'
+                : 'bg-red-500 text-white shadow-sm shadow-red-500/30'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[12px]">
+              {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+            </span>
+            <span>{isMicrophoneEnabled ? 'Sessiz' : 'Açık'}</span>
+          </button>
+
+          {/* Cam toggle */}
+          <button
+            onClick={toggleCamera}
+            title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all cursor-pointer ${
+              isCameraEnabled
+                ? 'bg-slate-800 text-slate-200 hover:bg-red-500 hover:text-white border border-slate-700'
+                : 'bg-red-500 text-white shadow-sm shadow-red-500/30'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[12px]">
+              {isCameraEnabled ? 'videocam' : 'videocam_off'}
+            </span>
+            <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
+          </button>
+
+          {/* Quick 5 min break for teacher */}
+          <button
+            onClick={() => startBreakTeacher(5)}
+            title="5 Dakika Mola Başlat"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[12px]">free_breakfast</span>
+            <span>Mola (5 Dk)</span>
+          </button>
+        </div>
+
+        {/* Stop screen share button */}
+        <button
+          onClick={toggleScreenShare}
+          title="Ekran Paylaşımını Bitir"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[12px]">stop_screen_share</span>
+          <span>Paylaşımı Durdur</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
 const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
@@ -1806,6 +2178,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   // Picture-in-Picture state & refs
+  const [docPipWindow, setDocPipWindow] = useState(null);
   const pipVideoRef = useRef(null);
   const pipCanvasRef = useRef(null);
   const [isPipActive, setIsPipActive] = useState(false);
@@ -1815,7 +2188,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const enterPip = () => enterPipRef.current?.();
   const exitPip = () => exitPipRef.current?.();
   const togglePip = () => {
-    if (document.pictureInPictureElement) {
+    if (docPipWindow || document.pictureInPictureElement) {
       exitPip();
     } else {
       enterPip();
@@ -2052,6 +2425,71 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
 
     const enterPip = async () => {
+      // 1. Önce modern Document Picture-in-Picture dene (Chrome 116+, Edge)
+      // Bu sayede masaüstünde butonlu, tıklanabilir interaktif mini öğretmen masası açılır!
+      if ('documentPictureInPicture' in window) {
+        try {
+          if (window.documentPictureInPicture.window) {
+            setDocPipWindow(window.documentPictureInPicture.window);
+            setIsPipActive(true);
+            return;
+          }
+
+          const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: 540,
+            height: 360,
+          });
+
+          // Stilleri ana pencereden kopyala
+          document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+            pipWin.document.head.appendChild(link.cloneNode(true));
+          });
+          document.querySelectorAll('style').forEach((style) => {
+            pipWin.document.head.appendChild(style.cloneNode(true));
+          });
+          try {
+            [...document.styleSheets].forEach((sheet) => {
+              if (sheet.href) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = sheet.href;
+                pipWin.document.head.appendChild(link);
+              } else if (sheet.cssRules) {
+                const style = document.createElement('style');
+                style.textContent = [...sheet.cssRules].map((r) => r.cssText).join('');
+                pipWin.document.head.appendChild(style);
+              }
+            });
+          } catch (e) {}
+
+          const fontLink = document.createElement('link');
+          fontLink.rel = 'stylesheet';
+          fontLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200';
+          pipWin.document.head.appendChild(fontLink);
+
+          pipWin.document.body.style.margin = '0';
+          pipWin.document.body.style.padding = '0';
+          pipWin.document.body.style.backgroundColor = '#0a1628';
+          pipWin.document.body.style.color = '#f8fafc';
+          pipWin.document.body.style.fontFamily = 'Inter, system-ui, -apple-system, sans-serif';
+          pipWin.document.body.style.overflow = 'hidden';
+          pipWin.document.title = 'Fulle Canlı Ders • Öğretmen Masası';
+
+          pipWin.addEventListener('pagehide', () => {
+            setDocPipWindow(null);
+            setIsPipActive(false);
+          });
+
+          setDocPipWindow(pipWin);
+          setIsPipActive(true);
+          console.log('Document PiP window opened successfully');
+          return;
+        } catch (docErr) {
+          console.warn('Document PiP failed, falling back to Video PiP:', docErr);
+        }
+      }
+
+      // 2. Desteklenmiyorsa Video PiP fallback
       try {
         if (!pipVideo || !canvas) return;
         drawFrame();
@@ -2063,22 +2501,29 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         if (document.pictureInPictureEnabled && document.pictureInPictureElement !== pipVideo) {
           await pipVideo.requestPictureInPicture();
           setIsPipActive(true);
-          console.log('Entered PiP stream successfully');
+          console.log('Entered Video PiP stream successfully');
         }
       } catch (err) {
-        console.warn('enterPip warning:', err);
+        console.warn('enterPip fallback warning:', err);
       }
     };
 
     const exitPip = async () => {
       try {
+        if ('documentPictureInPicture' in window && window.documentPictureInPicture.window) {
+          window.documentPictureInPicture.window.close();
+        }
+      } catch (e) {}
+      setDocPipWindow(null);
+
+      try {
         if (document.pictureInPictureElement) {
           await document.exitPictureInPicture();
         }
-        setIsPipActive(false);
       } catch (err) {
         console.warn('exitPip warning:', err);
       }
+      setIsPipActive(false);
     };
 
     enterPipRef.current = enterPip;
@@ -2138,6 +2583,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if (pipVideo.parentNode) {
         pipVideo.parentNode.removeChild(pipVideo);
       }
+      try {
+        if ('documentPictureInPicture' in window && window.documentPictureInPicture.window) {
+          window.documentPictureInPicture.window.close();
+        }
+      } catch (e) {}
+      setDocPipWindow(null);
       pipVideoRef.current = null;
       pipCanvasRef.current = null;
       enterPipRef.current = null;
@@ -3570,6 +4021,30 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           isTeacher={isTeacherRole}
           onEndBreak={endBreakTeacher}
         />
+      )}
+
+      {/* Desktop Document Picture-in-Picture Floating Window Portal */}
+      {docPipWindow && createPortal(
+        <DesktopPipPanel
+          teacherParticipant={teacherParticipant}
+          studentParticipants={studentParticipants}
+          teacherTrackRef={teacherTrackRef}
+          cameraTracks={cameraTracks}
+          isMicrophoneEnabled={isMicrophoneEnabled}
+          isCameraEnabled={isCameraEnabled}
+          toggleMicrophone={toggleMicrophone}
+          toggleCamera={toggleCamera}
+          toggleScreenShare={toggleScreenShare}
+          muteParticipantTrack={muteParticipantTrack}
+          mutingParticipant={mutingParticipant}
+          chatMessages={chatMessages}
+          sendChatMessage={sendChatMessage}
+          chatInput={chatInput}
+          setChatInput={setChatInput}
+          startBreakTeacher={startBreakTeacher}
+          onClosePip={exitPip}
+        />,
+        docPipWindow.document.body
       )}
     </div>
   );
