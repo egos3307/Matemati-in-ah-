@@ -560,6 +560,18 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const room = useMaybeRoomContext();
   const isTeacherRole = role === 'TEACHER' || role === 'HEAD_TEACHER';
 
+  const isParticipantTeacher = (p) => {
+    if (!p) return false;
+    if (p.isLocal && isTeacherRole) return true;
+    return checkIsTeacher(p);
+  };
+
+  const teacherParticipant = participants.find(p => isParticipantTeacher(p)) || (isTeacherRole ? localParticipant : null);
+  const studentParticipants = participants.filter(p => !isParticipantTeacher(p));
+  const teacherTrackRef = teacherParticipant 
+    ? cameraTracks.find(t => t.participant.identity === teacherParticipant.identity) 
+    : null;
+
   const [recordingStatus, setRecordingStatus] = useState('idle'); // idle, recording, saving
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const showWhiteboardRef = useRef(false);
@@ -1794,7 +1806,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   // Dragging state for camera feeds when screen sharing is active
-  const [floatingPos, setFloatingPos] = useState({ x: window.innerWidth - 230, y: window.innerHeight - 360 });
+  const [floatingPos, setFloatingPos] = useState({ 
+    x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 490) : 100, 
+    y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 340) : 100 
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
@@ -1869,34 +1884,148 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       ctx.fillStyle = '#080b11';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Find video elements in the DOM for camera tracks (webcams only)
-      const videoElements = document.querySelectorAll('video');
-      const cameraVideos = [];
-      videoElements.forEach(v => {
-        if (v !== pipVideo && (v.srcObject || v.readyState >= 2)) {
-          // Identify webcam feeds by looking for 'object-cover' class
-          if (v.className.includes('object-cover')) {
-            cameraVideos.push(v);
+      const drawCover = (video, dx, dy, dw, dh) => {
+        try {
+          const vw = video.videoWidth || 640;
+          const vh = video.videoHeight || 360;
+          const vAspect = vw / vh;
+          const targetAspect = dw / dh;
+          let sx, sy, sw, sh;
+          if (vAspect > targetAspect) {
+            sh = vh;
+            sw = vh * targetAspect;
+            sx = (vw - sw) / 2;
+            sy = 0;
+          } else {
+            sw = vw;
+            sh = vw / targetAspect;
+            sx = 0;
+            sy = (vh - sh) / 2;
           }
+          ctx.drawImage(video, sx, sy, sw, sh, dx, dy, dw, dh);
+        } catch (e) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(dx, dy, dw, dh);
         }
-      });
+      };
 
-      if (cameraVideos.length > 0) {
-        if (cameraVideos.length === 1) {
-          // 1 video: draw centered (keeping aspect ratio)
-          ctx.drawImage(cameraVideos[0], 80, 0, 480, 360);
-        } else {
-          // 2 videos: draw side-by-side
-          ctx.drawImage(cameraVideos[0], 0, 60, 320, 240);
-          ctx.drawImage(cameraVideos[1], 320, 60, 320, 240);
-        }
-      } else {
-        // Draw placeholder text if no active webcam is found
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 20px sans-serif';
+      const drawPlaceholder = (name, roleText, dx, dy, dw, dh, isTeacher) => {
+        ctx.fillStyle = '#0a101d';
+        ctx.fillRect(dx, dy, dw, dh);
+        
+        const radius = Math.min(dw, dh) * 0.18;
+        const cx = dx + dw / 2;
+        const cy = dy + dh / 2 - 8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = isTeacher ? '#f97316' : '#334155';
+        ctx.fill();
+
+        const initial = (name ? name.charAt(0) : (isTeacher ? 'Ö' : 'Ö')).toUpperCase();
+        ctx.fillStyle = isTeacher ? '#0a1628' : '#e2e8f0';
+        ctx.font = `bold ${Math.round(radius * 1.1)}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Kameralar Bekleniyor...', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(initial, cx, cy);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = `bold ${Math.min(11, Math.max(8, Math.round(dh * 0.08)))}px sans-serif`;
+        ctx.fillText(name || (isTeacher ? 'Öğretmen' : 'Öğrenci'), cx, cy + radius + 12);
+      };
+
+      // 1. Öğretmen Bölümü (Sol Yarı: 0, 0, 320, 360)
+      const teacherContainer = document.querySelector('[data-pip="teacher"]');
+      const teacherVideo = teacherContainer ? teacherContainer.querySelector('video') : null;
+      const teacherName = teacherContainer?.getAttribute('data-name') || 'Öğretmen';
+
+      if (teacherVideo && (teacherVideo.srcObject || teacherVideo.readyState >= 2)) {
+        drawCover(teacherVideo, 0, 0, 320, 360);
+      } else {
+        drawPlaceholder(teacherName, 'Öğretmen', 0, 0, 320, 360, true);
+      }
+
+      // Öğretmen Rozeti
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.95)';
+      ctx.fillRect(8, 8, 74, 18);
+      ctx.fillStyle = '#0a1628';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('ÖĞRETMEN', 45, 17);
+
+      // İsim etiketi (sol alt)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(8, 336, 160, 16);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(teacherName, 12, 344);
+
+      // Dikey ayırıcı çizgi
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(320, 0);
+      ctx.lineTo(320, 360);
+      ctx.stroke();
+
+      // 2. Öğrenciler Bölümü (Sağ Yarı: 320, 0, 320, 360)
+      const studentCards = Array.from(document.querySelectorAll('[data-pip="student"]')).slice(0, 4);
+
+      if (studentCards.length === 0) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(320, 0, 320, 360);
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Öğrenci Bekleniyor...', 480, 180);
+      } else {
+        let slots = [];
+        if (studentCards.length === 1) {
+          slots = [{ x: 320, y: 0, w: 320, h: 360 }];
+        } else if (studentCards.length === 2) {
+          slots = [
+            { x: 320, y: 0, w: 320, h: 180 },
+            { x: 320, y: 180, w: 320, h: 180 }
+          ];
+        } else {
+          // 3 veya 4 öğrenci -> 2x2 grid
+          slots = [
+            { x: 320, y: 0, w: 160, h: 180 },
+            { x: 480, y: 0, w: 160, h: 180 },
+            { x: 320, y: 180, w: 160, h: 180 },
+            { x: 480, y: 180, w: 160, h: 180 }
+          ];
+        }
+
+        studentCards.forEach((card, idx) => {
+          const slot = slots[idx];
+          if (!slot) return;
+          const sVideo = card.querySelector('video');
+          const sName = card.getAttribute('data-name') || `Öğrenci ${idx + 1}`;
+
+          if (sVideo && (sVideo.srcObject || sVideo.readyState >= 2)) {
+            drawCover(sVideo, slot.x, slot.y, slot.w, slot.h);
+          } else {
+            drawPlaceholder(sName, 'Öğrenci', slot.x, slot.y, slot.w, slot.h, false);
+          }
+
+          // Çerçeve/ayraç çizgisi
+          ctx.strokeStyle = '#1e293b';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(slot.x, slot.y, slot.w, slot.h);
+
+          // İsim etiketi
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(slot.x + 4, slot.y + slot.h - 18, Math.min(slot.w - 8, 120), 14);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 8px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(sName, slot.x + 8, slot.y + slot.h - 11);
+        });
       }
 
       animationFrameId = requestAnimationFrame(drawFrame);
@@ -2034,10 +2163,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       let newX = clientX - dragStart.current.x;
       let newY = clientY - dragStart.current.y;
 
+      const boxWidth = Math.min(480, window.innerWidth - 20);
+      const boxHeight = 260;
       const minX = 10;
       const minY = 10;
-      const maxX = window.innerWidth - 230;
-      const maxY = window.innerHeight - 180;
+      const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
+      const maxY = Math.max(10, window.innerHeight - boxHeight - 10);
 
       newX = Math.max(minX, Math.min(maxX, newX));
       newY = Math.max(minY, Math.min(maxY, newY));
@@ -2070,8 +2201,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   useEffect(() => {
     const handleResize = () => {
       setFloatingPos((prev) => {
-        const maxX = window.innerWidth - 230;
-        const maxY = window.innerHeight - 180;
+        const boxWidth = Math.min(480, window.innerWidth - 20);
+        const boxHeight = 260;
+        const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
+        const maxY = Math.max(10, window.innerHeight - boxHeight - 10);
         return {
           x: Math.max(10, Math.min(maxX, prev.x)),
           y: Math.max(10, Math.min(maxY, prev.y))
@@ -2485,7 +2618,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   />
                 </div>
 
-                {/* Webcams Float Box (Draggable) - only active cameras */}
+                {/* Webcams Float Box (Draggable) - 50% Teacher / 50% Students */}
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
@@ -2493,19 +2626,19 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: '200px',
+                    width: 'min(480px, calc(100vw - 20px))',
                   }}
                 >
                   {/* Header */}
                   <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px] text-primary">videocam</span>
-                      Kameralar ({cameraTracks.length})
+                    <span className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px] text-primary">groups</span>
+                      <span>Kameralar (1 Öğretmen + {studentParticipants.length} Öğrenci)</span>
                     </span>
                     <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
                   </div>
 
-                  {/* Kamera ve Mikrofon kontrol butonları */}
+                  {/* Kamera ve Mikrofon kontrol butonları (Local user) */}
                   <div className="no-drag flex gap-1.5 px-0.5">
                     {/* Mikrofon butonu */}
                     <button
@@ -2540,81 +2673,126 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     </button>
                   </div>
 
-                  {/* Active camera feeds only */}
-                  <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto no-drag pr-0.5">
-                    {cameraTracks.length === 0 ? (
-                      <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                        Aktif kamera yok
-                      </div>
-                    ) : (
-                      cameraTracks.map((trackRef) => {
-                        const p = trackRef.participant;
-                        const isTeacher = checkIsTeacher(p);
-                        const isLocal = p.isLocal;
-                        const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${p.identity}_camera`;
-                        return (
-                          <div
-                            key={trackKey}
-                            className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
-                              isTeacher ? 'border-primary/50 shadow-primary/10' : 'border-slate-800'
-                            }`}
-                          >
-                            <VideoTrack
-                              trackRef={trackRef}
-                              className="w-full h-full object-cover"
-                            />
-
-                            {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
-                            {isLocal && (
-                              <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
-                                {/* Mikrofon butonu */}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
-                                  title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                                  className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                    isMicrophoneEnabled
-                                      ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                      : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                                  }`}
-                                >
-                                  <span className="material-symbols-outlined text-[11px] font-bold">
-                                    {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                                  </span>
-                                </button>
-
-                                {/* Kamera butonu */}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
-                                  title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                                  className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                    isCameraEnabled
-                                      ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                      : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                                  }`}
-                                >
-                                  <span className="material-symbols-outlined text-[11px] font-bold">
-                                    {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                                  </span>
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Speaking indicator */}
-                            {p.isSpeaking && (
-                              <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                                <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
-                              </div>
-                            )}
-
-                            {/* Name tag */}
-                            <div className="absolute bottom-1 left-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 truncate">
-                              {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm shrink-0">HOCA</span>}
-                              <span className="text-white truncate">{p.name || p.identity}{p.isLocal ? ' (Sen)' : ''}</span>
-                            </div>
+                  {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
+                  <div className="flex gap-2 h-[200px] no-drag">
+                    {/* SOL YARI (%50): Öğretmen Kamerası */}
+                    <div 
+                      className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
+                      data-pip="teacher"
+                      data-name={teacherParticipant?.name || 'Öğretmen'}
+                    >
+                      {teacherTrackRef ? (
+                        <VideoTrack
+                          trackRef={teacherTrackRef}
+                          className="w-full h-full object-cover animate-in fade-in duration-300"
+                          style={teacherParticipant?.isLocal ? { transform: 'scaleX(-1)' } : undefined}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-2 text-center">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-sm mb-1 shadow-inner">
+                            {teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
                           </div>
-                        );
-                      })
-                    )}
+                          <span className="text-[10px] font-bold text-slate-300 truncate max-w-full">
+                            {teacherParticipant?.name || 'Öğretmen'}
+                          </span>
+                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[9px]">videocam_off</span>
+                            Kamera Kapalı
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Öğretmen Rozeti */}
+                      <div className="absolute top-1.5 left-1.5 bg-primary text-slate-950 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
+                        <span className="material-symbols-outlined text-[10px]">school</span>
+                        <span>ÖĞRETMEN</span>
+                      </div>
+
+                      {/* Speaking indicator */}
+                      {teacherParticipant?.isSpeaking && (
+                        <div className="absolute top-1.5 right-1.5 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                          <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
+                        </div>
+                      )}
+
+                      {/* Name tag */}
+                      <div className="absolute bottom-1 left-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 truncate z-10">
+                        <span className="text-white truncate">
+                          {teacherParticipant?.name || teacherParticipant?.identity || 'Öğretmen'}
+                          {teacherParticipant?.isLocal ? ' (Sen)' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* SAĞ YARI (%50): Öğrenciler Bölümü (1, 2, 3 veya 4 Öğrenci Izgarası) */}
+                    <div className="w-1/2 h-full flex flex-col">
+                      {studentParticipants.length === 0 ? (
+                        <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-2 text-center">
+                          <span className="material-symbols-outlined text-slate-600 text-2xl mb-1">group</span>
+                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                            Öğrenci Bekleniyor
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          className={`w-full h-full gap-1.5 ${
+                            studentParticipants.length === 1
+                              ? 'grid grid-cols-1 grid-rows-1'
+                              : studentParticipants.length === 2
+                              ? 'grid grid-cols-1 grid-rows-2'
+                              : 'grid grid-cols-2 grid-rows-2'
+                          }`}
+                        >
+                          {studentParticipants.slice(0, 4).map((student) => {
+                            const trackRef = cameraTracks.find((t) => t.participant.identity === student.identity);
+                            const initial = student.name
+                              ? student.name.charAt(0).toUpperCase()
+                              : student.identity.charAt(0).toUpperCase();
+
+                            return (
+                              <div
+                                key={student.identity}
+                                className="relative w-full h-full rounded-lg overflow-hidden bg-slate-950 border border-slate-800 shadow-sm flex items-center justify-center"
+                                data-pip="student"
+                                data-name={student.name || student.identity}
+                              >
+                                {trackRef ? (
+                                  <VideoTrack
+                                    trackRef={trackRef}
+                                    className="w-full h-full object-cover animate-in fade-in duration-300"
+                                    style={student.isLocal ? { transform: 'scaleX(-1)' } : undefined}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/80 p-1 text-center">
+                                    <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px]">
+                                      {initial}
+                                    </div>
+                                    <span className="text-[8px] text-slate-400 font-medium truncate max-w-full mt-0.5 px-0.5">
+                                      {student.name || student.identity}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Speaking indicator */}
+                                {student.isSpeaking && (
+                                  <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                                    <span className="material-symbols-outlined text-[9px] font-bold">volume_up</span>
+                                  </div>
+                                )}
+
+                                {/* Student Name tag */}
+                                <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 backdrop-blur-sm px-1 py-0.5 rounded text-[7px] font-bold flex items-center gap-0.5 border border-white/5 truncate z-10">
+                                  <span className="text-white truncate">
+                                    {student.name || student.identity}
+                                    {student.isLocal ? ' (Sen)' : ''}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
