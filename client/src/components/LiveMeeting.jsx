@@ -2156,9 +2156,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   // Dragging state for camera feeds when screen sharing is active
-  const [floatingPos, setFloatingPos] = useState({ 
-    x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 400) : 100, 
-    y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 290) : 100 
+  const [floatingPos, setFloatingPos] = useState(() => {
+    if (typeof window === 'undefined') return { x: 100, y: 100 };
+    if (!isTeacherRole && window.innerWidth < 768) {
+      // Mobilde öğrenci için sağ üst köşeye temiz ve ekranı kapatmayan yerleşim
+      return { x: Math.max(8, window.innerWidth - 170), y: 12 };
+    }
+    return {
+      x: Math.max(10, window.innerWidth - (isTeacherRole ? 400 : 230)),
+      y: Math.max(10, window.innerHeight - (isTeacherRole ? 290 : 160))
+    };
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -2563,12 +2570,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       let newX = clientX - dragStart.current.x;
       let newY = clientY - dragStart.current.y;
 
-      const boxWidth = Math.min(isTeacherRole ? 380 : 320, window.innerWidth - 20);
-      const boxHeight = isTeacherRole ? 210 : 180;
-      const minX = 10;
-      const minY = 10;
-      const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
-      const maxY = Math.max(10, window.innerHeight - boxHeight - 10);
+      const isMobile = window.innerWidth < 768;
+      const boxWidth = isTeacherRole 
+        ? Math.min(380, window.innerWidth - 20) 
+        : (isMobile ? 160 : 210);
+      const boxHeight = isTeacherRole 
+        ? 210 
+        : (isMobile ? 95 : 115);
+      const minX = 6;
+      const minY = 6;
+      const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
+      const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
 
       newX = Math.max(minX, Math.min(maxX, newX));
       newY = Math.max(minY, Math.min(maxY, newY));
@@ -2601,13 +2613,18 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   useEffect(() => {
     const handleResize = () => {
       setFloatingPos((prev) => {
-        const boxWidth = Math.min(isTeacherRole ? 380 : 320, window.innerWidth - 20);
-        const boxHeight = isTeacherRole ? 210 : 180;
-        const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
-        const maxY = Math.max(10, window.innerHeight - boxHeight - 10);
+        const isMobile = window.innerWidth < 768;
+        const boxWidth = isTeacherRole 
+          ? Math.min(380, window.innerWidth - 20) 
+          : (isMobile ? 160 : 210);
+        const boxHeight = isTeacherRole 
+          ? 210 
+          : (isMobile ? 95 : 115);
+        const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
+        const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
         return {
-          x: Math.max(10, Math.min(maxX, prev.x)),
-          y: Math.max(10, Math.min(maxY, prev.y))
+          x: Math.max(6, Math.min(maxX, prev.x)),
+          y: Math.max(6, Math.min(maxY, prev.y))
         };
       });
     };
@@ -2791,8 +2808,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
       style={{ backgroundColor: '#0a1628' }}
     >
-      {/* Top Header */}
-      <div className="px-5 py-3.5 flex items-center justify-between border-b border-[#162540] z-10 shadow-sm relative" style={{ backgroundColor: '#0d1e35' }}>
+      {/* Top Header - Mobilde öğrenci için tamamen gizlenir, derse maksimum alan açılır */}
+      <div className={`px-5 py-3.5 items-center justify-between border-b border-[#162540] z-10 shadow-sm relative ${!isTeacherRole ? 'hidden md:flex' : 'flex'}`} style={{ backgroundColor: '#0d1e35' }}>
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
             <img src="/logo.png" alt="Fullematematiği Logo" className="h-full w-full object-contain" />
@@ -3056,22 +3073,22 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
-                  className={`fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none cursor-move ${
-                    isTeacherRole ? 'flex flex-col p-2.5 gap-2' : 'hidden md:flex flex-col p-2 gap-1.5'
+                  className={`fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none cursor-move flex flex-col ${
+                    isTeacherRole ? 'p-2.5 gap-2' : 'p-1.5 gap-1'
                   }`}
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: isTeacherRole ? 'min(380px, calc(100vw - 20px))' : 'min(320px, calc(100vw - 20px))',
+                    width: isTeacherRole ? 'min(380px, calc(100vw - 20px))' : 'min(210px, calc(100vw - 16px))',
                   }}
                 >
                   {/* Header */}
-                  <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
-                    <span className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[13px] text-primary">groups</span>
-                      <span>Kameralar (1 Öğretmen + {studentParticipants.length} Öğrenci)</span>
+                  <div className="px-1 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-1">
+                    <span className="flex items-center gap-1 truncate">
+                      <span className="material-symbols-outlined text-[11px] text-primary">groups</span>
+                      <span className="truncate">{isTeacherRole ? `Kameralar (1 Öğretmen + ${studentParticipants.length} Öğrenci)` : 'Kameralar'}</span>
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {isTeacherRole && (
                         <button
                           onClick={(e) => {
@@ -3091,7 +3108,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
                         </button>
                       )}
-                      <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+                      <span className="material-symbols-outlined text-[13px] text-slate-500">drag_indicator</span>
                     </div>
                   </div>
 
@@ -3133,7 +3150,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   )}
 
                   {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
-                  <div className={`flex gap-2 no-drag ${isTeacherRole ? 'h-[150px]' : 'h-[130px]'}`}>
+                  <div className={`flex gap-1.5 no-drag ${isTeacherRole ? 'h-[150px]' : 'h-[75px] md:h-[85px]'}`}>
                     {/* SOL YARI (%50): Öğretmen Kamerası */}
                     <div 
                       className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
@@ -3147,35 +3164,37 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                           style={teacherParticipant?.isLocal ? { transform: 'scaleX(-1)' } : undefined}
                         />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-2 text-center">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-xs mb-1 shadow-inner">
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-1 text-center">
+                          <div className={`${isTeacherRole ? 'w-8 h-8 text-xs' : 'w-5 h-5 text-[9px]'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-black mb-0.5 shadow-inner`}>
                             {teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
                           </div>
-                          <span className="text-[10px] font-bold text-slate-300 truncate max-w-full">
+                          <span className={`${isTeacherRole ? 'text-[10px]' : 'text-[7.5px]'} font-bold text-slate-300 truncate max-w-full`}>
                             {teacherParticipant?.name || 'Öğretmen'}
                           </span>
-                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[9px]">videocam_off</span>
-                            Kamera Kapalı
-                          </span>
+                          {isTeacherRole && (
+                            <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[9px]">videocam_off</span>
+                              Kamera Kapalı
+                            </span>
+                          )}
                         </div>
                       )}
 
                       {/* Öğretmen Rozeti */}
-                      <div className="absolute top-1.5 left-1.5 bg-primary text-slate-950 px-1.5 py-0.5 rounded text-[8px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
-                        <span className="material-symbols-outlined text-[10px]">school</span>
+                      <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1 py-0.5 rounded text-[7px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
+                        <span className="material-symbols-outlined text-[8px]">school</span>
                         <span>ÖĞRETMEN</span>
                       </div>
 
                       {/* Speaking indicator */}
                       {teacherParticipant?.isSpeaking && (
-                        <div className="absolute top-1.5 right-1.5 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                          <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
+                        <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                          <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
                         </div>
                       )}
 
                       {/* Name tag */}
-                      <div className="absolute bottom-1 left-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 truncate z-10">
+                      <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/70 backdrop-blur-sm px-1 py-0.5 rounded text-[7px] font-extrabold flex items-center gap-0.5 border border-white/5 truncate z-10">
                         <span className="text-white truncate">
                           {teacherParticipant?.name || teacherParticipant?.identity || 'Öğretmen'}
                           {teacherParticipant?.isLocal ? ' (Sen)' : ''}
@@ -3186,15 +3205,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     {/* SAĞ YARI (%50): Öğrenciler Bölümü (1, 2, 3 veya 4 Öğrenci Izgarası) */}
                     <div className="w-1/2 h-full flex flex-col">
                       {studentParticipants.length === 0 ? (
-                        <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-2 text-center">
-                          <span className="material-symbols-outlined text-slate-600 text-2xl mb-1">group</span>
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                            Öğrenci Bekleniyor
+                        <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-1 text-center">
+                          <span className="material-symbols-outlined text-slate-600 text-base mb-0.5">group</span>
+                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">
+                            Öğrenci Yok
                           </span>
                         </div>
                       ) : (
                         <div
-                          className={`w-full h-full gap-1.5 ${
+                          className={`w-full h-full gap-1 ${
                             studentParticipants.length === 1
                               ? 'grid grid-cols-1 grid-rows-1'
                               : studentParticipants.length === 2
@@ -3222,11 +3241,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                                     style={student.isLocal ? { transform: 'scaleX(-1)' } : undefined}
                                   />
                                 ) : (
-                                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/80 p-1 text-center">
-                                    <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px]">
+                                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/80 p-0.5 text-center">
+                                    <div className="w-4 h-4 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[7px]">
                                       {initial}
                                     </div>
-                                    <span className="text-[8px] text-slate-400 font-medium truncate max-w-full mt-0.5 px-0.5">
+                                    <span className="text-[6.5px] text-slate-400 font-medium truncate max-w-full mt-0.5 px-0.5">
                                       {student.name || student.identity}
                                     </span>
                                   </div>
@@ -3234,13 +3253,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
                                 {/* Speaking indicator */}
                                 {student.isSpeaking && (
-                                  <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                                    <span className="material-symbols-outlined text-[9px] font-bold">volume_up</span>
+                                  <div className="absolute top-0.5 right-0.5 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+                                    <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
                                   </div>
                                 )}
 
                                 {/* Student Name tag */}
-                                <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 backdrop-blur-sm px-1 py-0.5 rounded text-[7px] font-bold flex items-center gap-0.5 border border-white/5 truncate z-10">
+                                <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 backdrop-blur-sm px-1 py-0.5 rounded text-[6.5px] font-bold flex items-center gap-0.5 border border-white/5 truncate z-10">
                                   <span className="text-white truncate">
                                     {student.name || student.identity}
                                     {student.isLocal ? ' (Sen)' : ''}
