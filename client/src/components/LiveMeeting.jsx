@@ -1491,14 +1491,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       const sessionData = await initRes.json();
       const { uploadUrl, chunkSize: serverChunkSize } = sessionData;
 
-      // Google Drive 256KB katı gereksinimi: 4MB (4 * 1024 * 1024 = 4194304 bayt)
-      const CHUNK_SIZE = serverChunkSize || (4 * 1024 * 1024);
+      // Google Drive 256KB katı gereksinimi: Varsayılan 2MB (2 * 1024 * 1024 = 2097152 bayt)
+      const CHUNK_SIZE = serverChunkSize || (2 * 1024 * 1024);
       const totalBytes = blob.size;
       let offset = 0;
       let directUploadDisabled = false;
       let completedFileId = null;
 
-      console.log(`[Drive Upload] Oturum URL alındı, dilimler aktarılıyor (Dilim boyutu: ${(CHUNK_SIZE / 1024 / 1024).toFixed(0)} MB)...`);
+      console.log(`[Drive Upload] Oturum URL alındı, dilimler aktarılıyor (Dilim boyutu: ${(CHUNK_SIZE / 1024 / 1024).toFixed(1)} MB)...`);
 
       while (offset < totalBytes) {
         const chunkEnd = Math.min(offset + CHUNK_SIZE, totalBytes);
@@ -1525,12 +1525,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   chunkUploaded = true;
                   if (directRes.ok) {
                     const doneData = await directRes.json().catch(() => ({}));
-                    completedFileId = doneData.id;
+                    completedFileId = doneData.id || completedFileId;
                   }
                   break;
                 } else {
-                  const errTxt = await directRes.text();
-                  throw new Error(`Drive direct error ${directRes.status}: ${errTxt}`);
+                  console.warn(`[Drive Direct] Doğrudan bağlantı HTTP ${directRes.status}, sunucu proxy'sine geçiliyor.`);
+                  directUploadDisabled = true;
                 }
               } catch (directErr) {
                 console.warn("[Drive Direct] Doğrudan bağlantı kullanılamadı, sunucu akış proxy'sine geçiliyor:", directErr.message);
@@ -1559,8 +1559,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             }
 
             const proxyData = await proxyRes.json();
-            if (proxyData.done || proxyData.status === 200) {
-              completedFileId = proxyData.fileId;
+            if (proxyData.done || proxyData.status === 200 || proxyData.fileId) {
+              completedFileId = proxyData.fileId || completedFileId;
             }
             chunkUploaded = true;
             break;

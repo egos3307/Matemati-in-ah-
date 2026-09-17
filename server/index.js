@@ -1457,23 +1457,34 @@ async function convertToMp4(inputBuffer) {
   return outputBuffer;
 }
 
+function getCleanGoogleDriveFolderId(rawId = process.env.GOOGLE_DRIVE_FOLDER_ID) {
+  if (!rawId) return null;
+  let clean = String(rawId).trim().replace(/^['"]|['"]$/g, '');
+  const folderMatch = clean.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (folderMatch && folderMatch[1]) return folderMatch[1];
+  const idParamMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idParamMatch && idParamMatch[1]) return idParamMatch[1];
+  return clean;
+}
+
 async function verifyDriveFolder(accessToken, folderId) {
-  if (!folderId) return false;
+  const cleanId = getCleanGoogleDriveFolderId(folderId);
+  if (!cleanId) return false;
   try {
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType&supportsAllDrives=true`, {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${cleanId}?fields=id,name,mimeType&supportsAllDrives=true`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     if (!res.ok) {
       const err = await res.text();
-      console.warn(`[Drive] Klasör doğrulama başarısız (${folderId}): ${err}`);
-      return false;
+      console.warn(`[Drive] Klasör doğrulama uyarısı (${cleanId}): ${err}`);
+      return /^[a-zA-Z0-9_-]{10,}$/.test(cleanId);
     }
     const data = await res.json();
     console.log(`[Drive] Klasör doğrulandı: "${data.name}" (${data.id})`);
     return true;
   } catch (e) {
     console.warn(`[Drive] Klasör doğrulama hatası: ${e.message}`);
-    return false;
+    return /^[a-zA-Z0-9_-]{10,}$/.test(cleanId);
   }
 }
 
@@ -1965,11 +1976,11 @@ app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEAC
     }
 
     const { token: accessToken, type: authType } = authData;
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    let resolvedFolderId = folderId;
+    const rawFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    let resolvedFolderId = getCleanGoogleDriveFolderId(rawFolderId);
 
-    if (folderId) {
-      const folderOk = await verifyDriveFolder(accessToken, folderId);
+    if (resolvedFolderId) {
+      const folderOk = await verifyDriveFolder(accessToken, resolvedFolderId);
       if (!folderOk) {
         resolvedFolderId = null;
       }
@@ -1989,7 +2000,16 @@ app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEAC
       parents: resolvedFolderId ? [resolvedFolderId] : []
     };
 
-    const origin = req.headers.origin || req.headers.host || '';
+    let cleanOrigin = req.headers.origin;
+    if (!cleanOrigin && req.headers.referer) {
+      try {
+        cleanOrigin = new URL(req.headers.referer).origin;
+      } catch (e) {}
+    }
+    if (!cleanOrigin && req.headers.host) {
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      cleanOrigin = `${proto}://${req.headers.host}`;
+    }
 
     const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true', {
       method: 'POST',
@@ -1998,7 +2018,7 @@ app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEAC
         'Content-Type': 'application/json; charset=UTF-8',
         'X-Upload-Content-Type': mimeType,
         'X-Upload-Content-Length': String(fileSize),
-        ...(origin ? { 'Origin': origin } : {})
+        ...(cleanOrigin ? { 'Origin': cleanOrigin } : {})
       },
       body: JSON.stringify(metadata)
     });
@@ -2016,8 +2036,9 @@ app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEAC
       return res.status(500).json({ error: 'Google Drive upload URL alınamadı.' });
     }
 
-    // Google Drive 256KB katı gereksinimi: 4MB (16 * 256KB)
-    const CHUNK_SIZE = 4 * 1024 * 1024;
+    // Google Drive 256KB katı gereksinimi: 2MB (8 * 256KB = 2097152 bayt)
+    // Vercel 4.5MB fonksiyon yük limitinin çok altındadır ve ağ kopmalarını engeller
+    const CHUNK_SIZE = 2 * 1024 * 1024;
 
     recordingUploadSessions.set(uploadUrl, {
       lessonId,
@@ -2046,127 +2067,155 @@ app.post('/api/teacher/lessons/:id/recording/init-upload', auth, checkRole('TEAC
 });
 
 // 2. Parçalı akış yükleme proxy'si (Streaming chunk direct to Drive)
-app.post('/api/teacher/lessons/:id/recording/upload-part', auth, checkRole('TEACHER'), async (req, res) => {
-  const lessonId = parseInt(req.params.id);
-  if (isNaN(lessonId)) {
-    return res.status(400).json({ error: 'Geçersiz ders ID' });
-  }
-
-  const uploadUrl = req.headers['x-upload-url'];
-  const startByte = parseInt(req.headers['x-start-byte']);
-  const endByte = parseInt(req.headers['x-end-byte']);
-  const totalBytes = parseInt(req.headers['x-total-bytes']);
-  const mimeType = req.headers['x-mime-type'] || 'video/webm';
-
-  if (!uploadUrl || isNaN(startByte) || isNaN(endByte) || isNaN(totalBytes)) {
-    return res.status(400).json({ error: 'Eksik veya geçersiz yükleme başlıkları.' });
-  }
-
-  if (!uploadUrl.startsWith('https://www.googleapis.com/upload/drive/v3/files')) {
-    return res.status(400).json({ error: 'Güvenlik hatası: Geçersiz upload URL.' });
-  }
-
-  try {
-    const buffers = [];
-    for await (const chunk of req) {
-      buffers.push(chunk);
-    }
-    const chunkBuffer = Buffer.concat(buffers);
-    const contentLength = chunkBuffer.length;
-
-    const session = recordingUploadSessions.get(uploadUrl);
-    if (session) {
-      session.receivedBytes += contentLength;
-      console.log(`[Recording Debug #5] Lesson ${lessonId}: Backend'e ulaşan dilim: ${contentLength} bytes (Kümülatif toplam: ${session.receivedBytes}/${totalBytes} bytes - %${Math.round((session.receivedBytes / totalBytes) * 100)})`);
-    } else {
-      console.log(`[Recording Debug #5] Lesson ${lessonId}: Backend'e ulaşan dilim: ${contentLength} bytes (Range: ${startByte}-${endByte}/${totalBytes})`);
+app.post(
+  '/api/teacher/lessons/:id/recording/upload-part',
+  auth,
+  checkRole('TEACHER'),
+  express.raw({ type: 'application/octet-stream', limit: '20mb' }),
+  async (req, res) => {
+    const lessonId = parseInt(req.params.id);
+    if (isNaN(lessonId)) {
+      return res.status(400).json({ error: 'Geçersiz ders ID' });
     }
 
-    const driveRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': mimeType,
-        'Content-Length': String(contentLength),
-        'Content-Range': `bytes ${startByte}-${endByte}/${totalBytes}`
-      },
-      body: chunkBuffer
-    });
+    const uploadUrl = req.headers['x-upload-url'];
+    const startByte = parseInt(req.headers['x-start-byte']);
+    const endByte = parseInt(req.headers['x-end-byte']);
+    const totalBytes = parseInt(req.headers['x-total-bytes']);
+    const mimeType = req.headers['x-mime-type'] || 'video/webm';
 
-    if (driveRes.status === 308) {
-      if (session) {
-        session.sentBytes += contentLength;
-        console.log(`[Recording Debug #6] Lesson ${lessonId}: Google Drive'a gönderilen dilim: ${contentLength} bytes (Kümülatif gönderilen: ${session.sentBytes}/${totalBytes} bytes, Drive Durumu: HTTP 308 Resume Incomplete)`);
-      }
-      const range = driveRes.headers.get('range');
-      return res.json({
-        success: true,
-        status: 308,
-        range
-      });
+    if (!uploadUrl || isNaN(startByte) || isNaN(endByte) || isNaN(totalBytes)) {
+      return res.status(400).json({ error: 'Eksik veya geçersiz yükleme başlıkları.' });
     }
 
-    if (driveRes.ok) {
-      if (session) {
-        session.sentBytes += contentLength;
-        console.log(`[Recording Debug #6] Lesson ${lessonId}: Google Drive'a son dilim gönderildi: ${contentLength} bytes (Kümülatif gönderilen: ${session.sentBytes}/${totalBytes} bytes, Drive Durumu: HTTP ${driveRes.status} OK)`);
-      }
-      const fileData = await driveRes.json();
-      const fileId = fileData.id;
+    if (!uploadUrl.startsWith('https://www.googleapis.com/upload/drive/v3/files')) {
+      return res.status(400).json({ error: 'Güvenlik hatası: Geçersiz upload URL.' });
+    }
 
-      let verifiedFileSize = null;
-      let verifiedDuration = null;
-
-      // Google Drive API'den final dosya bilgilerini doğrula (Debug #7)
-      try {
-        const authData = await getGoogleDriveAccessToken();
-        if (authData && authData.token && fileId) {
-          const checkRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,size,videoMediaMetadata`, {
-            headers: { 'Authorization': `Bearer ${authData.token}` }
-          });
-          if (checkRes.ok) {
-            const driveMeta = await checkRes.json();
-            verifiedFileSize = driveMeta.size ? parseInt(driveMeta.size) : null;
-            verifiedDuration = driveMeta.videoMediaMetadata?.durationMillis || null;
-            console.log(`[Recording Debug #7] Google Drive Final Dosya Doğrulaması: ID: ${fileId}, Boyut: ${verifiedFileSize} bytes (${((verifiedFileSize || 0) / 1024 / 1024).toFixed(2)} MB), Video Süresi: ${verifiedDuration ? verifiedDuration + ' ms' : 'Drive video işleminde'}`);
+    try {
+      let chunkBuffer = null;
+      if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+        chunkBuffer = req.body;
+      } else if (req.rawBody && Buffer.isBuffer(req.rawBody)) {
+        chunkBuffer = req.rawBody;
+      } else if (typeof req.body === 'string' && req.body.length > 0) {
+        chunkBuffer = Buffer.from(req.body, 'binary');
+      } else {
+        const buffers = [];
+        try {
+          for await (const chunk of req) {
+            buffers.push(chunk);
           }
+          if (buffers.length > 0) {
+            chunkBuffer = Buffer.concat(buffers);
+          }
+        } catch (streamErr) {
+          console.warn('[Upload Part] Stream okuma uyarısı:', streamErr.message);
         }
-      } catch (checkErr) {
-        console.warn(`[Recording Debug #7] Google Drive final dosya sorgulama uyarısı:`, checkErr.message);
       }
 
-      if (fileId) {
-        await prisma.lesson.update({
-          where: { id: lessonId },
-          data: {
-            recordingUrl: `drive:${fileId}`,
-            recordingRequested: true
-          }
-        });
-        await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
-        console.log(`[Drive Upload Complete] Lesson ${lessonId} Google Drive'a yüklendi! File ID: ${fileId}`);
+      if (!chunkBuffer || chunkBuffer.length === 0) {
+        console.error(`[Drive Part Error] Boş veri paketi alındı (startByte: ${startByte}, endByte: ${endByte})`);
+        return res.status(400).json({ error: 'Yükleme parçası boş veya okunamadı.' });
       }
 
-      recordingUploadSessions.delete(uploadUrl);
+      const contentLength = chunkBuffer.length;
 
-      return res.json({
-        success: true,
-        status: 200,
-        done: true,
-        fileId,
-        driveFileSize: verifiedFileSize
+      const session = recordingUploadSessions.get(uploadUrl);
+      if (session) {
+        session.receivedBytes += contentLength;
+        console.log(`[Recording Debug #5] Lesson ${lessonId}: Backend'e ulaşan dilim: ${contentLength} bytes (Kümülatif toplam: ${session.receivedBytes}/${totalBytes} bytes - %${Math.round((session.receivedBytes / totalBytes) * 100)})`);
+      } else {
+        console.log(`[Recording Debug #5] Lesson ${lessonId}: Backend'e ulaşan dilim: ${contentLength} bytes (Range: ${startByte}-${endByte}/${totalBytes})`);
+      }
+
+      const driveRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': mimeType,
+          'Content-Length': String(contentLength),
+          'Content-Range': `bytes ${startByte}-${endByte}/${totalBytes}`
+        },
+        body: chunkBuffer,
+        redirect: 'manual'
       });
-    }
 
-    const errText = await driveRes.text();
-    console.warn(`[Drive Part Upload Error] HTTP ${driveRes.status}: ${errText}`);
-    return res.status(driveRes.status).json({
-      error: `Google Drive yükleme hatası (${driveRes.status}): ${errText}`
-    });
-  } catch (err) {
-    console.error(`[Drive Part Exception] Lesson ${lessonId}:`, err);
-    return res.status(500).json({ error: err.message || 'Dilim aktarım hatası.' });
+      if (driveRes.status === 308) {
+        if (session) {
+          session.sentBytes += contentLength;
+          console.log(`[Recording Debug #6] Lesson ${lessonId}: Google Drive'a gönderilen dilim: ${contentLength} bytes (Kümülatif gönderilen: ${session.sentBytes}/${totalBytes} bytes, Drive Durumu: HTTP 308 Resume Incomplete)`);
+        }
+        const range = driveRes.headers.get('range');
+        return res.json({
+          success: true,
+          status: 308,
+          range
+        });
+      }
+
+      if (driveRes.ok) {
+        if (session) {
+          session.sentBytes += contentLength;
+          console.log(`[Recording Debug #6] Lesson ${lessonId}: Google Drive'a son dilim gönderildi: ${contentLength} bytes (Kümülatif gönderilen: ${session.sentBytes}/${totalBytes} bytes, Drive Durumu: HTTP ${driveRes.status} OK)`);
+        }
+        const fileData = await driveRes.json().catch(() => ({}));
+        const fileId = fileData.id;
+
+        let verifiedFileSize = null;
+        let verifiedDuration = null;
+
+        // Google Drive API'den final dosya bilgilerini doğrula (Debug #7)
+        try {
+          const authData = await getGoogleDriveAccessToken();
+          if (authData && authData.token && fileId) {
+            const checkRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,size,videoMediaMetadata`, {
+              headers: { 'Authorization': `Bearer ${authData.token}` }
+            });
+            if (checkRes.ok) {
+              const driveMeta = await checkRes.json().catch(() => ({}));
+              verifiedFileSize = driveMeta.size ? parseInt(driveMeta.size) : null;
+              verifiedDuration = driveMeta.videoMediaMetadata?.durationMillis || null;
+              console.log(`[Recording Debug #7] Google Drive Final Dosya Doğrulaması: ID: ${fileId}, Boyut: ${verifiedFileSize} bytes (${((verifiedFileSize || 0) / 1024 / 1024).toFixed(2)} MB), Video Süresi: ${verifiedDuration ? verifiedDuration + ' ms' : 'Drive video işleminde'}`);
+            }
+          }
+        } catch (checkErr) {
+          console.warn(`[Recording Debug #7] Google Drive final dosya sorgulama uyarısı:`, checkErr.message);
+        }
+
+        if (fileId) {
+          await prisma.lesson.update({
+            where: { id: lessonId },
+            data: {
+              recordingUrl: `drive:${fileId}`,
+              recordingRequested: true
+            }
+          });
+          await prisma.lessonChunk.deleteMany({ where: { lessonId } }).catch(() => {});
+          console.log(`[Drive Upload Complete] Lesson ${lessonId} Google Drive'a yüklendi! File ID: ${fileId}`);
+        }
+
+        recordingUploadSessions.delete(uploadUrl);
+
+        return res.json({
+          success: true,
+          status: 200,
+          done: true,
+          fileId,
+          driveFileSize: verifiedFileSize
+        });
+      }
+
+      const errText = await driveRes.text().catch(() => '');
+      console.warn(`[Drive Part Upload Error] HTTP ${driveRes.status}: ${errText}`);
+      return res.status(driveRes.status || 500).json({
+        error: `Google Drive yükleme hatası (${driveRes.status}): ${errText}`
+      });
+    } catch (err) {
+      console.error(`[Drive Part Exception] Lesson ${lessonId}:`, err);
+      return res.status(500).json({ error: err.message || 'Dilim aktarım hatası.' });
+    }
   }
-});
+);
 
 // 3. Doğrudan yükleme tamamlandığında kayıt durumunu veritabanında güncelle
 app.post('/api/teacher/lessons/:id/recording/complete', auth, checkRole('TEACHER'), async (req, res) => {
