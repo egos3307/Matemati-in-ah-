@@ -3133,11 +3133,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
-                  className="fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
+                  className={`fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none cursor-move ${
+                    isTeacherRole ? 'flex flex-col p-2.5 gap-2' : 'hidden md:flex flex-col p-2 gap-1.5'
+                  }`}
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: 'min(480px, calc(100vw - 20px))',
+                    width: isTeacherRole ? 'min(480px, calc(100vw - 20px))' : 'min(320px, calc(100vw - 20px))',
                   }}
                 >
                   {/* Header */}
@@ -3147,64 +3149,68 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       <span>Kameralar (1 Öğretmen + {studentParticipants.length} Öğrenci)</span>
                     </span>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePip();
-                        }}
-                        title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç (Diğer programların üstünde gösterir)"}
-                        className={`no-drag flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                          isPipActive
-                            ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[11px]">
-                          {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
-                        </span>
-                        <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
-                      </button>
+                      {isTeacherRole && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePip();
+                          }}
+                          title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç (Diğer programların üstünde gösterir)"}
+                          className={`no-drag flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                            isPipActive
+                              ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[11px]">
+                            {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
+                          </span>
+                          <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
+                        </button>
+                      )}
                       <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
                     </div>
                   </div>
 
-                  {/* Kamera ve Mikrofon kontrol butonları (Local user) */}
-                  <div className="no-drag flex gap-1.5 px-0.5">
-                    {/* Mikrofon butonu */}
-                    <button
-                      onClick={toggleMicrophone}
-                      title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                        isMicrophoneEnabled
-                          ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[13px]">
-                        {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                      </span>
-                      <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
-                    </button>
+                  {/* Kamera ve Mikrofon kontrol butonları (Sadece Öğretmen için) */}
+                  {isTeacherRole && (
+                    <div className="no-drag flex gap-1.5 px-0.5">
+                      {/* Mikrofon butonu */}
+                      <button
+                        onClick={toggleMicrophone}
+                        title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                          isMicrophoneEnabled
+                            ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+                        </span>
+                        <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
+                      </button>
 
-                    {/* Kamera butonu */}
-                    <button
-                      onClick={toggleCamera}
-                      title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                        isCameraEnabled
-                          ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                          : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[13px]">
-                        {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                      </span>
-                      <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
-                    </button>
-                  </div>
+                      {/* Kamera butonu */}
+                      <button
+                        onClick={toggleCamera}
+                        title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                          isCameraEnabled
+                            ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {isCameraEnabled ? 'videocam' : 'videocam_off'}
+                        </span>
+                        <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
-                  <div className="flex gap-2 h-[200px] no-drag">
+                  <div className={`flex gap-2 no-drag ${isTeacherRole ? 'h-[200px]' : 'h-[130px]'}`}>
                     {/* SOL YARI (%50): Öğretmen Kamerası */}
                     <div 
                       className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
@@ -3875,23 +3881,25 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </div>
           )}
 
-          {/* Screen Share Button */}
-          <button 
-            onClick={toggleScreenShare}
-            className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md ${
-              isLocalScreenSharing 
-                ? 'bg-primary hover:bg-primary/95 text-white border-primary shadow-primary/10 hover:scale-102' 
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750 hover:scale-102'
-            }`}
-          >
-            <span className="material-symbols-outlined text-base">
-              {isLocalScreenSharing ? 'stop_screen_share' : 'screen_share'}
-            </span>
-            <span className="hidden md:inline">{isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}</span>
-          </button>
+          {/* Screen Share Button - Sadece Öğretmen */}
+          {isTeacherRole && (
+            <button 
+              onClick={toggleScreenShare}
+              className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md ${
+                isLocalScreenSharing 
+                  ? 'bg-primary hover:bg-primary/95 text-white border-primary shadow-primary/10 hover:scale-102' 
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750 hover:scale-102'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">
+                {isLocalScreenSharing ? 'stop_screen_share' : 'screen_share'}
+              </span>
+              <span className="hidden md:inline">{isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}</span>
+            </button>
+          )}
 
-          {/* PiP Floating Window Button for desktop overlay */}
-          {isScreenSharing && (
+          {/* PiP Floating Window Button for desktop overlay - Sadece Öğretmen */}
+          {(isTeacherRole && isScreenSharing) && (
             <button
               onClick={togglePip}
               title={isPipActive ? "Masaüstü Penceresini Kapat" : "Masaüstü Küçük Penceresini Aç (Diğer programların üstünde göster)"}
