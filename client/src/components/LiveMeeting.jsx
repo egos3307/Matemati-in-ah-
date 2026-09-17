@@ -2142,8 +2142,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if ('documentPictureInPicture' in window) {
         try {
           const pipWin = await window.documentPictureInPicture.requestWindow({
-            width: 460,
-            height: 300,
+            width: 360,
+            height: 230,
           });
           setupDocPipWindow(pipWin);
           return;
@@ -2157,8 +2157,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
   // Dragging state for camera feeds when screen sharing is active
   const [floatingPos, setFloatingPos] = useState({ 
-    x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 490) : 100, 
-    y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 340) : 100 
+    x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 400) : 100, 
+    y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 290) : 100 
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -2563,8 +2563,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       let newX = clientX - dragStart.current.x;
       let newY = clientY - dragStart.current.y;
 
-      const boxWidth = Math.min(480, window.innerWidth - 20);
-      const boxHeight = 260;
+      const boxWidth = Math.min(isTeacherRole ? 380 : 320, window.innerWidth - 20);
+      const boxHeight = isTeacherRole ? 210 : 180;
       const minX = 10;
       const minY = 10;
       const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
@@ -2601,8 +2601,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   useEffect(() => {
     const handleResize = () => {
       setFloatingPos((prev) => {
-        const boxWidth = Math.min(480, window.innerWidth - 20);
-        const boxHeight = 260;
+        const boxWidth = Math.min(isTeacherRole ? 380 : 320, window.innerWidth - 20);
+        const boxHeight = isTeacherRole ? 210 : 180;
         const maxX = Math.max(10, window.innerWidth - boxWidth - 10);
         const maxY = Math.max(10, window.innerHeight - boxHeight - 10);
         return {
@@ -2682,8 +2682,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         if ('documentPictureInPicture' in window && !docPipWindow) {
           try {
             openedWin = await window.documentPictureInPicture.requestWindow({
-              width: 460,
-              height: 300,
+              width: 360,
+              height: 230,
             });
             setupDocPipWindow(openedWin);
           } catch (e) {
@@ -3062,7 +3062,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: isTeacherRole ? 'min(480px, calc(100vw - 20px))' : 'min(320px, calc(100vw - 20px))',
+                    width: isTeacherRole ? 'min(380px, calc(100vw - 20px))' : 'min(320px, calc(100vw - 20px))',
                   }}
                 >
                   {/* Header */}
@@ -3133,7 +3133,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   )}
 
                   {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
-                  <div className={`flex gap-2 no-drag ${isTeacherRole ? 'h-[200px]' : 'h-[130px]'}`}>
+                  <div className={`flex gap-2 no-drag ${isTeacherRole ? 'h-[150px]' : 'h-[130px]'}`}>
                     {/* SOL YARI (%50): Öğretmen Kamerası */}
                     <div 
                       className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
@@ -3148,7 +3148,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                         />
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-2 text-center">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-sm mb-1 shadow-inner">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-xs mb-1 shadow-inner">
                             {teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
                           </div>
                           <span className="text-[10px] font-bold text-slate-300 truncate max-w-full">
