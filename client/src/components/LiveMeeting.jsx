@@ -565,12 +565,38 @@ const DesktopPipWindow = ({
   sendChatMessage,
   chatInput,
   setChatInput,
-  startBreakTeacher,
   toggleScreenShare,
+  meetingStartTime,
 }) => {
   const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
   const videoRef = useRef(null);
   const chatEndRef = useRef(null);
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(() => {
+    return meetingStartTime ? Math.max(0, Math.floor((Date.now() - meetingStartTime) / 1000)) : 0;
+  });
+
+  useEffect(() => {
+    const updateTimer = () => {
+      if (meetingStartTime) {
+        setElapsedSeconds(Math.max(0, Math.floor((Date.now() - meetingStartTime) / 1000)));
+      } else {
+        setElapsedSeconds((prev) => prev + 1);
+      }
+    };
+    const timerInterval = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerInterval);
+  }, [meetingStartTime]);
+
+  const formatElapsed = (sec) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     let checkInterval = null;
@@ -787,16 +813,16 @@ const DesktopPipWindow = ({
             {isCameraEnabled ? '📹 Cam' : '📷 Kapalı'}
           </button>
 
-          <button
-            onClick={() => startBreakTeacher(5)}
-            title="5 Dakika Mola Başlat"
+          {/* Ders Başlangıcından İtibaren Canlı Sayaç */}
+          <div
+            title="Ders Başlangıcından İtibaren Geçen Süre"
             style={{
-              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
-              background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)'
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, whiteSpace: 'nowrap',
+              background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.35)', letterSpacing: '0.03em'
             }}
           >
-            ☕ Mola
-          </button>
+            ⏱ {formatElapsed(elapsedSeconds)}
+          </div>
         </div>
 
         {/* Sağ: Paylaşımı Durdur */}
@@ -849,6 +875,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const showWhiteboardRef = useRef(false);
   const whiteboardCanvasRef = useRef(null);
   const recordingStartTimeRef = useRef(0);
+  const [meetingStartTime] = useState(() => Date.now());
   const [mutingParticipant, setMutingParticipant] = useState(null);
 
   // Live chat state
@@ -3943,8 +3970,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           sendChatMessage={sendChatMessage}
           chatInput={chatInput}
           setChatInput={setChatInput}
-          startBreakTeacher={startBreakTeacher}
           toggleScreenShare={toggleScreenShare}
+          meetingStartTime={meetingStartTime}
         />,
         docPipWindow.document.body
       )}
