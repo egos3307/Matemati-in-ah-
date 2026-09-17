@@ -2155,12 +2155,33 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
+  // Screen size detection for mobile & landscape phones
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+  });
+
+  useEffect(() => {
+    const handleScreenResize = () => {
+      const isMob = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+      setIsMobileScreen(isMob);
+    };
+    window.addEventListener('resize', handleScreenResize);
+    window.addEventListener('orientationchange', handleScreenResize);
+    return () => {
+      window.removeEventListener('resize', handleScreenResize);
+      window.removeEventListener('orientationchange', handleScreenResize);
+    };
+  }, []);
+
   // Dragging state for camera feeds when screen sharing is active
   const [floatingPos, setFloatingPos] = useState(() => {
     if (typeof window === 'undefined') return { x: 100, y: 100 };
-    if (!isTeacherRole && window.innerWidth < 768) {
-      // Mobilde öğrenci için sağ üst köşeye temiz ve ekranı kapatmayan yerleşim
-      return { x: Math.max(8, window.innerWidth - 170), y: 12 };
+    const isMob = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+    if (!isTeacherRole && isMob) {
+      // Mobilde öğrenci için sağ üst köşeye temiz ve ekranı kesinlikle taşırmayan yerleşim
+      const boxW = 160;
+      return { x: Math.max(8, window.innerWidth - boxW - 8), y: 8 };
     }
     return {
       x: Math.max(10, window.innerWidth - (isTeacherRole ? 400 : 230)),
@@ -2570,13 +2591,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       let newX = clientX - dragStart.current.x;
       let newY = clientY - dragStart.current.y;
 
-      const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
       const boxWidth = isTeacherRole 
         ? Math.min(380, window.innerWidth - 20) 
         : (isMobile ? 160 : 210);
       const boxHeight = isTeacherRole 
         ? 210 
-        : (isMobile ? 95 : 115);
+        : (isMobile ? 90 : 115);
       const minX = 6;
       const minY = 6;
       const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
@@ -2613,13 +2634,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   useEffect(() => {
     const handleResize = () => {
       setFloatingPos((prev) => {
-        const isMobile = window.innerWidth < 768;
+        const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
         const boxWidth = isTeacherRole 
           ? Math.min(380, window.innerWidth - 20) 
           : (isMobile ? 160 : 210);
         const boxHeight = isTeacherRole 
           ? 210 
-          : (isMobile ? 95 : 115);
+          : (isMobile ? 90 : 115);
         const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
         const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
         return {
@@ -2808,8 +2829,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
       style={{ backgroundColor: '#0a1628' }}
     >
-      {/* Top Header - Mobilde öğrenci için tamamen gizlenir, derse maksimum alan açılır */}
-      <div className={`px-5 py-3.5 items-center justify-between border-b border-[#162540] z-10 shadow-sm relative ${!isTeacherRole ? 'hidden md:flex' : 'flex'}`} style={{ backgroundColor: '#0d1e35' }}>
+      {/* Top Header - Mobilde tamamen gizlenir, derse maksimum alan açılır */}
+      <div 
+        className={`px-5 py-3.5 items-center justify-between border-b border-[#162540] z-10 shadow-sm relative shrink-0 ${isMobileScreen ? 'hidden' : 'hidden md:flex'}`} 
+        style={{ 
+          backgroundColor: '#0d1e35',
+          display: isMobileScreen ? 'none' : undefined
+        }}
+      >
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
             <img src="/logo.png" alt="Fullematematiği Logo" className="h-full w-full object-contain" />
@@ -3079,7 +3106,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   style={{
                     left: `${floatingPos.x}px`,
                     top: `${floatingPos.y}px`,
-                    width: isTeacherRole ? 'min(380px, calc(100vw - 20px))' : 'min(210px, calc(100vw - 16px))',
+                    width: isTeacherRole 
+                      ? 'min(380px, calc(100vw - 20px))' 
+                      : (isMobileScreen ? 'min(160px, calc(100vw - 16px))' : 'min(210px, calc(100vw - 16px))'),
                   }}
                 >
                   {/* Header */}
