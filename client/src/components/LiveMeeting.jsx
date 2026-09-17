@@ -550,6 +550,275 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 
+// 1.5 MASAÜSTÜ KÜÇÜK PENCERE (DOCUMENT PICTURE-IN-PICTURE PANEL)
+const DesktopPipWindow = ({
+  pipCanvasRef,
+  isMicrophoneEnabled,
+  isCameraEnabled,
+  toggleMicrophone,
+  toggleCamera,
+  studentParticipants,
+  teacherParticipant,
+  muteParticipantTrack,
+  mutingParticipant,
+  chatMessages,
+  sendChatMessage,
+  chatInput,
+  setChatInput,
+  startBreakTeacher,
+  toggleScreenShare,
+}) => {
+  const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
+  const videoRef = useRef(null);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    let checkInterval = null;
+    const attachStream = () => {
+      if (pipCanvasRef.current && videoRef.current) {
+        if (!videoRef.current.srcObject) {
+          const stream = pipCanvasRef.current.captureStream(24);
+          videoRef.current.srcObject = stream;
+        }
+        videoRef.current.play().catch(() => {});
+      }
+    };
+
+    attachStream();
+    checkInterval = setInterval(attachStream, 1000);
+    return () => {
+      if (checkInterval) clearInterval(checkInterval);
+    };
+  }, [pipCanvasRef]);
+
+  useEffect(() => {
+    if (activeOverlay === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeOverlay, chatMessages]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: '#080b11', color: '#f8fafc', overflow: 'hidden', userSelect: 'none', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      
+      {/* Üst Kısım: Otomatik Boyutlanan 50/50 Kamera Akışı (Windows boyutu değiştikçe pürüzsüz ölçeklenir) */}
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', width: '100%', background: '#080b11', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#080b11' }}
+        />
+
+        {/* Katılımcılar Overlay */}
+        {activeOverlay === 'participants' && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(8, 11, 17, 0.96)', backdropFilter: 'blur(10px)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.05em' }}>
+                KATILIMCILAR ({studentParticipants.length + (teacherParticipant ? 1 : 0)})
+              </span>
+              <button
+                onClick={() => setActiveOverlay(null)}
+                style={{ background: '#1e293b', border: 'none', color: '#f8fafc', borderRadius: '6px', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {teacherParticipant && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f172a', padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563eb' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc' }}>
+                    {teacherParticipant.name || 'Öğretmen'} (Sen)
+                  </span>
+                  <span style={{ fontSize: '9px', background: '#2563eb', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ÖĞRETMEN</span>
+                </div>
+              )}
+
+              {studentParticipants.map((s) => (
+                <div key={s.identity} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f172a', padding: '6px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>
+                      {s.name ? s.name.charAt(0).toUpperCase() : 'Ö'}
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#e2e8f0' }}>
+                      {s.name || s.identity}
+                    </span>
+                    {s.isSpeaking && (
+                      <span style={{ fontSize: '9px', color: '#22c55e', fontWeight: 700 }}>● Konuşuyor</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => muteParticipantTrack(s, 'audio')}
+                    disabled={mutingParticipant === `${s.identity}_audio`}
+                    style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: '6px', padding: '4px 8px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Sessize Al
+                  </button>
+                </div>
+              ))}
+
+              {studentParticipants.length === 0 && (
+                <div style={{ textAlign: 'center', color: '#64748b', fontSize: '11px', paddingTop: '20px' }}>
+                  Henüz derste öğrenci yok.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Sohbet Overlay */}
+        {activeOverlay === 'chat' && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(8, 11, 17, 0.96)', backdropFilter: 'blur(10px)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.05em' }}>
+                CANLI SOHBET ({chatMessages.length})
+              </span>
+              <button
+                onClick={() => setActiveOverlay(null)}
+                style={{ background: '#1e293b', border: 'none', color: '#f8fafc', borderRadius: '6px', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {chatMessages.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#64748b', fontSize: '11px', paddingTop: '30px' }}>
+                  Henüz mesaj yok.
+                </div>
+              ) : (
+                chatMessages.map((msg, i) => (
+                  <div key={i} style={{ background: '#0f172a', border: '1px solid #1e293b', padding: '6px 8px', borderRadius: '6px', fontSize: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#38bdf8', fontWeight: 700, marginBottom: '2px' }}>
+                      <span>{msg.senderName || msg.senderIdentity}</span>
+                      <span style={{ color: '#64748b', fontSize: '8px' }}>{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style={{ color: '#f1f5f9' }}>{msg.text}</div>
+                  </div>
+                ))
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendChatMessage();
+              }}
+              style={{ display: 'flex', gap: '6px', paddingTop: '6px', borderTop: '1px solid #1e293b' }}
+            >
+              <input
+                type="text"
+                placeholder="Öğrencilere yazın..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', color: '#fff', outline: 'none' }}
+              />
+              <button
+                type="submit"
+                style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Gönder
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
+      {/* Alt Kontrol Çubuğu: Doğrudan Masaüstü Penceresinde Sabit Menü */}
+      <div style={{ height: '46px', background: '#0f172a', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', gap: '6px', flexShrink: 0 }}>
+        
+        {/* Sol: Katılımcılar & Sohbet */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => setActiveOverlay(activeOverlay === 'participants' ? null : 'participants')}
+            title="Katılımcı Listesi ve Ses Yönetimi"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              background: activeOverlay === 'participants' ? '#2563eb' : '#1e293b',
+              color: activeOverlay === 'participants' ? '#ffffff' : '#cbd5e1',
+              border: '1px solid #334155'
+            }}
+          >
+            👥 Katılımcılar ({studentParticipants.length})
+          </button>
+
+          <button
+            onClick={() => setActiveOverlay(activeOverlay === 'chat' ? null : 'chat')}
+            title="Canlı Sohbet"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              background: activeOverlay === 'chat' ? '#2563eb' : '#1e293b',
+              color: activeOverlay === 'chat' ? '#ffffff' : '#cbd5e1',
+              border: '1px solid #334155'
+            }}
+          >
+            💬 Sohbet
+          </button>
+        </div>
+
+        {/* Orta: Mikrofon, Kamera, Mola */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={toggleMicrophone}
+            title={isMicrophoneEnabled ? "Mikrofonu Kapat" : "Mikrofonu Aç"}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              background: isMicrophoneEnabled ? '#1e293b' : 'rgba(239, 68, 68, 0.2)',
+              color: isMicrophoneEnabled ? '#e2e8f0' : '#ef4444',
+              border: isMicrophoneEnabled ? '1px solid #334155' : '1px solid rgba(239, 68, 68, 0.4)'
+            }}
+          >
+            {isMicrophoneEnabled ? '🎤 Mikrofon' : '🔇 Sessiz'}
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              background: isCameraEnabled ? '#1e293b' : 'rgba(239, 68, 68, 0.2)',
+              color: isCameraEnabled ? '#e2e8f0' : '#ef4444',
+              border: isCameraEnabled ? '1px solid #334155' : '1px solid rgba(239, 68, 68, 0.4)'
+            }}
+          >
+            {isCameraEnabled ? '📹 Kamera' : '📷 Kapalı'}
+          </button>
+
+          <button
+            onClick={() => startBreakTeacher(5)}
+            title="5 Dakika Mola Başlat"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+              background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)'
+            }}
+          >
+            ☕ 5 Dk Mola
+          </button>
+        </div>
+
+        {/* Sağ: Paylaşımı Durdur */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={toggleScreenShare}
+            title="Ekran Paylaşımını Bitir"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer',
+              background: '#dc2626', color: '#ffffff', border: 'none', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
+            }}
+          >
+            ⏹ Paylaşımı Durdur
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
 const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
@@ -1809,18 +2078,52 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   };
 
   // Picture-in-Picture state & refs
+  const [docPipWindow, setDocPipWindow] = useState(null);
   const pipVideoRef = useRef(null);
   const pipCanvasRef = useRef(null);
   const [isPipActive, setIsPipActive] = useState(false);
   const enterPipRef = useRef(null);
   const exitPipRef = useRef(null);
 
+  const setupDocPipWindow = (pipWin) => {
+    pipWin.document.title = 'Fulle Canlı Ders • Öğretmen Masası';
+    pipWin.document.body.style.margin = '0';
+    pipWin.document.body.style.padding = '0';
+    pipWin.document.body.style.backgroundColor = '#080b11';
+    pipWin.document.body.style.overflow = 'hidden';
+    pipWin.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+    pipWin.addEventListener('pagehide', () => {
+      setDocPipWindow(null);
+      setIsPipActive(false);
+    });
+
+    setDocPipWindow(pipWin);
+    setIsPipActive(true);
+  };
+
   const enterPip = () => enterPipRef.current?.();
   const exitPip = () => exitPipRef.current?.();
-  const togglePip = () => {
-    if (document.pictureInPictureElement) {
+  const togglePip = async () => {
+    if (docPipWindow) {
+      try { docPipWindow.close(); } catch (e) {}
+      setDocPipWindow(null);
+      setIsPipActive(false);
+    } else if (document.pictureInPictureElement) {
       exitPip();
     } else {
+      if ('documentPictureInPicture' in window) {
+        try {
+          const pipWin = await window.documentPictureInPicture.requestWindow({
+            width: 560,
+            height: 380,
+          });
+          setupDocPipWindow(pipWin);
+          return;
+        } catch (e) {
+          console.warn("Document PiP requestWindow failed, falling back:", e);
+        }
+      }
       enterPip();
     }
   };
@@ -2075,13 +2378,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
     const exitPip = async () => {
       try {
+        if (docPipWindow) {
+          docPipWindow.close();
+        }
+        if ('documentPictureInPicture' in window && window.documentPictureInPicture.window) {
+          window.documentPictureInPicture.window.close();
+        }
+      } catch (e) {}
+      setDocPipWindow(null);
+
+      try {
         if (document.pictureInPictureElement) {
           await document.exitPictureInPicture();
         }
-        setIsPipActive(false);
       } catch (err) {
         console.warn('exitPip warning:', err);
       }
+      setIsPipActive(false);
     };
 
     enterPipRef.current = enterPip;
@@ -2141,6 +2454,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if (pipVideo.parentNode) {
         pipVideo.parentNode.removeChild(pipVideo);
       }
+      try {
+        if ('documentPictureInPicture' in window && window.documentPictureInPicture.window) {
+          window.documentPictureInPicture.window.close();
+        }
+      } catch (e) {}
+      setDocPipWindow(null);
       pipVideoRef.current = null;
       pipCanvasRef.current = null;
       enterPipRef.current = null;
@@ -2329,14 +2648,39 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     try {
       // Toggle screen share dynamically reading direct state to bypass state delay
       const isCurrentlySharing = localParticipant.isScreenShareEnabled;
-      await localParticipant.setScreenShareEnabled(!isCurrentlySharing);
-
-      // Öğretmen ekran/pencere paylaşımını başlattığında küçük masaüstü penceresini (PiP) otomatik tetikle
       if (!isCurrentlySharing) {
-        setTimeout(() => {
+        // Öğretmen ekran paylaşımı başlattığında:
+        // Chrome/Edge'de Document PiP doğrudan bu kullanıcı tıklama olayında (user gesture) tetiklenmeli
+        let openedWin = null;
+        if ('documentPictureInPicture' in window && !docPipWindow) {
+          try {
+            openedWin = await window.documentPictureInPicture.requestWindow({
+              width: 560,
+              height: 380,
+            });
+            setupDocPipWindow(openedWin);
+          } catch (e) {
+            console.warn("Could not pre-open Document PiP on screen share click:", e);
+          }
+        }
+
+        try {
+          await localParticipant.setScreenShareEnabled(true);
+        } catch (shareErr) {
+          // Kullanıcı ekran seçme diyaloğunu iptal ederse açılan pencereyi kapat
+          if (openedWin) {
+            try { openedWin.close(); } catch (e) {}
+            setDocPipWindow(null);
+            setIsPipActive(false);
+          }
+          throw shareErr;
+        }
+
+        if (!openedWin) {
           enterPip();
-        }, 600);
+        }
       } else {
+        await localParticipant.setScreenShareEnabled(false);
         exitPip();
       }
     } catch (err) {
@@ -3583,117 +3927,26 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         />
       )}
 
-      {/* Teacher Floating Action Bar (Fixed in bottom-right during screen share) */}
-      {isTeacherRole && isScreenSharing && (
-        <div 
-          className="fixed bottom-24 right-5 z-[9990] flex items-center gap-1.5 p-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200 select-none"
-          style={{ maxWidth: 'calc(100vw - 30px)' }}
-        >
-          {/* Katılımcılar */}
-          <button
-            onClick={() => {
-              setShowParticipants((p) => !p);
-              setShowChat(false);
-            }}
-            title={`Katılımcılar (${studentParticipants.length} Öğrenci)`}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-              showParticipants
-                ? 'bg-primary text-slate-950 font-black shadow-sm'
-                : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px]">groups</span>
-            <span className="hidden sm:inline">Katılımcılar</span>
-            <span className="bg-slate-950/60 px-1 py-0.2 rounded text-[9px] font-black">
-              {studentParticipants.length}
-            </span>
-          </button>
-
-          {/* Sohbet */}
-          <button
-            onClick={toggleChat}
-            title="Sohbet"
-            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-              showChat
-                ? 'bg-primary text-slate-950 font-black shadow-sm'
-                : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px]">chat</span>
-            <span className="hidden sm:inline">Sohbet</span>
-            {hasUnreadChat && !showChat && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-slate-900 animate-pulse"></span>
-            )}
-          </button>
-
-          {/* Mikrofon */}
-          <button
-            onClick={toggleMicrophone}
-            title={isMicrophoneEnabled ? "Mikrofonu Kapat" : "Mikrofonu Aç"}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-              isMicrophoneEnabled
-                ? 'bg-slate-800/90 text-slate-300 hover:bg-red-500/80 hover:text-white border border-slate-700/60'
-                : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px]">
-              {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-            </span>
-            <span className="hidden md:inline">{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
-          </button>
-
-          {/* Kamera */}
-          <button
-            onClick={toggleCamera}
-            title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-              isCameraEnabled
-                ? 'bg-slate-800/90 text-slate-300 hover:bg-red-500/80 hover:text-white border border-slate-700/60'
-                : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px]">
-              {isCameraEnabled ? 'videocam' : 'videocam_off'}
-            </span>
-            <span className="hidden md:inline">{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
-          </button>
-
-          {/* 5 Dk Mola */}
-          <button
-            onClick={() => startBreakTeacher(5)}
-            title="5 Dakika Mola Başlat"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40"
-          >
-            <span className="material-symbols-outlined text-[15px]">free_breakfast</span>
-            <span className="hidden sm:inline">5 Dk Mola</span>
-          </button>
-
-          {/* Masaüstüne Al (PiP) */}
-          <button
-            onClick={togglePip}
-            title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç"}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
-              isPipActive
-                ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px]">
-              {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
-            </span>
-            <span className="hidden sm:inline">{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
-          </button>
-
-          {/* Paylaşımı Durdur */}
-          <button
-            onClick={toggleScreenShare}
-            title="Ekran Paylaşımını Bitir"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[15px]">stop_screen_share</span>
-            <span className="hidden sm:inline">Paylaşımı Durdur</span>
-          </button>
-        </div>
+      {/* Desktop Document Picture-in-Picture Floating Window Portal */}
+      {docPipWindow && createPortal(
+        <DesktopPipWindow
+          pipCanvasRef={pipCanvasRef}
+          isMicrophoneEnabled={isMicrophoneEnabled}
+          isCameraEnabled={isCameraEnabled}
+          toggleMicrophone={toggleMicrophone}
+          toggleCamera={toggleCamera}
+          studentParticipants={studentParticipants}
+          teacherParticipant={teacherParticipant}
+          muteParticipantTrack={muteParticipantTrack}
+          mutingParticipant={mutingParticipant}
+          chatMessages={chatMessages}
+          sendChatMessage={sendChatMessage}
+          chatInput={chatInput}
+          setChatInput={setChatInput}
+          startBreakTeacher={startBreakTeacher}
+          toggleScreenShare={toggleScreenShare}
+        />,
+        docPipWindow.document.body
       )}
     </div>
   );
