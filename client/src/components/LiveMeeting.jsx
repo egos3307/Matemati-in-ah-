@@ -728,28 +728,28 @@ const DesktopPipWindow = ({
       </div>
 
       {/* Alt Kontrol Çubuğu: Doğrudan Masaüstü Penceresinde Sabit Menü */}
-      <div style={{ height: '46px', background: '#0f172a', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', gap: '6px', flexShrink: 0 }}>
+      <div style={{ height: '42px', background: '#0f172a', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', gap: '4px', flexShrink: 0 }}>
         
         {/* Sol: Katılımcılar & Sohbet */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={() => setActiveOverlay(activeOverlay === 'participants' ? null : 'participants')}
             title="Katılımcı Listesi ve Ses Yönetimi"
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               background: activeOverlay === 'participants' ? '#2563eb' : '#1e293b',
               color: activeOverlay === 'participants' ? '#ffffff' : '#cbd5e1',
               border: '1px solid #334155'
             }}
           >
-            👥 Katılımcılar ({studentParticipants.length})
+            👥 Katılımcı ({studentParticipants.length})
           </button>
 
           <button
             onClick={() => setActiveOverlay(activeOverlay === 'chat' ? null : 'chat')}
             title="Canlı Sohbet"
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               background: activeOverlay === 'chat' ? '#2563eb' : '#1e293b',
               color: activeOverlay === 'chat' ? '#ffffff' : '#cbd5e1',
               border: '1px solid #334155'
@@ -760,56 +760,56 @@ const DesktopPipWindow = ({
         </div>
 
         {/* Orta: Mikrofon, Kamera, Mola */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={toggleMicrophone}
             title={isMicrophoneEnabled ? "Mikrofonu Kapat" : "Mikrofonu Aç"}
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               background: isMicrophoneEnabled ? '#1e293b' : 'rgba(239, 68, 68, 0.2)',
               color: isMicrophoneEnabled ? '#e2e8f0' : '#ef4444',
               border: isMicrophoneEnabled ? '1px solid #334155' : '1px solid rgba(239, 68, 68, 0.4)'
             }}
           >
-            {isMicrophoneEnabled ? '🎤 Mikrofon' : '🔇 Sessiz'}
+            {isMicrophoneEnabled ? '🎤 Mic' : '🔇 Sessiz'}
           </button>
 
           <button
             onClick={toggleCamera}
             title={isCameraEnabled ? "Kamerayı Kapat" : "Kamerayı Aç"}
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               background: isCameraEnabled ? '#1e293b' : 'rgba(239, 68, 68, 0.2)',
               color: isCameraEnabled ? '#e2e8f0' : '#ef4444',
               border: isCameraEnabled ? '1px solid #334155' : '1px solid rgba(239, 68, 68, 0.4)'
             }}
           >
-            {isCameraEnabled ? '📹 Kamera' : '📷 Kapalı'}
+            {isCameraEnabled ? '📹 Cam' : '📷 Kapalı'}
           </button>
 
           <button
             onClick={() => startBreakTeacher(5)}
             title="5 Dakika Mola Başlat"
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
               background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)'
             }}
           >
-            ☕ 5 Dk Mola
+            ☕ Mola
           </button>
         </div>
 
         {/* Sağ: Paylaşımı Durdur */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={toggleScreenShare}
             title="Ekran Paylaşımını Bitir"
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 9px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap',
               background: '#dc2626', color: '#ffffff', border: 'none', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
             }}
           >
-            ⏹ Paylaşımı Durdur
+            ⏹ Durdur
           </button>
         </div>
 
@@ -2115,8 +2115,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if ('documentPictureInPicture' in window) {
         try {
           const pipWin = await window.documentPictureInPicture.requestWindow({
-            width: 560,
-            height: 380,
+            width: 460,
+            height: 300,
           });
           setupDocPipWindow(pipWin);
           return;
@@ -2655,8 +2655,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         if ('documentPictureInPicture' in window && !docPipWindow) {
           try {
             openedWin = await window.documentPictureInPicture.requestWindow({
-              width: 560,
-              height: 380,
+              width: 460,
+              height: 300,
             });
             setupDocPipWindow(openedWin);
           } catch (e) {
