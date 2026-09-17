@@ -550,9 +550,72 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 
+// 1.5 DOĞRUDAN WEBRTC KAMERA OYNATICI (SIFIR GECİKME / HARDWARE ACCELERATED)
+const PipDirectVideo = ({ trackRef, isLocal = false, altInitial = '?', name = '', isTeacher = false }) => {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const msTrack = trackRef?.publication?.track?.mediaStreamTrack 
+      || trackRef?.track?.mediaStreamTrack 
+      || trackRef?.publication?.videoTrack?.mediaStreamTrack;
+
+    if (msTrack) {
+      const stream = new MediaStream([msTrack]);
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {});
+    } else if (trackRef?.track && typeof trackRef.track.attach === 'function') {
+      try { trackRef.track.attach(videoEl); } catch (e) {}
+    } else {
+      videoEl.srcObject = null;
+    }
+
+    return () => {
+      if (trackRef?.track && typeof trackRef.track.detach === 'function') {
+        try { trackRef.track.detach(videoEl); } catch (e) {}
+      }
+      if (videoEl) {
+        videoEl.srcObject = null;
+      }
+    };
+  }, [trackRef, trackRef?.publication?.track?.mediaStreamTrack, trackRef?.track?.mediaStreamTrack]);
+
+  if (!trackRef) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#090d16', padding: '4px' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isTeacher ? 'rgba(249, 115, 22, 0.2)' : '#1e293b', color: isTeacher ? '#f97316' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '12px' }}>
+          {altInitial}
+        </div>
+        <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 700, marginTop: '3px', maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {name}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        display: 'block',
+        transform: isLocal ? 'scaleX(-1)' : undefined
+      }}
+    />
+  );
+};
+
 // 1.5 MASAÜSTÜ KÜÇÜK PENCERE (DOCUMENT PICTURE-IN-PICTURE PANEL)
 const DesktopPipWindow = ({
-  pipCanvasRef,
+  cameraTracks = [],
+  teacherTrackRef,
   isMicrophoneEnabled,
   isCameraEnabled,
   toggleMicrophone,
@@ -569,7 +632,6 @@ const DesktopPipWindow = ({
   meetingStartTime,
 }) => {
   const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
-  const videoRef = useRef(null);
   const chatEndRef = useRef(null);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(() => {
@@ -599,25 +661,6 @@ const DesktopPipWindow = ({
   };
 
   useEffect(() => {
-    let checkInterval = null;
-    const attachStream = () => {
-      if (pipCanvasRef.current && videoRef.current) {
-        if (!videoRef.current.srcObject) {
-          const stream = pipCanvasRef.current.captureStream(24);
-          videoRef.current.srcObject = stream;
-        }
-        videoRef.current.play().catch(() => {});
-      }
-    };
-
-    attachStream();
-    checkInterval = setInterval(attachStream, 1000);
-    return () => {
-      if (checkInterval) clearInterval(checkInterval);
-    };
-  }, [pipCanvasRef]);
-
-  useEffect(() => {
     if (activeOverlay === 'chat') {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
@@ -626,15 +669,86 @@ const DesktopPipWindow = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: '#080b11', color: '#f8fafc', overflow: 'hidden', userSelect: 'none', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       
-      {/* Üst Kısım: Otomatik Boyutlanan 50/50 Kamera Akışı (Windows boyutu değiştikçe pürüzsüz ölçeklenir) */}
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', width: '100%', background: '#080b11', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#080b11' }}
-        />
+      {/* Üst Kısım: Doğrudan WebRTC Donanım Akışlı 50/50 Kamera Alanı (Gecikmesiz) */}
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', width: '100%', background: '#080b11', display: 'flex', gap: '4px', padding: '4px', overflow: 'hidden' }}>
+        
+        {/* SOL YARI (%50): Öğretmen Kamerası */}
+        <div style={{ width: '50%', height: '100%', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#090d16', border: '1px solid rgba(249, 115, 22, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <PipDirectVideo
+            trackRef={teacherTrackRef}
+            isLocal={teacherParticipant?.isLocal}
+            altInitial={teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
+            name={teacherParticipant?.name || 'Öğretmen'}
+            isTeacher={true}
+          />
+
+          {/* Öğretmen Rozeti */}
+          <div style={{ position: 'absolute', top: '4px', left: '4px', background: '#f97316', color: '#0a1628', padding: '1px 5px', borderRadius: '4px', fontSize: '8px', fontWeight: 900, letterSpacing: '0.05em', zIndex: 10 }}>
+            ÖĞRETMEN
+          </div>
+
+          {/* Speaking Indicator */}
+          {teacherParticipant?.isSpeaking && (
+            <div style={{ position: 'absolute', top: '4px', right: '4px', background: '#f97316', color: '#0a1628', borderRadius: '50%', width: '14px', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', zIndex: 10 }}>
+              🔊
+            </div>
+          )}
+
+          {/* Name tag */}
+          <div style={{ position: 'absolute', bottom: '3px', left: '3px', right: '3px', background: 'rgba(0, 0, 0, 0.75)', padding: '2px 5px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 10 }}>
+            {teacherParticipant?.name || 'Öğretmen'} {teacherParticipant?.isLocal ? '(Sen)' : ''}
+          </div>
+        </div>
+
+        {/* SAĞ YARI (%50): Öğrenciler Bölümü */}
+        <div style={{ width: '50%', height: '100%', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#090d16', display: 'flex', flexDirection: 'column' }}>
+          {studentParticipants.length === 0 ? (
+            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '10px', fontWeight: 700, border: '1px solid #1e293b', borderRadius: '8px' }}>
+              👥 Öğrenci Bekleniyor
+            </div>
+          ) : (
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'grid',
+              gap: '3px',
+              gridTemplateColumns: studentParticipants.length <= 2 ? '1fr' : '1fr 1fr',
+              gridTemplateRows: studentParticipants.length === 1 ? '1fr' : '1fr 1fr'
+            }}>
+              {studentParticipants.slice(0, 4).map((student) => {
+                const sTrackRef = cameraTracks?.find((t) => t.participant.identity === student.identity);
+                const sInitial = student.name ? student.name.charAt(0).toUpperCase() : student.identity.charAt(0).toUpperCase();
+
+                return (
+                  <div
+                    key={student.identity}
+                    style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '6px', overflow: 'hidden', background: '#0b111e', border: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <PipDirectVideo
+                      trackRef={sTrackRef}
+                      isLocal={student.isLocal}
+                      altInitial={sInitial}
+                      name={student.name || student.identity}
+                      isTeacher={false}
+                    />
+
+                    {/* Speaking indicator */}
+                    {student.isSpeaking && (
+                      <div style={{ position: 'absolute', top: '3px', right: '3px', background: '#f97316', color: '#0a1628', borderRadius: '50%', width: '12px', height: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', fontWeight: 'bold', zIndex: 10 }}>
+                        🔊
+                      </div>
+                    )}
+
+                    {/* Name tag */}
+                    <div style={{ position: 'absolute', bottom: '2px', left: '2px', right: '2px', background: 'rgba(0, 0, 0, 0.75)', padding: '1px 4px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 10 }}>
+                      {student.name || student.identity}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Katılımcılar Overlay */}
         {activeOverlay === 'participants' && (
@@ -2246,6 +2360,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   // Picture-in-Picture logic for background screen sharing
   useEffect(() => {
     let animationFrameId;
+    let bgDrawInterval;
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 360; // Standard 16:9 canvas size for dual feed or single feed
@@ -2495,6 +2610,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       drawFrame();
     }
     
+    bgDrawInterval = setInterval(() => {
+      if (document.hidden && isScreenSharing) {
+        drawFrame();
+      }
+    }, 50);
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
@@ -2502,6 +2623,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       pipVideo.removeEventListener('enterpictureinpicture', handleEnterPiP);
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
+      }
+      if (bgDrawInterval) {
+        clearInterval(bgDrawInterval);
       }
       if (pipVideo.srcObject) {
         pipVideo.srcObject.getTracks().forEach(track => track.stop());
@@ -4005,7 +4129,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       {/* Desktop Document Picture-in-Picture Floating Window Portal */}
       {docPipWindow && createPortal(
         <DesktopPipWindow
-          pipCanvasRef={pipCanvasRef}
+          cameraTracks={cameraTracks}
+          teacherTrackRef={teacherTrackRef}
           isMicrophoneEnabled={isMicrophoneEnabled}
           isCameraEnabled={isCameraEnabled}
           toggleMicrophone={toggleMicrophone}
