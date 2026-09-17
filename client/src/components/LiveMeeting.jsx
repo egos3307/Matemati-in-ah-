@@ -1805,6 +1805,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
+  // Picture-in-Picture state & refs
+  const pipVideoRef = useRef(null);
+  const pipCanvasRef = useRef(null);
+  const [isPipActive, setIsPipActive] = useState(false);
+  const enterPipRef = useRef(null);
+  const exitPipRef = useRef(null);
+
+  const enterPip = () => enterPipRef.current?.();
+  const exitPip = () => exitPipRef.current?.();
+  const togglePip = () => {
+    if (document.pictureInPictureElement) {
+      exitPip();
+    } else {
+      enterPip();
+    }
+  };
+
   // Dragging state for camera feeds when screen sharing is active
   const [floatingPos, setFloatingPos] = useState({ 
     x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 490) : 100, 
@@ -1873,11 +1890,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     canvas.height = 360; // Standard 16:9 canvas size for dual feed or single feed
     const ctx = canvas.getContext('2d');
     
+    pipCanvasRef.current = canvas;
+    
     const pipVideo = document.createElement('video');
     pipVideo.muted = true;
     pipVideo.playsInline = true;
     pipVideo.style.display = 'none';
     document.body.appendChild(pipVideo);
+    pipVideoRef.current = pipVideo;
 
     const drawFrame = () => {
       // Clear canvas with dark slate background matching app theme
@@ -2031,42 +2051,57 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       animationFrameId = requestAnimationFrame(drawFrame);
     };
 
-    const handleVisibilityChange = async () => {
-      // Only enter PiP if screen share is currently active (meaning the user is sharing screen/presenting)
-      if (!isScreenSharing) return;
-
-      if (document.visibilityState === 'hidden') {
-        try {
-          drawFrame();
-          const stream = canvas.captureStream(15); // 15 fps
+    const enterPip = async () => {
+      try {
+        if (!pipVideo || !canvas) return;
+        drawFrame();
+        if (!pipVideo.srcObject) {
+          const stream = canvas.captureStream(15);
           pipVideo.srcObject = stream;
-          await pipVideo.play();
-          if (document.pictureInPictureEnabled) {
-            await pipVideo.requestPictureInPicture();
-            console.log('Entered PiP stream successfully');
-          }
-        } catch (err) {
-          console.warn('Failed to enter PiP:', err);
         }
-      } else {
-        if (document.pictureInPictureElement) {
-          try {
-            await document.exitPictureInPicture();
-          } catch (err) {
-            console.warn('Failed to exit PiP:', err);
-          }
+        await pipVideo.play();
+        if (document.pictureInPictureEnabled && document.pictureInPictureElement !== pipVideo) {
+          await pipVideo.requestPictureInPicture();
+          setIsPipActive(true);
+          console.log('Entered PiP stream successfully');
         }
-        if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-        }
-        if (pipVideo.srcObject) {
-          pipVideo.srcObject.getTracks().forEach(track => track.stop());
-          pipVideo.srcObject = null;
-        }
+      } catch (err) {
+        console.warn('enterPip warning:', err);
       }
     };
 
+    const exitPip = async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        }
+        setIsPipActive(false);
+      } catch (err) {
+        console.warn('exitPip warning:', err);
+      }
+    };
+
+    enterPipRef.current = enterPip;
+    exitPipRef.current = exitPip;
+
+    const handleVisibilityChange = async () => {
+      if (!isScreenSharing) return;
+
+      if (document.visibilityState === 'hidden') {
+        enterPip();
+      } else {
+        exitPip();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Windows'ta pencere paylaşırken öğretmen Chrome dışındaki programa (PDF vb.) tıkladığında blur tetiklenir
+      if (!isScreenSharing) return;
+      enterPip();
+    };
+
     const handleLeavePiP = () => {
+      setIsPipActive(false);
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
@@ -2076,12 +2111,24 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       }
     };
 
+    const handleEnterPiP = () => {
+      setIsPipActive(true);
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
     pipVideo.addEventListener('leavepictureinpicture', handleLeavePiP);
+    pipVideo.addEventListener('enterpictureinpicture', handleEnterPiP);
+
+    if (isScreenSharing) {
+      drawFrame();
+    }
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
       pipVideo.removeEventListener('leavepictureinpicture', handleLeavePiP);
+      pipVideo.removeEventListener('enterpictureinpicture', handleEnterPiP);
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
@@ -2091,6 +2138,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       if (pipVideo.parentNode) {
         pipVideo.parentNode.removeChild(pipVideo);
       }
+      pipVideoRef.current = null;
+      pipCanvasRef.current = null;
+      enterPipRef.current = null;
+      exitPipRef.current = null;
     };
   }, [isScreenSharing]);
 
@@ -2276,6 +2327,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       // Toggle screen share dynamically reading direct state to bypass state delay
       const isCurrentlySharing = localParticipant.isScreenShareEnabled;
       await localParticipant.setScreenShareEnabled(!isCurrentlySharing);
+
+      // Öğretmen ekran/pencere paylaşımını başlattığında küçük masaüstü penceresini (PiP) otomatik tetikle
+      if (!isCurrentlySharing) {
+        setTimeout(() => {
+          enterPip();
+        }, 600);
+      } else {
+        exitPip();
+      }
     } catch (err) {
       console.error("Screen share toggle failed:", err);
       
@@ -2635,7 +2695,26 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       <span className="material-symbols-outlined text-[13px] text-primary">groups</span>
                       <span>Kameralar (1 Öğretmen + {studentParticipants.length} Öğrenci)</span>
                     </span>
-                    <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePip();
+                        }}
+                        title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç (Diğer programların üstünde gösterir)"}
+                        className={`no-drag flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                          isPipActive
+                            ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[11px]">
+                          {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
+                        </span>
+                        <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
+                      </button>
+                      <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
+                    </div>
                   </div>
 
                   {/* Kamera ve Mikrofon kontrol butonları (Local user) */}
@@ -3359,6 +3438,24 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </span>
             <span className="hidden md:inline">{isLocalScreenSharing ? 'Paylaşımı Durdur' : 'Ekran Paylaş'}</span>
           </button>
+
+          {/* PiP Floating Window Button for desktop overlay */}
+          {isScreenSharing && (
+            <button
+              onClick={togglePip}
+              title={isPipActive ? "Masaüstü Penceresini Kapat" : "Masaüstü Küçük Penceresini Aç (Diğer programların üstünde göster)"}
+              className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer shadow-md hover:scale-102 ${
+                isPipActive
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-400 font-extrabold shadow-amber-500/20'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-750'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">
+                {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
+              </span>
+              <span className="hidden md:inline">{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al (PiP)'}</span>
+            </button>
+          )}
 
           {/* Leave Button */}
           <button 
