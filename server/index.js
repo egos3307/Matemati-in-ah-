@@ -4621,8 +4621,8 @@ app.post('/api/livekit/end-break', auth, checkRole('TEACHER'), async (req, res) 
   res.json({ success: true, breakActive: false });
 });
 
-// Derse yeni katılan / yenileyen kullanıcının mola durumunu sorgulaması
-app.get('/api/livekit/break-status', auth, async (req, res) => {
+// Derse yeni katılan / yenileyen kullanıcının mola durumunu sorgulaması (herkes sorgulayabilir)
+app.get('/api/livekit/break-status', async (req, res) => {
   const { roomName } = req.query;
   if (!roomName) {
     return res.status(400).json({ error: 'Oda adı (roomName) gereklidir.' });

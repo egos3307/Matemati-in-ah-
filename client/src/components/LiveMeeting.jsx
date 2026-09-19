@@ -673,6 +673,9 @@ const DesktopPipWindow = React.memo(({
   setChatInput,
   toggleScreenShare,
   meetingStartTime,
+  breakActive = false,
+  startBreakTeacher,
+  endBreakTeacher,
 }) => {
   const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
   const chatEndRef = useRef(null);
@@ -946,6 +949,26 @@ const DesktopPipWindow = React.memo(({
 
           {/* Ders Başlangıcından İtibaren Canlı Sayaç (İzole, Re-render Önleyici) */}
           <PipTimer meetingStartTime={meetingStartTime} />
+
+          {/* Mola Başlat / Bitir Butonu */}
+          <button
+            onClick={() => {
+              if (breakActive) {
+                endBreakTeacher?.();
+              } else {
+                startBreakTeacher?.(5);
+              }
+            }}
+            title={breakActive ? "Molayı Bitir" : "5 Dakika Mola Başlat"}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 7px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: breakActive ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.2)',
+              color: breakActive ? '#ef4444' : '#f59e0b',
+              border: breakActive ? '1px solid #ef4444' : '1px solid rgba(245, 158, 11, 0.4)'
+            }}
+          >
+            {breakActive ? '⏹ Bitir' : '☕ Mola'}
+          </button>
         </div>
 
         {/* Sağ: Paylaşımı Durdur */}
@@ -1035,6 +1058,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     setBreakActive(true);
     setShowBreakMenu(false);
 
+    // Mola başladığında masaüstü Document PiP penceresi açıksa kapat ve tam ekran mola ekranına odaklan
+    if (docPipWindowRef.current) {
+      try {
+        docPipWindowRef.current.close();
+      } catch (e) {}
+      docPipWindowRef.current = null;
+      setDocPipWindow(null);
+      setIsPipActive(false);
+    }
+
     // 1. Mute & stop local microphone
     if (localParticipant) {
       try {
@@ -1095,41 +1128,57 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       alert('Lütfen geçerli bir mola süresi girin.');
       return;
     }
+    const durationSec = Math.round(mins * 60);
+    const calculatedEndsAt = Date.now() + durationSec * 1000;
+
+    // 1. Öğretmenin ekranında mola anında açılsın (gecikmesiz optimistic açılış)
+    applyStartBreak(calculatedEndsAt, durationSec);
+
     const roomName = `lesson_${lessonId}`;
     try {
+      const tokenVal = localStorage.getItem('token');
+      const authHeader = tokenVal ? { Authorization: `Bearer ${tokenVal}` } : {};
       const res = await axios.post('/api/livekit/start-break', {
         roomName,
         durationMinutes: mins
-      });
-      if (res.data && res.data.success) {
+      }, { headers: authHeader });
+
+      const finalEndsAt = res.data?.breakEndsAt || calculatedEndsAt;
+      const finalDuration = res.data?.breakDuration || durationSec;
+
+      // 2. Diğer katılımcılara (öğrencilere) veri kanalı üzerinden mola paketini gönder
+      try {
         const packet = {
           type: 'START_BREAK',
-          breakEndsAt: res.data.breakEndsAt,
-          breakDuration: res.data.breakDuration
+          breakEndsAt: finalEndsAt,
+          breakDuration: finalDuration
         };
         const encoder = new TextEncoder();
         sendBreakData(encoder.encode(JSON.stringify(packet)), { reliable: true });
-        applyStartBreak(res.data.breakEndsAt, res.data.breakDuration);
+      } catch (sendErr) {
+        console.warn('[MOLA] Data channel send uyarısı:', sendErr);
       }
     } catch (err) {
-      console.error('Mola başlatma hatası:', err);
-      alert('Mola başlatılamadı: ' + (err.response?.data?.error || err.message));
+      console.warn('[MOLA] Backend start-break sync uyarısı:', err);
     }
   };
 
   const endBreakTeacher = async () => {
+    // 1. Öğretmenin ekranında molayı anında bitir
+    applyEndBreak();
+
     const roomName = `lesson_${lessonId}`;
     try {
-      const res = await axios.post('/api/livekit/end-break', { roomName });
-      if (res.data && res.data.success) {
+      const tokenVal = localStorage.getItem('token');
+      const authHeader = tokenVal ? { Authorization: `Bearer ${tokenVal}` } : {};
+      await axios.post('/api/livekit/end-break', { roomName }, { headers: authHeader });
+      try {
         const packet = { type: 'END_BREAK' };
         const encoder = new TextEncoder();
         sendBreakData(encoder.encode(JSON.stringify(packet)), { reliable: true });
-        applyEndBreak();
-      }
+      } catch (dataErr) {}
     } catch (err) {
-      console.error('Mola bitirme hatası:', err);
-      applyEndBreak();
+      console.warn('[MOLA] Backend end-break sync uyarısı:', err);
     }
   };
 
@@ -1156,7 +1205,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             setBreakActive(false);
           }
         } else {
-          setBreakActive(false);
+          // Öğretmenin yerel olarak başlattığı aktif molayı sunucu gecikmesinde kapatma
+          if (!isTeacherRole || !breakEndsAtRef.current || Date.now() >= breakEndsAtRef.current) {
+            setBreakActive(false);
+          }
         }
       } catch (err) {
         console.warn('Break status polling error:', err);
@@ -1166,7 +1218,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     pollBreakStatus();
     const interval = setInterval(pollBreakStatus, 3000);
     return () => clearInterval(interval);
-  }, [lessonId, localParticipant, isMicrophoneEnabled, isCameraEnabled]);
+  }, [lessonId, localParticipant, isMicrophoneEnabled, isCameraEnabled, isTeacherRole]);
 
   const muteParticipantTrack = async (participant, trackType) => {
     const tracks = trackType === 'audio' ? micTracks : cameraTracks;
@@ -4219,6 +4271,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           setChatInput={setChatInput}
           toggleScreenShare={toggleScreenShare}
           meetingStartTime={meetingStartTime}
+          breakActive={breakActive}
+          startBreakTeacher={startBreakTeacher}
+          endBreakTeacher={endBreakTeacher}
         />,
         docPipWindow.document.body
       )}

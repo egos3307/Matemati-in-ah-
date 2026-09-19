@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -86,9 +87,33 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  return (
+  const mountTarget = (typeof document !== 'undefined' && document.fullscreenElement) 
+    ? document.fullscreenElement 
+    : (typeof document !== 'undefined' ? document.body : null);
+
+  if (!mountTarget) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[999999] bg-black overflow-hidden flex flex-col justify-between select-none font-sans break-overlay-container touch-none"
+      className="break-overlay-container"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#000000',
+        zIndex: 2147483647, // En yüksek z-index: Her şeyin, tüm menü ve modalların üzerinde tam ekran
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        userSelect: 'none',
+        fontFamily: 'sans-serif',
+        touchAction: 'none'
+      }}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -103,7 +128,18 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       />
 
       {/* Fullscreen Video Container */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden bg-black pointer-events-none">
+      <div 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          backgroundColor: '#000000',
+          pointerEvents: 'none'
+        }}
+      >
         {/* Main Background Video: sonvideo.mp4 (Loops from break start until last 10s) */}
         <video
           ref={mainVideoRef}
@@ -115,9 +151,17 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
           controls={false}
           disablePictureInPicture
           onContextMenu={(e) => e.preventDefault()}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            isLast10Seconds ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'opacity 300ms ease',
+            opacity: isLast10Seconds ? 0 : 1,
+            pointerEvents: 'none'
+          }}
         />
 
         {/* Ending Video: ilkvideo.mp4 (Plays once in the last 10s) */}
@@ -130,24 +174,46 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
           controls={false}
           disablePictureInPicture
           onContextMenu={(e) => e.preventDefault()}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-            isLast10Seconds ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'opacity 300ms ease',
+            opacity: isLast10Seconds ? 1 : 0,
+            pointerEvents: 'none'
+          }}
         />
       </div>
 
       {/* Header Overlay: PIXEL MOLA TEXT & TIMER */}
-      <div className="relative z-10 w-full px-4 sm:px-8 py-4 sm:py-6 flex items-start justify-between pointer-events-none">
+      <div 
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          width: '100%',
+          padding: '24px 32px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          pointerEvents: 'none',
+          boxSizing: 'border-box'
+        }}
+      >
         {/* Left Spacer to balance flex layout */}
-        <div className="w-20 sm:w-32 hidden sm:block"></div>
+        <div style={{ width: '100px', display: 'none' }} className="sm:block" />
 
         {/* Top Center: Retro Pixel "MOLA" */}
-        <div className="flex-1 flex justify-center">
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <h1
-            className="font-pixel text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-[#ff6600] tracking-widest uppercase"
+            className="font-pixel text-3xl sm:text-5xl md:text-6xl text-[#ff6600] tracking-widest uppercase"
             style={{
               textShadow:
-                '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 15px rgba(255, 102, 0, 0.6)',
+                '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 20px rgba(255, 102, 0, 0.7)',
+              margin: 0,
+              fontFamily: '"Press Start 2P", monospace, cursive, sans-serif'
             }}
           >
             MOLA
@@ -155,12 +221,13 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
         </div>
 
         {/* Top Right: Retro Pixel Counter */}
-        <div className="flex items-center">
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <span
-            className="font-pixel text-xl sm:text-3xl md:text-4xl lg:text-5xl text-[#ff6600] tracking-wider"
+            className="font-pixel text-2xl sm:text-4xl md:text-5xl text-[#ff6600] tracking-wider"
             style={{
               textShadow:
-                '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 15px rgba(255, 102, 0, 0.6)',
+                '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 20px rgba(255, 102, 0, 0.7)',
+              fontFamily: '"Press Start 2P", monospace, cursive, sans-serif'
             }}
           >
             {formatTime(remainingSeconds)}
@@ -171,21 +238,43 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       {/* Bottom Floating Control for Teacher ONLY */}
       {isTeacher && (
         <div
-          className="relative z-10 p-4 sm:p-6 flex justify-center pointer-events-auto"
+          style={{
+            position: 'relative',
+            zIndex: 20,
+            padding: '24px',
+            display: 'flex',
+            justifyContent: 'center',
+            pointerEvents: 'auto'
+          }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
           <button
             onClick={onEndBreak}
-            className="bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl shadow-2xl border border-red-400/40 flex items-center gap-2 transition-all cursor-pointer backdrop-blur-md"
+            style={{
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              fontWeight: 900,
+              fontSize: '14px',
+              padding: '12px 28px',
+              borderRadius: '16px',
+              border: '2px solid rgba(239, 68, 68, 0.6)',
+              boxShadow: '0 10px 25px -5px rgba(220, 38, 38, 0.5), 0 8px 10px -6px rgba(220, 38, 38, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              letterSpacing: '0.05em'
+            }}
           >
-            <span className="material-symbols-outlined text-base sm:text-lg">stop_circle</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>stop_circle</span>
             MOLAYI BİTİR
           </button>
         </div>
       )}
-    </div>
+    </div>,
+    mountTarget
   );
 };
 

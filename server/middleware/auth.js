@@ -23,7 +23,7 @@ const auth = (req, res, next) => {
 
 const checkRole = (role) => {
   return (req, res, next) => {
-    if (role === 'TEACHER' && (req.user.role === 'TEACHER' || req.user.role === 'HEAD_TEACHER')) {
+    if (role === 'TEACHER' && (req.user.role === 'TEACHER' || req.user.role === 'HEAD_TEACHER' || req.user.role === 'ADMIN')) {
       return next();
     }
     if (req.user.role !== role) {
