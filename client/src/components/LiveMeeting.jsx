@@ -2820,6 +2820,68 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
+  // Öğrenci ekranındaki yüzen kamera kutusu ölçeklendirme durumu (1.0x - 2.5x)
+  const [studentCamScale, setStudentCamScale] = useState(1.0);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef({ x: 0, scale: 1.0 });
+
+  const handleResizeStart = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    resizeStartRef.current = {
+      x: clientX,
+      scale: studentCamScale
+    };
+  };
+
+  const handleResizeClick = (e) => {
+    e.stopPropagation();
+    // Tıklandığında boyut döngüsü: 1.0x (normal) -> 1.75x (orta) -> 2.5x (büyük) -> 1.0x
+    setStudentCamScale((prev) => {
+      if (prev < 1.4) return 1.75;
+      if (prev < 2.2) return 2.5;
+      return 1.0;
+    });
+  };
+
+  useEffect(() => {
+    const handleResizeMove = (e) => {
+      if (!isResizing) return;
+      if (e.touches && e.cancelable) {
+        e.preventDefault();
+      }
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const deltaX = clientX - resizeStartRef.current.x;
+      const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+      const baseWidth = isMobile ? 160 : 210;
+      const deltaScale = deltaX / baseWidth;
+      const nextScale = Math.max(1.0, Math.min(2.5, Number((resizeStartRef.current.scale + deltaScale).toFixed(2))));
+      setStudentCamScale(nextScale);
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+      window.addEventListener('touchmove', handleResizeMove, { passive: false });
+      window.addEventListener('touchend', handleResizeEnd);
+      window.addEventListener('touchcancel', handleResizeEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('touchmove', handleResizeMove);
+      window.removeEventListener('touchend', handleResizeEnd);
+      window.removeEventListener('touchcancel', handleResizeEnd);
+    };
+  }, [isResizing]);
+
   const handleMouseDown = (e) => {
     if (e.button !== 0 || e.target.closest('button') || e.target.closest('.no-drag')) return;
     setIsDragging(true);
@@ -2855,12 +2917,13 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       let newY = clientY - dragStart.current.y;
 
       const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+      const baseWidth = isMobile ? 160 : 210;
       const boxWidth = isTeacherRole 
         ? Math.min(380, window.innerWidth - 20) 
-        : (isMobile ? 160 : 210);
+        : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
       const boxHeight = isTeacherRole 
         ? 210 
-        : (isMobile ? 90 : 115);
+        : Math.round((isMobile ? 100 : 115) * studentCamScale);
       const minX = 6;
       const minY = 6;
       const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
@@ -2891,19 +2954,20 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       document.removeEventListener('touchend', handleMouseUp);
       document.removeEventListener('touchcancel', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, isTeacherRole, studentCamScale]);
 
   // Maintain floating window placement on window resize
   useEffect(() => {
     const handleResize = () => {
       setFloatingPos((prev) => {
         const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+        const baseWidth = isMobile ? 160 : 210;
         const boxWidth = isTeacherRole 
           ? Math.min(380, window.innerWidth - 20) 
-          : (isMobile ? 160 : 210);
+          : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
         const boxHeight = isTeacherRole 
           ? 210 
-          : (isMobile ? 90 : 115);
+          : Math.round((isMobile ? 100 : 115) * studentCamScale);
         const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
         const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
         return {
@@ -2914,7 +2978,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isTeacherRole, studentCamScale]);
 
   const toggleMicrophone = async () => {
     if (!localParticipant) return;
@@ -3371,7 +3435,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     top: `${floatingPos.y}px`,
                     width: isTeacherRole 
                       ? 'min(380px, calc(100vw - 20px))' 
-                      : (isMobileScreen ? 'min(160px, calc(100vw - 16px))' : 'min(210px, calc(100vw - 16px))'),
+                      : `min(${Math.round((isMobileScreen ? 160 : 210) * studentCamScale)}px, calc(100vw - 16px))`,
                   }}
                 >
                   {/* Header */}
@@ -3442,7 +3506,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                   )}
 
                   {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
-                  <div className={`flex gap-1.5 no-drag ${isTeacherRole ? 'h-[150px]' : 'h-[75px] md:h-[85px]'}`}>
+                  <div 
+                    className="flex gap-1.5 no-drag"
+                    style={{
+                      height: isTeacherRole 
+                        ? '150px' 
+                        : `${Math.round((isMobileScreen ? 75 : 85) * studentCamScale)}px`
+                    }}
+                  >
                     {/* SOL YARI (%50): Öğretmen Kamerası */}
                     <div 
                       className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
@@ -3472,14 +3543,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                         </div>
                       )}
 
-                      {/* Öğretmen Rozeti */}
-                      <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1 py-0.5 rounded text-[7px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
-                        <span className="material-symbols-outlined text-[8px]">school</span>
-                        <span>ÖĞRETMEN</span>
-                      </div>
+                      {/* Öğretmen Rozeti (Sadece Öğretmen Görünümünde) */}
+                      {isTeacherRole && (
+                        <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1 py-0.5 rounded text-[7px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
+                          <span className="material-symbols-outlined text-[8px]">school</span>
+                          <span>ÖĞRETMEN</span>
+                        </div>
+                      )}
 
-                      {/* Speaking indicator */}
-                      {teacherParticipant?.isSpeaking && (
+                      {/* Speaking indicator (Sadece Öğretmen Görünümünde) */}
+                      {isTeacherRole && teacherParticipant?.isSpeaking && (
                         <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
                           <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
                         </div>
@@ -3543,8 +3616,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                                   </div>
                                 )}
 
-                                {/* Speaking indicator */}
-                                {student.isSpeaking && (
+                                {/* Speaking indicator (Sadece Öğretmen Görünümünde) */}
+                                {isTeacherRole && student.isSpeaking && (
                                   <div className="absolute top-0.5 right-0.5 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
                                     <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
                                   </div>
@@ -3564,6 +3637,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                       )}
                     </div>
                   </div>
+
+                  {/* Boyutlandırma Tutamacı (Sağ Alt Köşe - Sadece Öğrenci) */}
+                  {!isTeacherRole && (
+                    <div
+                      onMouseDown={handleResizeStart}
+                      onTouchStart={handleResizeStart}
+                      onClick={handleResizeClick}
+                      className="no-drag absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-1 cursor-nwse-resize z-30 select-none group touch-none"
+                      title="Boyutlandırmak için sürükleyin veya tıklayın (1.0x - 2.5x)"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" className="text-slate-400 group-hover:text-amber-400 transition-colors pointer-events-none">
+                        <line x1="9" y1="2" x2="2" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <line x1="9" y1="5.5" x2="5.5" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <line x1="9" y1="9" x2="9" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
