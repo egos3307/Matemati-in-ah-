@@ -550,67 +550,80 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 
-// 1.5 DOĞRUDAN WEBRTC KAMERA OYNATICI (SIFIR GECİKME / HARDWARE ACCELERATED)
+// 1.5 DOĞRUDAN WEBRTC KAMERA OYNATICI (SIFIR GECİKME / HARDWARE ACCELERATED / TİTREMESİZ)
 const PipDirectVideo = React.memo(({ trackRef, isLocal = false, altInitial = '?', name = '', isTeacher = false }) => {
   const videoRef = useRef(null);
+  const currentTrackIdRef = useRef(null);
+
+  const track = trackRef?.publication?.track || trackRef?.track;
+  const msTrack = track?.mediaStreamTrack || trackRef?.publication?.videoTrack?.mediaStreamTrack;
+  const hasTrack = Boolean(msTrack);
 
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
-    const msTrack = trackRef?.publication?.track?.mediaStreamTrack 
-      || trackRef?.track?.mediaStreamTrack 
-      || trackRef?.publication?.videoTrack?.mediaStreamTrack;
-
-    if (msTrack) {
-      if (!videoEl.srcObject || videoEl.srcObject.getVideoTracks()[0] !== msTrack) {
-        const stream = new MediaStream([msTrack]);
-        videoEl.srcObject = stream;
-        videoEl.play().catch(() => {});
+    if (!msTrack) {
+      if (currentTrackIdRef.current) {
+        videoEl.srcObject = null;
+        currentTrackIdRef.current = null;
       }
-    } else if (trackRef?.track && typeof trackRef.track.attach === 'function') {
-      try { trackRef.track.attach(videoEl); } catch (e) {}
-    } else {
-      videoEl.srcObject = null;
+      return;
     }
 
+    // Eğer zaten bu track ID aktif oynuyorsa kesinlikle sıfırlama (5 saniyede bir olan titreşimi/yenilenmeyi engeller)
+    if (currentTrackIdRef.current === msTrack.id && videoEl.srcObject) {
+      return;
+    }
+
+    currentTrackIdRef.current = msTrack.id;
+
+    try {
+      const stream = new MediaStream([msTrack]);
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {});
+    } catch (e) {
+      console.warn("PipDirectVideo stream error:", e);
+    }
+  }, [msTrack?.id]);
+
+  useEffect(() => {
     return () => {
-      if (trackRef?.track && typeof trackRef.track.detach === 'function') {
-        try { trackRef.track.detach(videoEl); } catch (e) {}
-      }
-      if (videoEl) {
-        videoEl.srcObject = null;
+      // Sadece bileşen tamamen DOM'dan kaldırıldığında (unmount) temizle
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        currentTrackIdRef.current = null;
       }
     };
-  }, [trackRef, trackRef?.publication?.track?.mediaStreamTrack, trackRef?.track?.mediaStreamTrack]);
-
-  if (!trackRef) {
-    return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#090d16', padding: '4px' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isTeacher ? 'rgba(249, 115, 22, 0.2)' : '#1e293b', color: isTeacher ? '#f97316' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '12px' }}>
-          {altInitial}
-        </div>
-        <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 700, marginTop: '3px', maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {name}
-        </span>
-      </div>
-    );
-  }
+  }, []);
 
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted
-      style={{
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        display: 'block',
-        transform: isLocal ? 'scaleX(-1)' : undefined
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#090d16', overflow: 'hidden' }}>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: 'block',
+          transform: isLocal ? 'scaleX(-1)' : undefined,
+          opacity: hasTrack ? 1 : 0
+        }}
+      />
+      {!hasTrack && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#090d16', padding: '4px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: isTeacher ? 'rgba(249, 115, 22, 0.2)' : '#1e293b', color: isTeacher ? '#f97316' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '12px' }}>
+            {altInitial}
+          </div>
+          <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 700, marginTop: '3px', maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {name}
+          </span>
+        </div>
+      )}
+    </div>
   );
 });
 
