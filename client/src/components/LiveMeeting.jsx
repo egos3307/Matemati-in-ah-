@@ -551,7 +551,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
 
 
 // 1.5 DOĞRUDAN WEBRTC KAMERA OYNATICI (SIFIR GECİKME / HARDWARE ACCELERATED)
-const PipDirectVideo = ({ trackRef, isLocal = false, altInitial = '?', name = '', isTeacher = false }) => {
+const PipDirectVideo = React.memo(({ trackRef, isLocal = false, altInitial = '?', name = '', isTeacher = false }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -563,9 +563,11 @@ const PipDirectVideo = ({ trackRef, isLocal = false, altInitial = '?', name = ''
       || trackRef?.publication?.videoTrack?.mediaStreamTrack;
 
     if (msTrack) {
-      const stream = new MediaStream([msTrack]);
-      videoEl.srcObject = stream;
-      videoEl.play().catch(() => {});
+      if (!videoEl.srcObject || videoEl.srcObject.getVideoTracks()[0] !== msTrack) {
+        const stream = new MediaStream([msTrack]);
+        videoEl.srcObject = stream;
+        videoEl.play().catch(() => {});
+      }
     } else if (trackRef?.track && typeof trackRef.track.attach === 'function') {
       try { trackRef.track.attach(videoEl); } catch (e) {}
     } else {
@@ -610,30 +612,10 @@ const PipDirectVideo = ({ trackRef, isLocal = false, altInitial = '?', name = ''
       }}
     />
   );
-};
+});
 
-// 1.5 MASAÜSTÜ KÜÇÜK PENCERE (DOCUMENT PICTURE-IN-PICTURE PANEL)
-const DesktopPipWindow = ({
-  cameraTracks = [],
-  teacherTrackRef,
-  isMicrophoneEnabled,
-  isCameraEnabled,
-  toggleMicrophone,
-  toggleCamera,
-  studentParticipants,
-  teacherParticipant,
-  muteParticipantTrack,
-  mutingParticipant,
-  chatMessages,
-  sendChatMessage,
-  chatInput,
-  setChatInput,
-  toggleScreenShare,
-  meetingStartTime,
-}) => {
-  const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
-  const chatEndRef = useRef(null);
-
+// İzole Sayaç Bileşeni: Sadece kendisini günceller, masaüstü penceresindeki diğer video ve butonları re-render etmez
+const PipTimer = React.memo(({ meetingStartTime }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(() => {
     return meetingStartTime ? Math.max(0, Math.floor((Date.now() - meetingStartTime) / 1000)) : 0;
   });
@@ -659,6 +641,41 @@ const DesktopPipWindow = ({
     }
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
+
+  return (
+    <div
+      title="Ders Başlangıcından İtibaren Geçen Süre"
+      style={{
+        display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, whiteSpace: 'nowrap',
+        background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.35)', letterSpacing: '0.03em'
+      }}
+    >
+      ⏱ {formatElapsed(elapsedSeconds)}
+    </div>
+  );
+});
+
+// 1.5 MASAÜSTÜ KÜÇÜK PENCERE (DOCUMENT PICTURE-IN-PICTURE PANEL)
+const DesktopPipWindow = React.memo(({
+  cameraTracks = [],
+  teacherTrackRef,
+  isMicrophoneEnabled,
+  isCameraEnabled,
+  toggleMicrophone,
+  toggleCamera,
+  studentParticipants,
+  teacherParticipant,
+  muteParticipantTrack,
+  mutingParticipant,
+  chatMessages,
+  sendChatMessage,
+  chatInput,
+  setChatInput,
+  toggleScreenShare,
+  meetingStartTime,
+}) => {
+  const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     if (activeOverlay === 'chat') {
@@ -927,16 +944,8 @@ const DesktopPipWindow = ({
             {isCameraEnabled ? '📹 Cam' : '📷 Kapalı'}
           </button>
 
-          {/* Ders Başlangıcından İtibaren Canlı Sayaç */}
-          <div
-            title="Ders Başlangıcından İtibaren Geçen Süre"
-            style={{
-              display: 'flex', alignItems: 'center', gap: '3px', padding: '5px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, whiteSpace: 'nowrap',
-              background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.35)', letterSpacing: '0.03em'
-            }}
-          >
-            ⏱ {formatElapsed(elapsedSeconds)}
-          </div>
+          {/* Ders Başlangıcından İtibaren Canlı Sayaç (İzole, Re-render Önleyici) */}
+          <PipTimer meetingStartTime={meetingStartTime} />
         </div>
 
         {/* Sağ: Paylaşımı Durdur */}
@@ -956,7 +965,7 @@ const DesktopPipWindow = ({
       </div>
     </div>
   );
-};
+});
 
 
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
@@ -1815,7 +1824,29 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       canvas.height = 720;
       const ctx = canvas.getContext('2d');
 
-      const drawFrame = () => {
+      // Video element caching to prevent DOM tree thrashing on every frame
+      let cachedScreenVideo = null;
+      let cachedCameraVideos = [];
+      let lastDomQueryTime = 0;
+      const DOM_QUERY_INTERVAL = 400; // query DOM at most ~2.5 times a second
+
+      const getSourceVideos = (now) => {
+        if (now - lastDomQueryTime > DOM_QUERY_INTERVAL) {
+          lastDomQueryTime = now;
+          cachedScreenVideo = document.querySelector('.screenshare-container video');
+          const camNodes = document.querySelectorAll('.camera-item video');
+          cachedCameraVideos = [];
+          for (let i = 0; i < camNodes.length; i++) {
+            const v = camNodes[i];
+            if (v.readyState >= 2 && !v.paused) {
+              cachedCameraVideos.push(v);
+            }
+          }
+        }
+        return { screenShareVideo: cachedScreenVideo, cameraVideos: cachedCameraVideos };
+      };
+
+      const drawFrame = (timestamp) => {
         if (!ctx) return;
 
         try {
@@ -1823,12 +1854,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           ctx.fillStyle = '#080b11';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-          // Find screen share video element if active
-          const screenShareVideo = document.querySelector('.screenshare-container video');
-          // Find camera video elements on the page (active, playing, and not paused)
-          const cameraVideos = Array.from(document.querySelectorAll('.camera-item video')).filter(video => {
-            return video.readyState >= 2 && !video.paused;
-          });
+          const nowTime = timestamp || performance.now();
+          const { screenShareVideo, cameraVideos } = getSourceVideos(nowTime);
 
           if (breakActiveRef.current) {
             // MOLA MODU KAYDI: Mola videosunu ve retro pixel başlık/sayacı ders kaydına dahil et
@@ -1877,11 +1904,15 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
               const pipY = 20;
               ctx.fillStyle = '#0f172a';
               ctx.fillRect(pipX - 2, pipY - 2, pipW + 4, pipH + 4);
-              ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
+              try {
+                ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
+              } catch (e) {}
             }
           } else if (screenShareVideo && screenShareVideo.readyState >= 2 && !screenShareVideo.paused) {
             // Draw screen share video full-screen
-            ctx.drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
+            try {
+              ctx.drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
+            } catch (e) {}
 
             // Draw teacher's camera video in a PiP corner if available
             if (cameraVideos.length > 0) {
@@ -1891,24 +1922,32 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
               const pipY = 20;
               ctx.fillStyle = '#0f172a';
               ctx.fillRect(pipX - 2, pipY - 2, pipW + 4, pipH + 4);
-              ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
+              try {
+                ctx.drawImage(cameraVideos[0], pipX, pipY, pipW, pipH);
+              } catch (e) {}
             }
           } else {
             // Normal camera grid
             if (cameraVideos.length === 1) {
-              ctx.drawImage(cameraVideos[0], 0, 0, canvas.width, canvas.height);
+              try {
+                ctx.drawImage(cameraVideos[0], 0, 0, canvas.width, canvas.height);
+              } catch (e) {}
             } else if (cameraVideos.length === 2) {
               const w = canvas.width / 2;
               const h = canvas.height;
-              ctx.drawImage(cameraVideos[0], 0, 0, w, h);
-              ctx.drawImage(cameraVideos[1], w, 0, w, h);
+              try {
+                ctx.drawImage(cameraVideos[0], 0, 0, w, h);
+                ctx.drawImage(cameraVideos[1], w, 0, w, h);
+              } catch (e) {}
             } else if (cameraVideos.length > 2) {
               const w = canvas.width / 2;
               const h = canvas.height / 2;
-              ctx.drawImage(cameraVideos[0], 0, 0, w, h);
-              ctx.drawImage(cameraVideos[1], w, 0, w, h);
-              if (cameraVideos[2]) ctx.drawImage(cameraVideos[2], 0, h, w, h);
-              if (cameraVideos[3]) ctx.drawImage(cameraVideos[3], w, h, w, h);
+              try {
+                ctx.drawImage(cameraVideos[0], 0, 0, w, h);
+                ctx.drawImage(cameraVideos[1], w, 0, w, h);
+                if (cameraVideos[2]) ctx.drawImage(cameraVideos[2], 0, h, w, h);
+                if (cameraVideos[3]) ctx.drawImage(cameraVideos[3], w, h, w, h);
+              } catch (e) {}
             } else {
               // Placeholder
               ctx.fillStyle = '#ffffff';
@@ -1928,18 +1967,31 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
       };
 
-      // Hybrid loop: use requestAnimationFrame for active tab, setInterval for background tab
-      const tick = () => {
-        drawFrame();
+      // Throttled loop: record at 24 FPS instead of monitor refresh rate (60-144 Hz)
+      let lastDrawTime = 0;
+      const TARGET_FPS = 24;
+      const FRAME_INTERVAL = 1000 / TARGET_FPS; // ~41.6ms
+
+      const tick = (now) => {
+        if (!lastDrawTime || now - lastDrawTime >= FRAME_INTERVAL) {
+          lastDrawTime = now;
+          drawFrame(now);
+        }
         animationFrameRef.current = requestAnimationFrame(tick);
       };
       
       // Start active tab drawing loop
       animationFrameRef.current = requestAnimationFrame(tick);
 
-      // Start backup background tab drawing loop (throttled to 10 FPS in background to avoid browser completely freezing video)
+      // Start backup background tab drawing loop — ONLY when tab is hidden
       backupIntervalRef.current = setInterval(() => {
-        drawFrame();
+        if (document.hidden) {
+          const now = performance.now();
+          if (now - lastDrawTime >= 100) { // 10 FPS in background
+            lastDrawTime = now;
+            drawFrame(now);
+          }
+        }
       }, 100);
 
       // 5. Build media stream (Canvas 24 FPS + Mixed Audio)
@@ -2220,11 +2272,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
   // Picture-in-Picture state & refs
   const [docPipWindow, setDocPipWindow] = useState(null);
+  const docPipWindowRef = useRef(null);
   const pipVideoRef = useRef(null);
   const pipCanvasRef = useRef(null);
   const [isPipActive, setIsPipActive] = useState(false);
   const enterPipRef = useRef(null);
   const exitPipRef = useRef(null);
+
+  useEffect(() => {
+    docPipWindowRef.current = docPipWindow;
+  }, [docPipWindow]);
 
   const setupDocPipWindow = (pipWin) => {
     pipWin.document.title = 'Fulle Canlı Ders • Öğretmen Masası';
@@ -2235,10 +2292,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     pipWin.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
     pipWin.addEventListener('pagehide', () => {
+      docPipWindowRef.current = null;
       setDocPipWindow(null);
       setIsPipActive(false);
     });
 
+    docPipWindowRef.current = pipWin;
     setDocPipWindow(pipWin);
     setIsPipActive(true);
   };
@@ -2524,10 +2583,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         });
       }
 
-      animationFrameId = requestAnimationFrame(drawFrame);
+      // Sadece standart video Picture-in-Picture modu gerçekten aktifse döngüyü sürdür (gereksiz 60 FPS CPU tüketimini önler)
+      if (document.pictureInPictureElement === pipVideo) {
+        animationFrameId = requestAnimationFrame(drawFrame);
+      }
     };
 
     const enterPip = async () => {
+      // Eğer yeni nesil masaüstü Document PiP paneli zaten açıksa video PiP başlatma
+      if (docPipWindowRef.current || (typeof window !== 'undefined' && window.documentPictureInPicture && window.documentPictureInPicture.window)) {
+        return;
+      }
       try {
         if (!pipVideo || !canvas) return;
         drawFrame();
@@ -2548,13 +2614,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
     const exitPip = async () => {
       try {
-        if (docPipWindow) {
-          docPipWindow.close();
+        if (docPipWindowRef.current) {
+          docPipWindowRef.current.close();
         }
         if ('documentPictureInPicture' in window && window.documentPictureInPicture.window) {
           window.documentPictureInPicture.window.close();
         }
       } catch (e) {}
+      docPipWindowRef.current = null;
       setDocPipWindow(null);
 
       try {
@@ -2572,6 +2639,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
     const handleVisibilityChange = async () => {
       if (!isScreenSharing) return;
+      if (docPipWindowRef.current || (typeof window !== 'undefined' && window.documentPictureInPicture && window.documentPictureInPicture.window)) {
+        return;
+      }
 
       if (document.visibilityState === 'hidden') {
         enterPip();
@@ -2583,6 +2653,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     const handleWindowBlur = () => {
       // Windows'ta pencere paylaşırken öğretmen Chrome dışındaki programa (PDF vb.) tıkladığında blur tetiklenir
       if (!isScreenSharing) return;
+      if (docPipWindowRef.current || (typeof window !== 'undefined' && window.documentPictureInPicture && window.documentPictureInPicture.window)) {
+        return;
+      }
       enterPip();
     };
 
@@ -2599,6 +2672,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
 
     const handleEnterPiP = () => {
       setIsPipActive(true);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      animationFrameId = requestAnimationFrame(drawFrame);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -2606,15 +2683,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     pipVideo.addEventListener('leavepictureinpicture', handleLeavePiP);
     pipVideo.addEventListener('enterpictureinpicture', handleEnterPiP);
 
-    if (isScreenSharing) {
-      drawFrame();
-    }
-    
+    // Arka plan çizim döngüsü — sadece standart video PiP açıkken ve sekme gizliyken çalışır
     bgDrawInterval = setInterval(() => {
-      if (document.hidden && isScreenSharing) {
+      if (document.hidden && document.pictureInPictureElement === pipVideo) {
         drawFrame();
       }
-    }, 50);
+    }, 100);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
