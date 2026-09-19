@@ -65,6 +65,7 @@ const StudentDashboard = () => {
   const [searchLessonId, setSearchLessonId] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [watchingLessonId, setWatchingLessonId] = useState(null);
   const { user, logout } = useAuth();
 
   const [activeSubTab, setActiveSubTab] = useState('topics'); 
@@ -549,6 +550,22 @@ const StudentDashboard = () => {
     }
   };
 
+  const handleWatchLesson = async (lessonId) => {
+    setWatchingLessonId(lessonId);
+    try {
+      const res = await axios.get(`/api/lessons/${lessonId}/watch`);
+      if (res.data.watchUrl) {
+        window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        alert('Ders kaydı bağlantısı bulunamadı.');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ders kaydına erişilemedi.');
+    } finally {
+      setWatchingLessonId(null);
+    }
+  };
+
   const handleSearchLessonById = async (e) => {
     e.preventDefault();
     setSearchError('');
@@ -560,21 +577,20 @@ const StudentDashboard = () => {
     
     setSearchLoading(true);
     try {
-      const response = await axios.get(`/api/student/lessons/${idVal}`);
-      const lesson = response.data;
-      if (lesson.recordingUrl) {
-        navigate(`/ogrenci/kayit-izle?url=${encodeURIComponent(lesson.recordingUrl)}&title=${encodeURIComponent(lesson.title || 'Ders Kaydı')}`);
+      const res = await axios.get(`/api/lessons/${idVal}/watch`);
+      if (res.data.watchUrl) {
+        window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
       } else {
         setSearchError('Bu derse ait bir ders kaydı bulunamadı.');
       }
     } catch (err) {
       console.error(err);
       if (err.response && err.response.status === 404) {
-        setSearchError('Bu ID numarasına sahip ders bulunamadı.');
+        setSearchError(err.response.data?.error || 'Bu ID numarasına sahip ders kaydı bulunamadı.');
       } else if (err.response && err.response.status === 403) {
         setSearchError('Bu ders kaydını izleme yetkiniz bulunmamaktadır.');
       } else {
-        setSearchError('Ders aranırken bir hata oluştu.');
+        setSearchError(err.response?.data?.error || 'Ders aranırken bir hata oluştu.');
       }
     } finally {
       setSearchLoading(false);
@@ -2235,11 +2251,15 @@ const StudentDashboard = () => {
 
                       {lesson.recordingUrl ? (
                         <button 
-                          onClick={() => navigate(`/ogrenci/kayit-izle?url=${encodeURIComponent(lesson.recordingUrl)}&title=${encodeURIComponent(lesson.title || 'Ders Kaydı')}`)} 
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          onClick={() => handleWatchLesson(lesson.id)} 
+                          disabled={watchingLessonId === lesson.id}
+                          className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          title="Ders Kaydını Google Drive'da İzle"
                         >
-                          <span className="material-symbols-outlined text-base">play_circle</span>
-                          Kaydı İzle
+                          <span className="material-symbols-outlined text-base">
+                            {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
+                          </span>
+                          {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
                         </button>
                       ) : (
                         isPast && (

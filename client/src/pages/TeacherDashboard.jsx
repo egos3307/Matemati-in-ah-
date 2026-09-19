@@ -3101,6 +3101,25 @@ const TeacherDashboard = () => {
                                 <span className="material-symbols-outlined text-base">video_library</span>
                               </button>
 
+                              {lesson.recordingUrl && (
+                                <button 
+                                  onClick={async () => {
+                                    try {
+                                      const res = await axios.get(`/api/lessons/${lesson.id}/watch`);
+                                      if (res.data.watchUrl) {
+                                        window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
+                                      }
+                                    } catch (err) {
+                                      alert(err.response?.data?.error || 'Kayıt açılamadı.');
+                                    }
+                                  }}
+                                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                  title="Ders Kaydını Google Drive'da İzle"
+                                >
+                                  <span className="material-symbols-outlined text-base">play_circle</span>
+                                </button>
+                              )}
+
                               <button 
                                 onClick={() => handleDeleteLesson(lesson)}
                                 className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"

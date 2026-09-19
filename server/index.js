@@ -9,6 +9,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { auth, checkRole } = require('./middleware/auth');
+const {
+  extractDriveFileId,
+  isValidDriveFileId,
+  ensureDriveFileReadable,
+  buildDriveWatchUrl
+} = require('./services/driveService');
 const crypto = require('crypto');
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 const rateLimit = require('express-rate-limit');
@@ -1610,6 +1616,11 @@ async function uploadFileToGoogleDrive(filePath, fileName, folderId, mimeType = 
 
   if (fileId) {
     console.log(`[Drive Success] Başarıyla yüklendi! File ID: ${fileId}`);
+    try {
+      await ensureDriveFileReadable(fileId, getGoogleDriveAccessToken);
+    } catch (e) {
+      console.warn(`[Drive Perm] Yeni yüklenen dosya izni ayarlanamadı:`, e.message);
+    }
     return `drive:${fileId}`;
   }
 
@@ -1629,7 +1640,97 @@ async function uploadToGoogleDrive(assembledBuffer, fileName, folderId, mimeType
   }
 }
 
-// 🔒 Güvenli Drive Video Endpoint'i (Site İçi Oynatıcı İçin)
+// 🔒 Google Drive Hızlı ve Güvenli Ders Kaydı İzleme Endpoint'i
+// Yalnızca yetkili kullanıcılara doğrudan Google Drive dosya URL'si döndürür (yeni sekmede izleme)
+app.get(['/api/lessons/:id/watch', '/api/recordings/:id/watch'], auth, async (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  if (isNaN(lessonId)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID.' });
+  }
+
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        teacher: { select: { id: true, name: true } },
+        student: { select: { id: true, name: true } }
+      }
+    });
+
+    if (!lesson || lesson.deletedAt) {
+      return res.status(404).json({ error: 'Ders kaydı bulunamadı.' });
+    }
+
+    // SERVER / BACKEND Yetkilendirme Kontrolü
+    const user = req.user;
+    let isAuthorized = false;
+
+    if (user.role === 'HEAD_TEACHER') {
+      isAuthorized = true;
+    } else if (user.role === 'TEACHER') {
+      isAuthorized = (lesson.teacherId === user.id);
+    } else if (user.role === 'STUDENT' || user.role === 'PARENT') {
+      // Veli logininde req.user.id öğrencinin id'sidir
+      if (lesson.studentId === user.id) {
+        isAuthorized = true;
+      } else if (lesson.studentIds) {
+        try {
+          const ids = JSON.parse(lesson.studentIds);
+          if (Array.isArray(ids) && ids.includes(user.id)) {
+            isAuthorized = true;
+          }
+        } catch {}
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Bu ders kaydını izleme yetkiniz bulunmamaktadır.' });
+    }
+
+    if (!lesson.recordingUrl) {
+      return res.status(404).json({ error: 'Bu derse ait bir kayıt henüz yüklenmemiştir.' });
+    }
+
+    const fileId = extractDriveFileId(lesson.recordingUrl);
+    if (!fileId) {
+      // Harici geçerli bir URL varsa doğrudan yönlendir
+      if (lesson.recordingUrl.startsWith('http')) {
+        return res.json({
+          success: true,
+          watchUrl: lesson.recordingUrl,
+          lessonTitle: lesson.title
+        });
+      }
+      return res.status(404).json({ error: 'Ders kaydı geçerli bir video dosyasına işaret etmiyor.' });
+    }
+
+    // Google Drive üzerinde dosya bazında 'anyone: reader' iznini güvenceye al
+    try {
+      await ensureDriveFileReadable(fileId, getGoogleDriveAccessToken);
+    } catch (permErr) {
+      console.warn(`[Drive Perm] İzin denetimi uyarısı (${fileId}):`, permErr.message);
+    }
+
+    const watchUrl = buildDriveWatchUrl(fileId);
+
+    // Eğer doğrudan tarayıcı yönlendirmesi istenmişse
+    if (req.query.redirect === 'true') {
+      return res.redirect(watchUrl);
+    }
+
+    return res.json({
+      success: true,
+      fileId,
+      watchUrl,
+      lessonTitle: lesson.title
+    });
+  } catch (err) {
+    console.error('Watch recording authorization error:', err);
+    return res.status(500).json({ error: 'Ders kaydı getirilirken sunucu hatası oluştu.' });
+  }
+});
+
+// 🔒 Güvenli Drive Video Endpoint'i (Geriye dönük uyumluluk - IDOR Korumalı)
 app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   const { fileId } = req.params;
 
@@ -1638,6 +1739,35 @@ app.get('/api/drive/stream/:fileId', auth, async (req, res) => {
   }
 
   try {
+    // 🔒 IDOR Koruması: Bu dosya ID'sine sahip dersi ve kullanıcının erişim yetkisini doğrula
+    const matchingLesson = await prisma.lesson.findFirst({
+      where: {
+        OR: [
+          { recordingUrl: `drive:${fileId}` },
+          { recordingUrl: { contains: fileId } }
+        ],
+        deletedAt: null
+      }
+    });
+
+    if (matchingLesson) {
+      const user = req.user;
+      let allowed = false;
+      if (user.role === 'HEAD_TEACHER') allowed = true;
+      else if (user.role === 'TEACHER' && matchingLesson.teacherId === user.id) allowed = true;
+      else if (user.role === 'STUDENT' || user.role === 'PARENT') {
+        if (matchingLesson.studentId === user.id) allowed = true;
+        else if (matchingLesson.studentIds) {
+          try {
+            if (JSON.parse(matchingLesson.studentIds).includes(user.id)) allowed = true;
+          } catch {}
+        }
+      }
+      if (!allowed) {
+        return res.status(403).json({ error: 'Bu video dosyasına erişim yetkiniz yok.' });
+      }
+    }
+
     const rangeHeader = req.headers['range'];
     const authData = await getGoogleDriveAccessToken();
 
@@ -2183,6 +2313,11 @@ app.post(
         }
 
         if (fileId) {
+          try {
+            await ensureDriveFileReadable(fileId, getGoogleDriveAccessToken);
+          } catch (permErr) {
+            console.warn(`[Drive Perm] Final parça izin uyarısı:`, permErr.message);
+          }
           await prisma.lesson.update({
             where: { id: lessonId },
             data: {
@@ -2257,6 +2392,12 @@ app.post('/api/teacher/lessons/:id/recording/complete', auth, checkRole('TEACHER
       }
     } catch (checkErr) {
       console.warn(`[Recording Debug #7] Drive final metadata sorgu uyarısı:`, checkErr.message);
+    }
+
+    try {
+      await ensureDriveFileReadable(fileId, getGoogleDriveAccessToken);
+    } catch (permErr) {
+      console.warn(`[Drive Perm] Complete izin uyarısı:`, permErr.message);
     }
 
     await prisma.lesson.update({

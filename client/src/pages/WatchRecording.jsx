@@ -1,9 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const isSafari = typeof navigator !== 'undefined' &&
-  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+function extractDriveFileId(input) {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = decodeURIComponent(input).trim();
+
+  if (trimmed.startsWith('drive:')) {
+    const id = trimmed.replace('drive:', '').trim();
+    if (/^[a-zA-Z0-9_-]{15,60}$/.test(id)) return id;
+  }
+
+  const fileDMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]{15,})/);
+  if (fileDMatch && fileDMatch[1]) {
+    return fileDMatch[1];
+  }
+
+  const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+  if (idParamMatch && idParamMatch[1]) {
+    return idParamMatch[1];
+  }
+
+  if (!trimmed.includes('/') && !trimmed.includes('?') && /^[a-zA-Z0-9_-]{15,60}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
 
 const WatchRecording = () => {
   const [searchParams] = useSearchParams();
@@ -11,9 +34,6 @@ const WatchRecording = () => {
   const { user } = useAuth();
   const videoUrl = searchParams.get('url');
   const lessonTitle = searchParams.get('title') || 'Ders Kaydı';
-  const [isBuffering, setIsBuffering] = React.useState(true);
-  const [videoError, setVideoError] = React.useState(false);
-  const [loadProgress, setLoadProgress] = React.useState(0);
 
   const getBackPath = () => {
     if (user?.role === 'PARENT') return '/veli';
@@ -21,106 +41,34 @@ const WatchRecording = () => {
     return '/ogrenci';
   };
 
-  const getPlayerTypeAndUrl = (url) => {
-    if (!url) return { type: 'native', url: '' };
-    
-    const decodedUrl = decodeURIComponent(url).trim();
-    
-    // 1. Güvenli Drive stream (drive:FILEID formatı)
-    if (decodedUrl.startsWith('drive:')) {
-      const fileId = decodedUrl.replace('drive:', '');
-      const apiBase = import.meta.env.VITE_API_URL || '';
-      const token = localStorage.getItem('token') || '';
-      return {
-        type: 'native',
-        url: `${apiBase}/api/drive/stream/${fileId}?token=${encodeURIComponent(token)}`
-      };
-    }
-    
-    // 2. Pixeldrain -> Site içi HTML5 Video Oynatıcı
-    if (decodedUrl.includes('pixeldrain.com')) {
-      const match = decodedUrl.match(/\/u\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return {
-          type: 'native',
-          url: `https://pixeldrain.com/api/file/${match[1]}`
-        };
-      }
-    }
+  const driveFileId = extractDriveFileId(videoUrl);
+  const driveWatchUrl = driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : null;
 
-    // 3. Google Drive Link Detector -> Stream native video via server proxy
-    if (decodedUrl.includes('drive.google.com')) {
-      const fileDMatch = decodedUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (fileDMatch && fileDMatch[1]) {
-        return {
-          type: 'native',
-          url: `/api/drive/stream/${fileDMatch[1]}`
-        };
-      }
-
-      const folderMatch = decodedUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
-      if (folderMatch && folderMatch[1]) {
-        return {
-          type: 'native',
-          url: `/api/drive/stream/${folderMatch[1]}`
-        };
-      }
-
-      const idParamMatch = decodedUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-      if (idParamMatch && idParamMatch[1]) {
-        return {
-          type: 'native',
-          url: `/api/drive/stream/${idParamMatch[1]}`
-        };
-      }
-    }
-    
-    // 4. GoFile Link Detector
-    if (decodedUrl.includes('gofile.io')) {
-      return { type: 'gofile', url: decodedUrl };
-    }
-
-    // 5. YouTube Link Detector
-    if (decodedUrl.includes('youtube.com') || decodedUrl.includes('youtu.be')) {
-      let videoId = '';
-      const watchMatch = decodedUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
-      if (watchMatch) {
-        videoId = watchMatch[1];
-      } else {
-        const shortMatch = decodedUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-        if (shortMatch) {
-          videoId = shortMatch[1];
-        } else {
-          const embedMatch = decodedUrl.match(/\/embed\/([a-zA-Z0-9_-]+)/);
-          if (embedMatch) {
-            videoId = embedMatch[1];
-          }
+  // Otomatik olarak yeni sekmede açmayı dene
+  useEffect(() => {
+    if (driveWatchUrl) {
+      try {
+        const opened = window.open(driveWatchUrl, '_blank', 'noopener,noreferrer');
+        if (opened) {
+          // Açıldıysa kullanıcıyı önceki sayfasına nazikçe yönlendirebiliriz veya bilgilendirebiliriz
         }
-      }
-      
-      if (videoId) {
-        return {
-          type: 'iframe',
-          url: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
-        };
+      } catch (e) {
+        console.warn('Popup blocker prevented automatic tab open:', e);
       }
     }
-    
-    // Default to native HTML5 video tag
-    return { type: 'native', url: decodedUrl };
-  };
+  }, [driveWatchUrl]);
 
   if (!videoUrl) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
         <span className="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
         <h2 className="text-2xl font-black mb-2">Hata: Ders Kaydı Bulunamadı</h2>
-        <p className="text-slate-400 text-sm mb-6 text-center max-w-md">
+        <p className="text-slate-400 text-sm mb-6 max-w-md">
           Geçersiz veya eksik ders kaydı bağlantısı. Lütfen Dersler sayfasına geri dönüp tekrar deneyin.
         </p>
         <button 
           onClick={() => navigate(getBackPath())} 
-          className="bg-primary hover:bg-primary/95 text-white font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all"
+          className="bg-primary hover:bg-primary/95 text-white font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all cursor-pointer"
         >
           Derslerime Geri Dön
         </button>
@@ -128,12 +76,21 @@ const WatchRecording = () => {
     );
   }
 
-  const player = getPlayerTypeAndUrl(videoUrl);
+  // YouTube Linki için istisnai destek
+  const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+  let ytEmbedUrl = null;
+  if (isYouTube) {
+    const watchMatch = videoUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+    const shortMatch = videoUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+    const embedMatch = videoUrl.match(/\/embed\/([a-zA-Z0-9_-]+)/);
+    const ytId = watchMatch?.[1] || shortMatch?.[1] || embedMatch?.[1];
+    if (ytId) ytEmbedUrl = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+  }
 
   return (
-    <div className="h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
-      {/* Immersive Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/85 to-transparent px-6 py-6 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
+      {/* Top Bar */}
+      <div className="bg-slate-900/80 border-b border-slate-800 px-6 py-4 flex items-center justify-between backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => {
@@ -143,99 +100,75 @@ const WatchRecording = () => {
                 navigate(getBackPath());
               }
             }} 
-            className="h-12 w-12 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white flex items-center justify-center transition-all cursor-pointer border border-white/10"
+            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer border border-white/10"
             title="Geri Dön"
           >
-            <span className="material-symbols-outlined text-2xl">arrow_back</span>
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           <div>
-            <h1 className="text-lg font-black tracking-wide text-slate-100 font-display drop-shadow">
+            <h1 className="text-base font-black tracking-wide text-slate-100 font-display">
               {lessonTitle}
             </h1>
-            <p className="text-xs text-slate-400 font-medium font-sans drop-shadow-sm">
-              Ders Kayıt Yayını
+            <p className="text-xs text-slate-400 font-medium font-sans">
+              Ders Kayıt Sistemi
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/20 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider drop-shadow-sm hidden md:block">
-            Fullematematiği Korumalı Oynatıcı
-          </div>
-        </div>
+        <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+          Google Drive Hızlı Oynatıcı
+        </span>
       </div>
 
-      {/* Video Viewport */}
-      <div className="flex-1 w-full flex items-center justify-center bg-black relative" style={{ minHeight: 0 }}>
-
-        {videoError ? (
-          <div className="flex flex-col items-center justify-center gap-6 text-center px-6 z-10 relative">
-            <span className="material-symbols-outlined text-6xl text-red-400">broken_image</span>
-            <div>
-              <h2 className="text-xl font-black text-white mb-2">Video Oynatılamıyor</h2>
-              <p className="text-slate-400 text-sm max-w-md">
-                Ders kaydı yüklenirken bir sorun oluştu. Lütfen bağlantınızı kontrol edip sayfayı yenileyin.
-              </p>
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">refresh</span>
-              Yeniden Dene
-            </button>
-          </div>
-        ) : player.type === 'iframe' ? (
-          <div className="relative w-full h-full">
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        {isYouTube && ytEmbedUrl ? (
+          <div className="w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
             <iframe
-              src={player.url}
-              className="w-full h-full border-0 z-10"
+              src={ytEmbedUrl}
+              className="w-full h-full border-0"
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
               allowFullScreen
-              onError={() => setVideoError(true)}
-            />
-            {/* Top-Right Shield: Blocks Drive pop-out icon without obstructing play/pause controls */}
-            <div 
-              className="absolute top-0 right-0 w-24 h-14 bg-transparent z-30 pointer-events-auto cursor-default" 
-              title="Sitede Korumalı Yayın"
             />
           </div>
         ) : (
-          <video
-            src={player.url}
-            controls
-            playsInline
-            autoPlay
-            preload="auto"
-            onWaiting={() => setIsBuffering(true)}
-            onPlaying={() => { setIsBuffering(false); setVideoError(false); }}
-            onCanPlay={() => setIsBuffering(false)}
-            onSeeked={() => setIsBuffering(false)}
-            onError={() => { setIsBuffering(false); setVideoError(true); }}
-            onProgress={(e) => {
-              const v = e.target;
-              if (v.duration && v.buffered.length > 0) {
-                const bufferedEnd = v.buffered.end(v.buffered.length - 1);
-                setLoadProgress(Math.min(100, Math.round((bufferedEnd / v.duration) * 100)));
-              }
-            }}
-            className="w-full h-full max-h-screen object-contain z-10"
-          />
-        )}
+          <div className="max-w-lg w-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-inner">
+              <span className="material-symbols-outlined text-4xl">play_circle</span>
+            </div>
 
-        {player.type === 'native' && isBuffering && !videoError && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-4 transition-all px-6 text-center">
-            <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-semibold text-slate-200 tracking-wider">
-              Video Yükleniyor{loadProgress > 0 ? ` — %${loadProgress}` : '...'}
-            </p>
-            <p className="text-xs text-slate-400 max-w-xs">
-              Uzun ders kayıtlarının açılması biraz zaman alabilir, lütfen sayfayı kapatmadan bekleyin.
-            </p>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-white">
+                {lessonTitle}
+              </h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Ders kaydınız en yüksek görüntü kalitesi ve kesintisiz hız için doğrudan Google Drive üzerinden oynatılmaktadır.
+              </p>
+            </div>
+
+            {driveWatchUrl ? (
+              <a
+                href={driveWatchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer transform hover:scale-[1.02]"
+              >
+                <span className="material-symbols-outlined text-xl">open_in_new</span>
+                Google Drive'da İzle (Yeni Sekme)
+              </a>
+            ) : (
+              <div className="text-amber-400 text-xs font-bold bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-2xl">
+                Geçerli bir Google Drive video dosyası tespit edilemedi.
+              </div>
+            )}
+
+            <button
+              onClick={() => navigate(getBackPath())}
+              className="text-xs font-bold text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+            >
+              ← Derslerime Geri Dön
+            </button>
           </div>
         )}
-
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)] pointer-events-none" />
       </div>
     </div>
   );

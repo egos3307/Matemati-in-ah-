@@ -13,7 +13,24 @@ const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeRecordingUrl, setActiveRecordingUrl] = useState(null);
+  const [watchingLessonId, setWatchingLessonId] = useState(null);
   const { logout } = useAuth();
+
+  const handleWatchLesson = async (lessonId) => {
+    setWatchingLessonId(lessonId);
+    try {
+      const res = await axios.get(`/api/lessons/${lessonId}/watch`);
+      if (res.data.watchUrl) {
+        window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        alert('Ders kaydı bağlantısı bulunamadı.');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Ders kaydına erişilemedi.');
+    } finally {
+      setWatchingLessonId(null);
+    }
+  };
 
   const getTeacherWhatsAppLink = () => {
     let phone = student?.teacher?.studentTel || '905350598950';
@@ -382,11 +399,15 @@ const ParentDashboard = () => {
                       <div className="flex items-center gap-2">
                         {lesson.recordingUrl ? (
                           <button 
-                            onClick={() => navigate(`/veli/kayit-izle?url=${encodeURIComponent(lesson.recordingUrl)}&title=${encodeURIComponent(lesson.title || 'Ders Kaydı')}`)} 
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            onClick={() => handleWatchLesson(lesson.id)} 
+                            disabled={watchingLessonId === lesson.id}
+                            className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            title="Ders Kaydını Google Drive'da İzle"
                           >
-                            <span className="material-symbols-outlined text-base">play_circle</span>
-                            Kaydı İzle
+                            <span className="material-symbols-outlined text-base">
+                              {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
+                            </span>
+                            {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
                           </button>
                         ) : isCompleted ? (
                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
