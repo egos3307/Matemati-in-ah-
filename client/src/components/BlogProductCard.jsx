@@ -42,7 +42,6 @@ const FALLBACK_PRODUCTS = [
 ];
 
 const BlogProductCard = ({ post }) => {
-  const navigate = useNavigate();
   const [matchedProduct, setMatchedProduct] = useState(null);
 
   useEffect(() => {
