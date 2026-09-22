@@ -13,7 +13,7 @@ import {
   RoomAudioRenderer,
   useDataChannel
 } from '@livekit/components-react';
-import { Track, ConnectionState, LocalVideoTrack } from 'livekit-client';
+import { Track, ConnectionState, LocalVideoTrack, ScreenSharePresets } from 'livekit-client';
 import '@livekit/components-styles';
 import BreakOverlay from './BreakOverlay.jsx';
 
@@ -3057,7 +3057,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
 
         try {
-          await localParticipant.setScreenShareEnabled(true);
+          await localParticipant.setScreenShareEnabled(true, {
+            resolution: ScreenSharePresets.h1080fps15.resolution,
+            contentHint: 'detail',
+            suppressLocalAudioPlayback: true
+          });
         } catch (shareErr) {
           // Kullanıcı ekran seçme diyaloğunu iptal ederse açılan pencereyi kapat
           if (openedWin) {
@@ -4513,6 +4517,10 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
         handleLiveKitError();
       }}
       connectOptions={{ autoSubscribe: true }}
+      options={{
+        adaptiveStream: true,
+        dynacast: true,
+      }}
       className="fixed inset-0 z-[99999] w-screen h-screen bg-slate-950 overflow-hidden"
     >
       <MeetingSession 
