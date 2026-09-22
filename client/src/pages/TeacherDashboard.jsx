@@ -3454,7 +3454,7 @@ const TeacherDashboard = () => {
 
           {activeTab === 'blog-conversions' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <BlogConversionDashboard />
+              <BlogConversionDashboard onNavigateTab={(tab) => { setActiveTab(tab); setSelectedStudent(null); }} />
             </div>
           )}
 
@@ -5050,9 +5050,21 @@ const TeacherDashboard = () => {
                 </div>
 
                 {quotaAppsList.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-10 text-center border border-slate-100">
-                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">inbox</span>
-                    <p className="text-slate-500 font-bold text-sm">Henüz gelen yer ayırtma başvurusu bulunmuyor.</p>
+                  <div className="bg-white rounded-3xl p-8 text-center border border-slate-100 space-y-3">
+                    <span className="material-symbols-outlined text-4xl text-slate-300">inbox</span>
+                    <p className="text-slate-800 font-black text-sm">Henüz doğrudan kontenjan kursu başvurusu bulunmuyor.</p>
+                    <p className="text-xs text-slate-500 max-w-lg mx-auto font-medium leading-relaxed">
+                      Bloglardaki <b>"Ücretsiz Tanışma Dersi Planla"</b> butonundan gelen kayıtlar <span className="font-bold text-slate-800">Formdan Gelenler</span> sekmesine (Deneme Dersi) kaydedilmektedir.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => { setActiveTab('forms'); setSelectedStudent(null); }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">forum</span>
+                        <span>Formdan Gelenler (Deneme Dersleri) Sekmesine Git</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">

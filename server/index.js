@@ -94,6 +94,67 @@ async function ensureDbColumnsExist() {
         CONSTRAINT "BlogConversionLog_pkey" PRIMARY KEY ("id")
       );
     `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "QuotaCourse" (
+        "id" SERIAL NOT NULL,
+        "category" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "description" TEXT,
+        "published" BOOLEAN NOT NULL DEFAULT true,
+        "tracks" TEXT,
+        "totalQuota" INTEGER DEFAULT 20,
+        "remainingQuota" INTEGER DEFAULT 5,
+        "price" TEXT,
+        "image" TEXT,
+        "whatsappLink" TEXT,
+        "teacherId" INTEGER,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "QuotaCourse_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "QuotaApplication" (
+        "id" SERIAL NOT NULL,
+        "quotaCourseId" INTEGER,
+        "category" TEXT NOT NULL,
+        "courseTitle" TEXT NOT NULL,
+        "track" TEXT NOT NULL,
+        "studentName" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "email" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "QuotaApplication_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TrialLessonRequest" (
+        "id" SERIAL NOT NULL,
+        "type" TEXT NOT NULL DEFAULT 'SELF',
+        "studentName" TEXT NOT NULL,
+        "email" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "grade" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "scheduledDate" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "TrialLessonRequest_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ContactMessage" (
+        "id" SERIAL NOT NULL,
+        "name" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "email" TEXT NOT NULL,
+        "message" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ContactMessage_pkey" PRIMARY KEY ("id")
+      );
+    `);
     dbMigrated = true;
   } catch (err) {
     console.warn('[DbMigration] Schema column check:', err.message);
@@ -3489,7 +3550,8 @@ app.get('/api/teacher/blog-conversions', auth, checkRole('TEACHER'), async (req,
     const freeLessonClicks = logs.filter(l => l.eventType === 'free_lesson_click').length;
     const productClicks = logs.filter(l => l.eventType === 'product_cta_click').length;
     const whatsappClicks = logs.filter(l => l.eventType === 'whatsapp_click').length;
-    const conversions = logs.filter(l => ['registration', 'quota_app', 'purchase', 'form_submit_success'].includes(l.eventType)).length;
+    // Çift sayımı önlemek için sadece tamamlanan form olaylarını (form_submit_success, registration, quota_app) sayıyoruz
+    const conversions = logs.filter(l => ['registration', 'quota_app', 'form_submit_success'].includes(l.eventType)).length;
 
     // Per-blog stats map
     const blogStatsMap = {};
@@ -3510,12 +3572,58 @@ app.get('/api/teacher/blog-conversions', auth, checkRole('TEACHER'), async (req,
       if (l.eventType === 'blog_cta_click') blogStatsMap[slug].ctaClicks++;
       if (l.eventType === 'free_lesson_click') blogStatsMap[slug].freeLessonClicks++;
       if (l.eventType === 'product_cta_click') blogStatsMap[slug].productClicks++;
-      if (['registration', 'quota_app', 'purchase', 'form_submit_success'].includes(l.eventType)) blogStatsMap[slug].conversions++;
+      if (['registration', 'quota_app', 'form_submit_success'].includes(l.eventType)) blogStatsMap[slug].conversions++;
     });
 
     const topBlogs = Object.values(blogStatsMap)
       .sort((a, b) => (b.ctaClicks + b.conversions) - (a.ctaClicks + a.conversions))
       .slice(0, 15);
+
+    // Gelen gerçek başvuruları (Deneme Dersi ve Kontenjan Başvuruları) çek
+    let recentLeads = [];
+    try {
+      let trials = [];
+      let quotas = [];
+      if (prisma.trialLessonRequest) {
+        trials = await prisma.trialLessonRequest.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 30
+        });
+      }
+      if (prisma.quotaApplication) {
+        quotas = await prisma.quotaApplication.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 30
+        });
+      }
+
+      recentLeads = [
+        ...trials.map(t => ({
+          id: t.id,
+          sourceType: 'TRIAL_LESSON',
+          sourceLabel: 'Ücretsiz Deneme Dersi',
+          studentName: t.studentName,
+          phone: t.phone,
+          email: t.email,
+          grade: t.grade,
+          status: t.status,
+          createdAt: t.createdAt
+        })),
+        ...quotas.map(q => ({
+          id: q.id,
+          sourceType: 'QUOTA_APPLICATION',
+          sourceLabel: 'Kontenjan Kurs Başvurusu',
+          studentName: q.studentName,
+          phone: q.phone,
+          email: q.email,
+          grade: `${q.category || ''} - ${q.courseTitle || ''}`,
+          status: q.status,
+          createdAt: q.createdAt
+        }))
+      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 30);
+    } catch (leadsErr) {
+      console.warn('Error fetching recent leads for blog conversions:', leadsErr.message);
+    }
 
     res.json({
       summary: {
@@ -3527,7 +3635,8 @@ app.get('/api/teacher/blog-conversions', auth, checkRole('TEACHER'), async (req,
         totalConversions: conversions,
         conversionRate: views > 0 ? ((conversions / views) * 100).toFixed(1) + '%' : '0.0%'
       },
-      topBlogs
+      topBlogs,
+      recentLeads
     });
   } catch (err) {
     console.error('Error fetching blog conversion report:', err);
