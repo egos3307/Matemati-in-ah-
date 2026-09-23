@@ -13,7 +13,8 @@ const {
   extractDriveFileId,
   isValidDriveFileId,
   ensureDriveFileReadable,
-  buildDriveWatchUrl
+  buildDriveWatchUrl,
+  parseLessonRecordings
 } = require('./services/driveService');
 const crypto = require('crypto');
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
@@ -1792,38 +1793,50 @@ app.get(['/api/lessons/:id/watch', '/api/recordings/:id/watch'], auth, async (re
       return res.status(404).json({ error: 'Bu derse ait bir kayıt henüz yüklenmemiştir.' });
     }
 
-    const fileId = extractDriveFileId(lesson.recordingUrl);
-    if (!fileId) {
-      // Harici geçerli bir URL varsa doğrudan yönlendir
+    const recordings = parseLessonRecordings(lesson.recordingUrl);
+    if (!recordings || recordings.length === 0) {
+      // Yedek fallback: parse edilemedi ama http ile başlıyorsa doğrudan yönlendir
       if (lesson.recordingUrl.startsWith('http')) {
         return res.json({
           success: true,
           watchUrl: lesson.recordingUrl,
-          lessonTitle: lesson.title
+          lessonTitle: lesson.title,
+          part: 1,
+          totalParts: 1,
+          recordings: [{ part: 1, title: 'Ders Kaydı', shortTitle: 'Kaydı İzle', watchUrl: lesson.recordingUrl, fileId: null, type: 'external' }]
         });
       }
       return res.status(404).json({ error: 'Ders kaydı geçerli bir video dosyasına işaret etmiyor.' });
     }
 
-    // Google Drive üzerinde dosya bazında 'anyone: reader' iznini güvenceye al
-    try {
-      await ensureDriveFileReadable(fileId, getGoogleDriveAccessToken);
-    } catch (permErr) {
-      console.warn(`[Drive Perm] İzin denetimi uyarısı (${fileId}):`, permErr.message);
-    }
+    // İstenen bölüm (part): 1, 2 vb. Varsayılan: 1
+    const reqPart = parseInt(req.query.part, 10);
+    const selectedRec = (reqPart >= 1 && reqPart <= recordings.length) 
+      ? recordings[reqPart - 1] 
+      : recordings[0];
 
-    const watchUrl = buildDriveWatchUrl(fileId);
+    // Google Drive üzerinde dosya bazında 'anyone: reader' iznini güvenceye al
+    if (selectedRec.fileId) {
+      try {
+        await ensureDriveFileReadable(selectedRec.fileId, getGoogleDriveAccessToken);
+      } catch (permErr) {
+        console.warn(`[Drive Perm] İzin denetimi uyarısı (${selectedRec.fileId}):`, permErr.message);
+      }
+    }
 
     // Eğer doğrudan tarayıcı yönlendirmesi istenmişse
     if (req.query.redirect === 'true') {
-      return res.redirect(watchUrl);
+      return res.redirect(selectedRec.watchUrl);
     }
 
     return res.json({
       success: true,
-      fileId,
-      watchUrl,
-      lessonTitle: lesson.title
+      fileId: selectedRec.fileId,
+      watchUrl: selectedRec.watchUrl,
+      lessonTitle: lesson.title,
+      part: selectedRec.part,
+      totalParts: recordings.length,
+      recordings
     });
   } catch (err) {
     console.error('Watch recording authorization error:', err);
@@ -2419,10 +2432,26 @@ app.post(
           } catch (permErr) {
             console.warn(`[Drive Perm] Final parça izin uyarısı:`, permErr.message);
           }
+          const existingLesson = await prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { recordingUrl: true }
+          });
+
+          let newRecUrl = `drive:${fileId}`;
+          if (existingLesson?.recordingUrl) {
+            const parsed = parseLessonRecordings(existingLesson.recordingUrl);
+            const exists = parsed.some(r => r.fileId === fileId || r.raw.includes(fileId));
+            if (!exists) {
+              newRecUrl = `${existingLesson.recordingUrl.trim()}, drive:${fileId}`;
+            } else {
+              newRecUrl = existingLesson.recordingUrl;
+            }
+          }
+
           await prisma.lesson.update({
             where: { id: lessonId },
             data: {
-              recordingUrl: `drive:${fileId}`,
+              recordingUrl: newRecUrl,
               recordingRequested: true
             }
           });
@@ -2501,10 +2530,26 @@ app.post('/api/teacher/lessons/:id/recording/complete', auth, checkRole('TEACHER
       console.warn(`[Drive Perm] Complete izin uyarısı:`, permErr.message);
     }
 
+    const existingLesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { recordingUrl: true }
+    });
+
+    let newRecUrl = `drive:${fileId}`;
+    if (existingLesson?.recordingUrl) {
+      const parsed = parseLessonRecordings(existingLesson.recordingUrl);
+      const exists = parsed.some(r => r.fileId === fileId || r.raw.includes(fileId));
+      if (!exists) {
+        newRecUrl = `${existingLesson.recordingUrl.trim()}, drive:${fileId}`;
+      } else {
+        newRecUrl = existingLesson.recordingUrl;
+      }
+    }
+
     await prisma.lesson.update({
       where: { id: lessonId },
       data: {
-        recordingUrl: `drive:${fileId}`,
+        recordingUrl: newRecUrl,
         recordingRequested: true
       }
     });
@@ -5474,10 +5519,12 @@ async function cleanupOldRecordings() {
     console.log(`🗑️ ${oldLessons.length} adet 8 aydan eski ders kaydı temizlenecek...`);
 
     for (const lesson of oldLessons) {
-      // Drive'dan sil (drive:FILEID formatındaysa)
-      if (lesson.recordingUrl?.startsWith('drive:')) {
-        const fileId = lesson.recordingUrl.replace('drive:', '');
-        await deleteFromGoogleDrive(fileId);
+      // Drive'dan sil (tekli veya çoklu kayıtları ayrıştırıp sil)
+      const parsedRecordings = parseLessonRecordings(lesson.recordingUrl);
+      for (const rec of parsedRecordings) {
+        if (rec.fileId) {
+          await deleteFromGoogleDrive(rec.fileId);
+        }
       }
 
       // DB'den kaydı temizle

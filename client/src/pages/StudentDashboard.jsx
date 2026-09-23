@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import LiveMeeting from '../components/LiveMeeting';
 import ZoomMeeting from '../components/ZoomMeeting';
+import { parseLessonRecordings } from '../utils/recordingHelper';
 
 const parseZoomUrl = (url) => {
   if (!url) return { meetingNumber: '', password: '' };
@@ -65,7 +66,9 @@ const StudentDashboard = () => {
   const [searchLessonId, setSearchLessonId] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [searchMultipleRecordings, setSearchMultipleRecordings] = useState(null);
   const [watchingLessonId, setWatchingLessonId] = useState(null);
+  const [watchingKey, setWatchingKey] = useState(null);
   const { user, logout } = useAuth();
 
   const normalizeGradeKey = (g) => {
@@ -587,10 +590,12 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleWatchLesson = async (lessonId) => {
+  const handleWatchLesson = async (lessonId, part = 1) => {
+    const key = `${lessonId}-${part}`;
+    setWatchingKey(key);
     setWatchingLessonId(lessonId);
     try {
-      const res = await axios.get(`/api/lessons/${lessonId}/watch`);
+      const res = await axios.get(`/api/lessons/${lessonId}/watch?part=${part}`);
       if (res.data.watchUrl) {
         window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
       } else {
@@ -599,6 +604,7 @@ const StudentDashboard = () => {
     } catch (err) {
       alert(err.response?.data?.error || 'Ders kaydına erişilemedi.');
     } finally {
+      setWatchingKey(null);
       setWatchingLessonId(null);
     }
   };
@@ -606,6 +612,7 @@ const StudentDashboard = () => {
   const handleSearchLessonById = async (e) => {
     e.preventDefault();
     setSearchError('');
+    setSearchMultipleRecordings(null);
     const idVal = parseInt(searchLessonId.trim());
     if (isNaN(idVal)) {
       setSearchError('Lütfen geçerli bir sayısal Ders ID girin.');
@@ -615,7 +622,13 @@ const StudentDashboard = () => {
     setSearchLoading(true);
     try {
       const res = await axios.get(`/api/lessons/${idVal}/watch`);
-      if (res.data.watchUrl) {
+      if (res.data.recordings && res.data.recordings.length > 1) {
+        setSearchMultipleRecordings({
+          lessonId: idVal,
+          lessonTitle: res.data.lessonTitle || `Ders #${idVal}`,
+          recordings: res.data.recordings
+        });
+      } else if (res.data.watchUrl) {
         window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
       } else {
         setSearchError('Bu derse ait bir ders kaydı bulunamadı.');
@@ -2435,6 +2448,44 @@ const StudentDashboard = () => {
                   {searchError}
                 </p>
               )}
+
+              {searchMultipleRecordings && (
+                <div className="bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-4 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
+                      <span className="text-xs font-bold text-slate-200">
+                        {searchMultipleRecordings.lessonTitle} - Bu derste <strong className="text-emerald-400">{searchMultipleRecordings.recordings.length} adet</strong> kayıt bulundu:
+                      </span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setSearchMultipleRecordings(null)}
+                      className="text-slate-400 hover:text-white text-xs cursor-pointer"
+                    >
+                      Kapat
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {searchMultipleRecordings.recordings.map((rec) => {
+                      const isWatching = watchingKey === `${searchMultipleRecordings.lessonId}-${rec.part}`;
+                      return (
+                        <button
+                          key={rec.part}
+                          onClick={() => handleWatchLesson(searchMultipleRecordings.lessonId, rec.part)}
+                          disabled={isWatching}
+                          className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                        >
+                          <span className="material-symbols-outlined text-base">
+                            {isWatching ? 'hourglass_top' : 'play_circle'}
+                          </span>
+                          {isWatching ? 'Açılıyor...' : `${rec.part}. Kaydı İzle`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Dersler Listesi */}
@@ -2495,25 +2546,53 @@ const StudentDashboard = () => {
                             Katıl
                           </button>
 
-                          {lesson.recordingUrl ? (
-                            <button 
-                              onClick={() => handleWatchLesson(lesson.id)} 
-                              disabled={watchingLessonId === lesson.id}
-                              className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                              title="Ders Kaydını Google Drive'da İzle"
-                            >
-                              <span className="material-symbols-outlined text-base">
-                                {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
-                              </span>
-                              {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
-                            </button>
-                          ) : (
-                            isPast && (
-                              <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                          {(() => {
+                            const recordings = parseLessonRecordings(lesson.recordingUrl);
+                            if (recordings.length === 1) {
+                              const isWatching = watchingKey === `${lesson.id}-1` || watchingLessonId === lesson.id;
+                              return (
+                                <button 
+                                  onClick={() => handleWatchLesson(lesson.id, 1)} 
+                                  disabled={isWatching}
+                                  className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                  title="Ders Kaydını Google Drive'da İzle"
+                                >
+                                  <span className="material-symbols-outlined text-base">
+                                    {isWatching ? 'hourglass_top' : 'play_circle'}
+                                  </span>
+                                  {isWatching ? 'Açılıyor...' : 'Kaydı İzle'}
+                                </button>
+                              );
+                            }
+                            if (recordings.length > 1) {
+                              return (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {recordings.map((rec) => {
+                                    const isWatching = watchingKey === `${lesson.id}-${rec.part}`;
+                                    return (
+                                      <button 
+                                        key={rec.part}
+                                        onClick={() => handleWatchLesson(lesson.id, rec.part)} 
+                                        disabled={isWatching}
+                                        className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                        title={`${rec.part}. Ders Kaydını Google Drive'da İzle`}
+                                      >
+                                        <span className="material-symbols-outlined text-base">
+                                          {isWatching ? 'hourglass_top' : 'play_circle'}
+                                        </span>
+                                        {isWatching ? 'Açılıyor...' : `${rec.part}. Kaydı İzle`}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            }
+                            return isPast ? (
+                              <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs whitespace-nowrap">
                                 Kayıt Yok
                               </span>
-                            )
-                          )}
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     );

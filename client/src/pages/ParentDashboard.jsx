@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { parseLessonRecordings } from '../utils/recordingHelper';
 
 const ParentDashboard = () => {
   const navigate = useNavigate();
@@ -14,12 +15,15 @@ const ParentDashboard = () => {
   const [error, setError] = useState('');
   const [activeRecordingUrl, setActiveRecordingUrl] = useState(null);
   const [watchingLessonId, setWatchingLessonId] = useState(null);
+  const [watchingKey, setWatchingKey] = useState(null);
   const { logout } = useAuth();
 
-  const handleWatchLesson = async (lessonId) => {
+  const handleWatchLesson = async (lessonId, part = 1) => {
+    const key = `${lessonId}-${part}`;
+    setWatchingKey(key);
     setWatchingLessonId(lessonId);
     try {
-      const res = await axios.get(`/api/lessons/${lessonId}/watch`);
+      const res = await axios.get(`/api/lessons/${lessonId}/watch?part=${part}`);
       if (res.data.watchUrl) {
         window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
       } else {
@@ -28,6 +32,7 @@ const ParentDashboard = () => {
     } catch (err) {
       alert(err.response?.data?.error || 'Ders kaydına erişilemedi.');
     } finally {
+      setWatchingKey(null);
       setWatchingLessonId(null);
     }
   };
@@ -397,27 +402,57 @@ const ParentDashboard = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {lesson.recordingUrl ? (
-                          <button 
-                            onClick={() => handleWatchLesson(lesson.id)} 
-                            disabled={watchingLessonId === lesson.id}
-                            className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                            title="Ders Kaydını Google Drive'da İzle"
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
+                        {(() => {
+                          const recordings = parseLessonRecordings(lesson.recordingUrl);
+                          if (recordings.length === 1) {
+                            const isWatching = watchingKey === `${lesson.id}-1` || watchingLessonId === lesson.id;
+                            return (
+                              <button 
+                                onClick={() => handleWatchLesson(lesson.id, 1)} 
+                                disabled={isWatching}
+                                className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                title="Ders Kaydını Google Drive'da İzle"
+                              >
+                                <span className="material-symbols-outlined text-base">
+                                  {isWatching ? 'hourglass_top' : 'play_circle'}
+                                </span>
+                                {isWatching ? 'Açılıyor...' : 'Kaydı İzle'}
+                              </button>
+                            );
+                          }
+                          if (recordings.length > 1) {
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {recordings.map((rec) => {
+                                  const isWatching = watchingKey === `${lesson.id}-${rec.part}`;
+                                  return (
+                                    <button 
+                                      key={rec.part}
+                                      onClick={() => handleWatchLesson(lesson.id, rec.part)} 
+                                      disabled={isWatching}
+                                      className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                      title={`${rec.part}. Ders Kaydını Google Drive'da İzle`}
+                                    >
+                                      <span className="material-symbols-outlined text-base">
+                                        {isWatching ? 'hourglass_top' : 'play_circle'}
+                                      </span>
+                                      {isWatching ? 'Açılıyor...' : `${rec.part}. Kaydı İzle`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }
+                          return isCompleted ? (
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+                              Ders Tamamlandı
                             </span>
-                            {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
-                          </button>
-                        ) : isCompleted ? (
-                          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
-                            Ders Tamamlandı
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10">
-                            Gelecek Ders
-                          </span>
-                        )}
+                          ) : (
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 px-3 py-1.5 rounded-xl border border-primary/10">
+                              Gelecek Ders
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

@@ -6,6 +6,7 @@ import ZoomMeeting from '../components/ZoomMeeting';
 import StudentRegistrationForm from './StudentRegistrationForm';
 import SeoAiManager from '../components/SeoAiManager';
 import BlogConversionDashboard from '../components/BlogConversionDashboard';
+import { parseLessonRecordings } from '../utils/recordingHelper';
 
 
 const parseZoomUrl = (url) => {
@@ -3117,24 +3118,53 @@ const TeacherDashboard = () => {
                                 <span className="material-symbols-outlined text-base">video_library</span>
                               </button>
 
-                              {lesson.recordingUrl && (
-                                <button 
-                                  onClick={async () => {
-                                    try {
-                                      const res = await axios.get(`/api/lessons/${lesson.id}/watch`);
-                                      if (res.data.watchUrl) {
-                                        window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
-                                      }
-                                    } catch (err) {
-                                      alert(err.response?.data?.error || 'Kayıt açılamadı.');
-                                    }
-                                  }}
-                                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
-                                  title="Ders Kaydını Google Drive'da İzle"
-                                >
-                                  <span className="material-symbols-outlined text-base">play_circle</span>
-                                </button>
-                              )}
+                              {lesson.recordingUrl && (() => {
+                                const recs = parseLessonRecordings(lesson.recordingUrl);
+                                if (recs.length <= 1) {
+                                  return (
+                                    <button 
+                                      onClick={async () => {
+                                        try {
+                                          const res = await axios.get(`/api/lessons/${lesson.id}/watch`);
+                                          if (res.data.watchUrl) {
+                                            window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
+                                          }
+                                        } catch (err) {
+                                          alert(err.response?.data?.error || 'Kayıt açılamadı.');
+                                        }
+                                      }}
+                                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 px-2.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                      title="Ders Kaydını Google Drive'da İzle"
+                                    >
+                                      <span className="material-symbols-outlined text-base">play_circle</span>
+                                    </button>
+                                  );
+                                }
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    {recs.map(rec => (
+                                      <button 
+                                        key={rec.part}
+                                        onClick={async () => {
+                                          try {
+                                            const res = await axios.get(`/api/lessons/${lesson.id}/watch?part=${rec.part}`);
+                                            if (res.data.watchUrl) {
+                                              window.open(res.data.watchUrl, '_blank', 'noopener,noreferrer');
+                                            }
+                                          } catch (err) {
+                                            alert(err.response?.data?.error || 'Kayıt açılamadı.');
+                                          }
+                                        }}
+                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 px-2 py-1.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                        title={`${rec.part}. Kaydı Google Drive'da İzle`}
+                                      >
+                                        <span className="material-symbols-outlined text-xs">play_circle</span>
+                                        <span>{rec.part}. Kayıt</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
 
                               <button 
                                 onClick={() => handleDeleteLesson(lesson)}
@@ -3148,11 +3178,11 @@ const TeacherDashboard = () => {
 
                           {editingRecordingId === lesson.id && (
                             <div className="bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-100 animate-in fade-in duration-200">
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ders Kayıt Yolu veya Bağlantısı (Otomatik Kayıt: /uploads/lesson_{lesson.id}.webm)</label>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ders Kayıt Yolu veya Bağlantısı (Çoklu kayıtlar virgülle ayrılır: drive:ID1, drive:ID2)</label>
                               <div className="flex gap-2">
                                 <input 
                                   type="text"
-                                  placeholder={`/uploads/lesson_${lesson.id}.webm`}
+                                  placeholder="drive:DOSYA_ID1, drive:DOSYA_ID2"
                                   value={recordingUrlInput}
                                   onChange={(e) => setRecordingUrlInput(e.target.value)}
                                   className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:border-primary text-slate-700 font-bold"
@@ -3173,7 +3203,7 @@ const TeacherDashboard = () => {
                                 </button>
                               </div>
                               <p className="text-[9px] text-slate-400 leading-normal">
-                                Canlı ders sonlandırıldığında sistem bu kaydı otomatik oluşturur. İhtiyacınız olursa manuel dosya yolu veya harici link düzenleyebilirsiniz.
+                                Canlı derste birden fazla kayıt yapıldığında sistem otomatik ekler. Dilerseniz birden fazla kayıt linkini veya Google Drive ID'sini virgülle ayırarak (örn. <span className="font-mono text-slate-600">drive:ID1, drive:ID2</span>) kaydedebilirsiniz. Öğrenci panelinde tüm kayıtlar ayrı ayrı izleme butonları olarak gösterilir.
                               </p>
                             </div>
                           )}
