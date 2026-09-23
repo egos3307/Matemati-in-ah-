@@ -562,65 +562,31 @@ app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
     const staticPages = [
       { url: '/', priority: '1.0', changefreq: 'daily' },
       { url: '/blog', priority: '0.9', changefreq: 'daily' },
+      { url: '/ucretsiz-tanisma-dersi', priority: '0.9', changefreq: 'weekly' },
       { url: '/derslerimiz', priority: '0.8', changefreq: 'weekly' },
       { url: '/pdf-notlari', priority: '0.8', changefreq: 'weekly' },
       { url: '/camps', priority: '0.7', changefreq: 'weekly' },
       { url: '/kontenjan-kurslari', priority: '0.7', changefreq: 'weekly' },
       { url: '/kontenjan-dersleri', priority: '0.7', changefreq: 'weekly' },
       { url: '/iletisim', priority: '0.5', changefreq: 'monthly' },
-      { url: '/kvkk', priority: '0.3', changefreq: 'monthly' }
-    ];
-
-    // Static fallback blog slugs list (including Grade 5-12 lecture blogs)
-    const staticBlogSlugs = [
-      'online-matematik-ozel-ders-rehberi',
-      'geometride-sekilleri-gormek-ve-geometri-taktikleri',
-      'tyt-ayt-matematik-geometri-net-artirma-taktikleri',
-      '9-sinif-matematik-konulari',
-      'tyt-matematik-konulari',
-      'tyt-matematik-soru-dagilimi',
-      'lgs-matematik-konulari',
-      'lgs-matematik-soru-dagilimi',
-      'uslu-sayilar-konu-anlatimi',
-      'koklu-sayilar-konu-anlatimi',
-      'tyt-temel-kavramlar',
-      'tyt-problemler',
-      'sayi-basamaklari',
-      'bolme-bolunebilme',
-      'mutlak-deger',
-      'rasyonel-sayilar',
-      'carpanlara-ayirma',
-      'denklem-cozme',
-      'oran-oranti',
-      'yas-problemleri',
-      'yuzde-problemleri',
-      'tyt-fonksiyonlar',
-      'tyt-matematik-calisma-programi',
-      '5-sinif-matematik-dogal-sayilar-ve-islemler',
-      '6-sinif-matematik-kesirler-ve-ondalik-gosterim',
-      '7-sinif-matematik-tam-sayilar-ve-rasyonel-sayilar',
-      '8-sinif-lgs-matematik-carpanlar-katlar-uslu-ifadeler',
-      '9-sinif-matematik-kumeler-ve-mantik-konu-anlatimi',
-      '10-sinif-matematik-sayma-ve-olasilik-permutasyon-kombinasyon',
-      '11-sinif-matematik-trigonometri-konu-anlatimi',
-      '12-sinif-ayt-matematik-turev-ve-integral-temelleri',
-      '5-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
-      '6-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
-      '7-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
-      '8-sinif-lgs-matematik-tum-konulari-ve-lgs-mufredati',
-      '10-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
-      '11-sinif-matematik-tum-konulari-ve-mufredat-rehberi',
-      '12-sinif-ayt-matematik-tum-konulari-ve-yks-mufredati'
+      { url: '/kvkk', priority: '0.3', changefreq: 'monthly' },
+      { url: '/tarsus-matematik-ozel-ders', priority: '0.9', changefreq: 'weekly' },
+      { url: '/malatya-matematik-ozel-ders', priority: '0.9', changefreq: 'weekly' },
+      { url: '/malatya-fen-ozel-ders', priority: '0.9', changefreq: 'weekly' }
     ];
 
     let blogPostsMap = new Map();
 
-    // 1. Add static blogs first
-    for (const slug of staticBlogSlugs) {
-      blogPostsMap.set(slug, {
-        slug,
-        lastmod: new Date().toISOString().split('T')[0]
-      });
+    // 1. Add static fallback blogs from FALLBACK_BLOGS array
+    if (Array.isArray(FALLBACK_BLOGS)) {
+      for (const b of FALLBACK_BLOGS) {
+        if (b && b.slug) {
+          blogPostsMap.set(b.slug, {
+            slug: b.slug,
+            lastmod: b.publishedAt || new Date().toISOString().split('T')[0]
+          });
+        }
+      }
     }
 
     // 2. Fetch database blogs and merge/override
