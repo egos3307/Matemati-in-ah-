@@ -64,7 +64,7 @@ const compressImage = handleImageUpload;
 const TeacherDashboard = () => {
   const [students, setStudents] = useState([]);
   const [newStudent, setNewStudent] = useState({ email: '', password: '', name: '', grade: '', parentName: '', parentTel: '', studentTel: '', serviceProvided: '' });
-  const [newLesson, setNewLesson] = useState({ title: '', description: '', date: '' });
+  const [newLesson, setNewLesson] = useState({ title: '', description: '', date: '', subject: 'MATEMATIK' });
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentTrials, setStudentTrials] = useState([]);
@@ -93,6 +93,7 @@ const TeacherDashboard = () => {
   const [recurringStudentIds, setRecurringStudentIds] = useState([]);
   const [recurringStudentSearch, setRecurringStudentSearch] = useState('');
   const [recurringZoomUrl, setRecurringZoomUrl] = useState('');
+  const [recurringSubject, setRecurringSubject] = useState('MATEMATIK');
   const [creatingRecurring, setCreatingRecurring] = useState(false);
   const [activeMeeting, setActiveMeeting] = useState(null);
   const [blogs, setBlogs] = useState([]);
@@ -849,9 +850,10 @@ const TeacherDashboard = () => {
         description: newLesson.description,
         date: dateObj.toISOString(),
         studentIds: selectedStudentIds,
-        zoomJoinUrl: newLessonZoomUrl
+        zoomJoinUrl: newLessonZoomUrl,
+        subject: newLesson.subject || 'MATEMATIK'
       });
-      setNewLesson({ title: '', description: '', date: '' });
+      setNewLesson({ title: '', description: '', date: '', subject: 'MATEMATIK' });
       setLessonTime('12:00');
       setSelectedStudentIds([]);
       setNewLessonZoomUrl('');
@@ -877,9 +879,11 @@ const TeacherDashboard = () => {
         weeks: recurringWeeks,
         startDate: recurringStartDate,
         studentIds: recurringStudentIds,
-        zoomJoinUrl: recurringZoomUrl
+        zoomJoinUrl: recurringZoomUrl,
+        subject: recurringSubject || 'MATEMATIK'
       });
       setRecurringTitle('');
+      setRecurringSubject('MATEMATIK');
       setRecurringStudentIds([]);
       setRecurringZoomUrl('');
       fetchLessons();
@@ -1742,9 +1746,16 @@ const TeacherDashboard = () => {
                       getUpcomingLessons().map((lesson) => (
                         <div key={lesson.id} className="p-4 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all">
                           <div>
-                            <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                              Canlı Ders
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Canlı Ders
+                              </span>
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                lesson.subject === 'FEN' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                              }`}>
+                                {lesson.subject === 'FEN' ? '🔬 Fen Bilimleri' : '📐 Matematik'}
+                              </span>
+                            </div>
                             <h4 className="font-black text-slate-955 text-sm mt-1">{lesson.title}</h4>
                             <p className="text-xs text-slate-500 font-bold mt-1">
                               Öğrenci: <span className="text-slate-800">{getLessonStudentNames(lesson)}</span>
@@ -3020,6 +3031,11 @@ const TeacherDashboard = () => {
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h5 className="font-bold text-slate-900 text-sm">{lesson.title}</h5>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                  lesson.subject === 'FEN' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                }`}>
+                                  {lesson.subject === 'FEN' ? '🔬 Fen' : '📐 Matematik'}
+                                </span>
                                 <span className="bg-slate-100 text-slate-650 px-2 py-0.5 rounded-md text-[10px] font-extrabold border border-slate-200 shadow-sm">
                                   ID: {lesson.id}
                                 </span>
@@ -3244,10 +3260,40 @@ const TeacherDashboard = () => {
                     </div>
 
                     <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Branşı</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewLesson({ ...newLesson, subject: 'MATEMATIK' })}
+                          className={`py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                            (newLesson.subject || 'MATEMATIK') === 'MATEMATIK'
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span>📐</span>
+                          <span>Matematik</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewLesson({ ...newLesson, subject: 'FEN' })}
+                          className={`py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                            newLesson.subject === 'FEN'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span>🔬</span>
+                          <span>Fen Bilimleri</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Başlığı</label>
                       <input 
                         className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm" 
-                        placeholder="Örn: TYT Fonksiyonlar" 
+                        placeholder={newLesson.subject === 'FEN' ? "Örn: LGS Maddenin Halleri" : "Örn: TYT Fonksiyonlar"} 
                         value={newLesson.title} 
                         onChange={(e) => setNewLesson({...newLesson, title: e.target.value})} 
                         required
@@ -3297,10 +3343,40 @@ const TeacherDashboard = () => {
               </p>
               <form onSubmit={handleCreateRecurringLessons} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Branşı</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRecurringSubject('MATEMATIK')}
+                      className={`py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                        recurringSubject === 'MATEMATIK'
+                          ? 'bg-primary text-white border-primary shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>📐</span>
+                      <span>Matematik</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecurringSubject('FEN')}
+                      className={`py-3 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                        recurringSubject === 'FEN'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>🔬</span>
+                      <span>Fen Bilimleri</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ders Başlığı</label>
                   <input
                     className="w-full rounded-2xl border border-primary/10 bg-slate-50/50 px-4 py-3.5 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                    placeholder="Örn: TYT Fonksiyonlar"
+                    placeholder={recurringSubject === 'FEN' ? "Örn: LGS Maddenin Halleri" : "Örn: TYT Fonksiyonlar"}
                     value={recurringTitle}
                     onChange={(e) => setRecurringTitle(e.target.value)}
                     required

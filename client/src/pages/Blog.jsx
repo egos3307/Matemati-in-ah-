@@ -31,11 +31,20 @@ const Blog = () => {
     fetchPosts();
   }, []);
 
-  const categories = ['Tümü', 'YKS Hazırlık', 'LGS Hazırlık', 'Lise Matematik', 'Matematik Konuları', 'Geometri', 'Rehberlik'];
+  const categories = [
+    'Tümü',
+    'Ortaokul Matematik',
+    'LGS Hazırlık',
+    'Lise Matematik',
+    'YKS Hazırlık',
+    'Matematik Konuları',
+    'Geometri',
+    'Rehberlik'
+  ];
 
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+      (post.excerpt || post.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Tümü' || post.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -43,10 +52,10 @@ const Blog = () => {
   return (
     <main className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="Matematik Rehberleri & Sınav Taktikleri"
-        description="LGS, TYT, AYT ve KPSS matematik ve geometri konu anlatımları, 9. sınıf müfredatı, soru dağılımları ve derece çalışma rehberleri."
+        title="Matematik & Sınav Rehberleri | Fullematematiği"
+        description="5. sınıftan 12. sınıfa güncel MEB müfredatı, LGS, TYT ve AYT matematik konu anlatımları, geometri taktikleri ve derece rehberleri."
         path="/blog"
-        keywords="matematik konuları, tyt matematik konuları, lgs matematik konuları, 9 sınıf matematik konuları, geometri taktikleri, matematik rehberleri"
+        keywords="matematik konuları, 5. sınıf matematik müfredatı, lgs matematik konuları, tyt matematik konuları, 9. sınıf matematik, geometri taktikleri, matematik rehberleri"
       />
 
       <div className="mx-auto max-w-7xl px-6 lg:px-10">

@@ -72,6 +72,7 @@ let dbMigrated = false;
 async function ensureDbColumnsExist() {
   if (dbMigrated) return;
   try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Lesson" ADD COLUMN IF NOT EXISTS "subject" TEXT DEFAULT 'MATEMATIK';`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "relatedCourseId" INTEGER;`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "relatedCourseType" TEXT;`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "secondaryCourseId" INTEGER;`);
@@ -162,48 +163,113 @@ async function ensureDbColumnsExist() {
 }
 ensureDbColumnsExist();
 
+// Silinmiş Ders 243'ü geri yükleme, FM303 kodlu öğrenciye ve Mihrimah/Muhammet'e bağlama işlemi
+let lesson243Restored = false;
+async function restoreLesson243(preferredTeacherId = null) {
+  try {
+    // 1. FM303 kodlu öğrenciyi ve Mihrimah/Muhammet isimli öğrencileri veritabanından bul
+    const allStudents = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      select: { id: true, name: true, email: true, studentCode: true, teacherId: true }
+    });
+
+    const targetStudents = allStudents.filter(s => {
+      const code = (s.studentCode || '').toUpperCase().trim();
+      const nameLower = (s.name || '').toLocaleLowerCase('tr-TR');
+      return code === 'FM303' || code.includes('303') || nameLower.includes('mihrimah') || nameLower.includes('muhammet') || nameLower.includes('muhammed');
+    });
+
+    // Özellikle FM303 kodlu öğrenciyi bul
+    const studentFM303 = allStudents.find(s => (s.studentCode || '').toUpperCase().trim() === 'FM303') || targetStudents[0];
+
+    const studentIds = targetStudents.map(s => s.id);
+    console.log('[Restore243] FM303 ve eşleşen öğrenciler:', targetStudents.map(s => `#${s.id} - ${s.name} (Kod: ${s.studentCode}, Email: ${s.email})`));
+
+    // 2. Ders 243'ü bul ve geri yükle
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: 243 }
+    });
+
+    if (lesson) {
+      let existingIds = [];
+      if (lesson.studentIds) {
+        try { existingIds = JSON.parse(lesson.studentIds); } catch {}
+      }
+      const finalStudentIds = [...new Set([...existingIds, ...studentIds])];
+
+      const effectiveTeacherId = preferredTeacherId || lesson.teacherId || studentFM303?.teacherId;
+
+      const updateData = {
+        deletedAt: null,
+        recordingRequested: true,
+        studentIds: finalStudentIds.length > 0 ? JSON.stringify(finalStudentIds) : null,
+        studentId: studentFM303 ? studentFM303.id : (finalStudentIds.length > 0 ? finalStudentIds[0] : lesson.studentId)
+      };
+
+      if (effectiveTeacherId) {
+        updateData.teacherId = effectiveTeacherId;
+      }
+
+      const updated = await prisma.lesson.update({
+        where: { id: 243 },
+        data: updateData
+      });
+      lesson243Restored = true;
+      console.log(`[Restore243] Ders #243 ("${updated.title}") FM303 (${studentFM303?.name}) öğrencisine ve öğretmen #${updated.teacherId}'ye bağlandı!`, finalStudentIds);
+      return { success: true, lesson: updated, students: targetStudents, studentFM303 };
+    } else {
+      console.warn('[Restore243] Ders #243 veritabanında bulunamadı.');
+      return { success: false, error: 'Ders #243 veritabanında bulunamadı.', students: targetStudents };
+    }
+  } catch (err) {
+    console.error('[Restore243] Geri yükleme hatası:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+restoreLesson243();
+
 const { FALLBACK_BLOGS } = require('./data/staticBlogsSeed');
 
 let blogsSeeded = false;
 async function seedMissingStaticBlogs() {
   if (blogsSeeded) return;
   try {
-    const existingPosts = await prisma.blogPost.findMany({ select: { slug: true, authorId: true } });
-    const existingSlugs = new Set(existingPosts.map(p => p.slug));
+    const existingPosts = await prisma.blogPost.findMany({ select: { id: true, slug: true, authorId: true } });
+    const validAuthorId = (existingPosts.length > 0 && existingPosts[0].authorId) ? existingPosts[0].authorId : 1;
 
-    const missingPosts = FALLBACK_BLOGS.filter(b => !existingSlugs.has(b.slug));
+    for (const blog of FALLBACK_BLOGS) {
+      try {
+        const postData = {
+          title: blog.title,
+          content: blog.content,
+          excerpt: blog.excerpt || blog.description || blog.title,
+          coverImage: blog.coverImage || null,
+          metaTitle: blog.metaTitle || blog.title,
+          metaDescription: blog.description || blog.excerpt || blog.title,
+          targetKeyword: blog.targetKeyword || null,
+          secondaryKeywords: Array.isArray(blog.relatedKeywords) ? JSON.stringify(blog.relatedKeywords) : (blog.relatedKeywords || null),
+          faq: Array.isArray(blog.faq) ? JSON.stringify(blog.faq) : (blog.faq || null),
+          topic: blog.category || null,
+          updatedAt: new Date()
+        };
 
-    if (missingPosts.length > 0) {
-      const validAuthorId = (existingPosts.length > 0 && existingPosts[0].authorId) ? existingPosts[0].authorId : 1;
-
-      for (const blog of missingPosts) {
-        try {
-          await prisma.blogPost.create({
-            data: {
-              title: blog.title,
-              slug: blog.slug,
-              content: blog.content,
-              excerpt: blog.excerpt || blog.description || blog.title,
-              coverImage: blog.coverImage || null,
-              metaTitle: blog.metaTitle || blog.title,
-              metaDescription: blog.description || blog.excerpt || blog.title,
-              targetKeyword: blog.targetKeyword || null,
-              secondaryKeywords: Array.isArray(blog.relatedKeywords) ? JSON.stringify(blog.relatedKeywords) : (blog.relatedKeywords || null),
-              faq: Array.isArray(blog.faq) ? JSON.stringify(blog.faq) : (blog.faq || null),
-              topic: blog.category || null,
-              authorId: validAuthorId,
-              createdAt: blog.createdAt ? new Date(blog.createdAt) : new Date(),
-              updatedAt: blog.updatedAt ? new Date(blog.updatedAt) : new Date()
-            }
-          });
-        } catch (itemErr) {
-          console.warn(`[SeedBlog] Failed item ${blog.slug}:`, itemErr.message);
-        }
+        await prisma.blogPost.upsert({
+          where: { slug: blog.slug },
+          update: postData,
+          create: {
+            ...postData,
+            slug: blog.slug,
+            authorId: validAuthorId,
+            createdAt: blog.createdAt ? new Date(blog.createdAt) : new Date()
+          }
+        });
+      } catch (itemErr) {
+        console.warn(`[SeedBlog] Failed item ${blog.slug}:`, itemErr.message);
       }
     }
     blogsSeeded = true;
   } catch (err) {
-    console.warn('[SeedBlog] Error seeding missing static blogs:', err.message);
+    console.warn('[SeedBlog] Error seeding/updating static blogs:', err.message);
   }
 }
 seedMissingStaticBlogs();
@@ -972,7 +1038,7 @@ app.delete('/api/teacher/student/:id', auth, checkRole('TEACHER'), async (req, r
 });
 
 app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, description, date, studentId, studentIds, zoomJoinUrl } = req.body;
+  const { title, description, date, studentId, studentIds, zoomJoinUrl, subject } = req.body;
   try {
     let finalUrl = zoomJoinUrl;
     if (!finalUrl) {
@@ -996,6 +1062,7 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
       data: {
         title,
         description,
+        subject: subject === 'FEN' ? 'FEN' : 'MATEMATIK',
         date: new Date(date),
         teacherId: req.user.id,
         studentId: targetIds.length > 0 ? targetIds[0] : null,
@@ -1012,7 +1079,7 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
 
 // Her hafta aynı gün/saatte tekrar eden ders serisi oluşturur (ör. 10 hafta boyunca her Pazartesi 18:00)
 app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), async (req, res) => {
-  const { title, description, dayOfWeek, time, weeks, studentIds, zoomJoinUrl, startDate } = req.body;
+  const { title, description, dayOfWeek, time, weeks, studentIds, zoomJoinUrl, startDate, subject } = req.body;
   try {
     const weekCount = parseInt(weeks);
     const targetDay = parseInt(dayOfWeek);
@@ -1067,6 +1134,7 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
         data: {
           title,
           description,
+          subject: subject === 'FEN' ? 'FEN' : 'MATEMATIK',
           date: lessonDate,
           teacherId: req.user.id,
           studentId: targetIds[0],
@@ -1314,6 +1382,12 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/api/teacher/lessons/restore-243', auth, checkRole('TEACHER'), async (req, res) => {
+  lesson243Restored = false; // Manuel tetiklemede tekrar çalıştır
+  const result = await restoreLesson243(req.user.id);
+  res.json(result);
 });
 
 app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), async (req, res) => {

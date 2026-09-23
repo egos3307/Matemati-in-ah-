@@ -68,10 +68,47 @@ const StudentDashboard = () => {
   const [watchingLessonId, setWatchingLessonId] = useState(null);
   const { user, logout } = useAuth();
 
+  const normalizeGradeKey = (g) => {
+    if (!g) return "5";
+    const str = String(g).trim();
+    const upper = str.toUpperCase();
+    if (upper === "LGS") return "8";
+    if (upper === "YKS") return "12";
+    if (upper === "MEZUN") return "Mezun";
+    if (upper === "KPSS") return "KPSS";
+    if (upper === "ALES") return "ALES";
+    if (upper === "DGS") return "DGS";
+    if (upper === "AGS") return "AGS";
+    const numMatch = str.match(/\d+/);
+    if (numMatch && ["5", "6", "7", "8", "9", "10", "11", "12"].includes(numMatch[0])) {
+      return numMatch[0];
+    }
+    return "5";
+  };
+
   const [activeSubTab, setActiveSubTab] = useState('topics'); 
+  const [selectedCurriculumGrade, setSelectedCurriculumGrade] = useState(() => normalizeGradeKey(user?.grade));
+  const [lessonSubjectFilter, setLessonSubjectFilter] = useState('ALL'); // 'ALL' | 'MATEMATIK' | 'FEN'
   const [topicProgress, setTopicProgress] = useState({});
   const [dailyLog, setDailyLog] = useState({ questions: 0, minutes: 0, notes: '' });
   const [dailyLogInput, setDailyLogInput] = useState({ questions: '', minutes: '', notes: '' });
+
+  const getLessonSubject = (lesson) => {
+    if (!lesson) return 'MATEMATIK';
+    if (lesson.subject === 'FEN') return 'FEN';
+    if (lesson.subject === 'MATEMATIK') return 'MATEMATIK';
+    const text = ((lesson.title || '') + ' ' + (lesson.description || '')).toLowerCase();
+    if (text.includes('fen') || text.includes('fizik') || text.includes('kimya') || text.includes('biyoloji')) {
+      return 'FEN';
+    }
+    return 'MATEMATIK';
+  };
+
+  useEffect(() => {
+    if (user?.grade) {
+      setSelectedCurriculumGrade(normalizeGradeKey(user?.grade));
+    }
+  }, [user?.grade]);
 
   // Hata Defteri states
   const [hataDefteri, setHataDefteri] = useState([]);
@@ -707,145 +744,231 @@ const StudentDashboard = () => {
 
   const topicsByGrade = {
     "5": [
-      "Doğal Sayılar",
-      "Doğal Sayılarla İşlemler",
-      "Kesirler",
+      // 1. Tema: Sayılar ve Nicelikler
+      "Çok Basamaklı Doğal Sayılar ve Okuma-Yazma",
+      "Basamak ve Bölük Kavramları",
+      "Doğal Sayılarla Dört İşlem",
+      "Doğal Sayılarla Problem Çözme",
+      "Kesirler (Bileşik ve Tam Sayılı Kesirler)",
+      "Kesirlerin Karşılaştırılması ve Sıralama",
       "Ondalık Gösterimler",
-      "Yüzdeler",
-      "Temel Geometrik Kavramlar",
-      "Geometrik Şekiller",
+      "Yüzde Gösterimi",
+      "Kesir–Ondalık–Yüzde İlişkisi",
+      // 2. Tema: İşlemlerle Cebirsel Düşünme
+      "İşlemlerde Bilinmeyen Nicelikler",
+      "İşlem Özellikleri ve İlişkileri",
+      "Örüntüler ve Matematiksel İlişkiler",
+      "Cebirsel Düşünmeyle Problem Çözme",
+      // 3. Tema: Geometrik Şekiller
+      "Nokta, Doğru, Işın ve Doğru Parçası",
+      "Açılar ve Açıların Ölçülmesi",
+      "Çokgenler ve Temel Geometrik Şekiller",
+      // 4. Tema: Geometrik Nicelikler
       "Uzunluk ve Çevre Ölçme",
-      "Alan Ölçme",
-      "Veri Toplama ve Veri Analizi"
+      "Alan Ölçme ve Nicelik İlişkileri",
+      // 5. Tema: İstatistiksel Araştırma Süreci
+      "Araştırma Sorusu Oluşturma ve Veri Toplama",
+      "Veriyi Düzenleme, Grafik ve Tablolar",
+      "Verileri Yorumlama",
+      // 6. Tema: Veriden Olasılığa
+      "Belirsiz Durumlar ve Olasılığa Giriş",
+      "Bir Olayın Gerçekleşme İhtimali"
     ],
     "6": [
-      "Doğal Sayılarla İşlemler",
+      // 1. Tema: Sayılar ve Nicelikler
       "Çarpanlar ve Katlar",
-      "Kümeler",
-      "Tam Sayılar",
-      "Kesirlerle İşlemler",
-      "Ondalık Gösterimler",
-      "Oran",
-      "Cebirsel İfadeler",
-      "Veri Analizi",
-      "Açılar",
-      "Alan Ölçme",
-      "Çember"
+      "Bölünebilme Kuralları",
+      "Asal Sayılar ve Asal Çarpanlar",
+      "Ortak Bölen ve Ortak Kat",
+      "Ondalık Gösterimler ve İşlemler",
+      "Kesirler ve Bölme İşlemi İlişkisi",
+      "Kesirlerle Dört İşlem",
+      "Yüzdeler",
+      "Kesir–Ondalık–Yüzde Problemleri",
+      "Uzunluk Ölçme Birimleri",
+      // 2. Tema: İşlemlerle Cebirsel Düşünme ve Değişimler
+      "Örüntüler ve Değişkenler",
+      "Cebirsel İfadeler ve Sayısal İlişkilerin Gösterimi",
+      "Cebirsel Problem Çözme",
+      // 3. Tema: Geometrik Şekiller
+      "Açılar ve Doğrular",
+      "Üçgenler, Dörtgenler ve Çokgenler",
+      // 4. Tema: Geometrik Nicelikler
+      "Uzunluk ve Alan Ölçme",
+      "Üçgenin ve Paralelkenarın Alanı",
+      "Çember ve Çevresi",
+      "Geometrik Ölçme Problemleri",
+      // 5. Tema: İstatistiksel Araştırma Süreci
+      "Veri Toplama ve Düzenleme",
+      "Grafikler ve Verilerin Analizi",
+      "Merkezi Eğilim Ölçüleri ve Sonuç Çıkarma",
+      // 6. Tema: Veriden Olasılığa (Deneysel Olasılık)
+      "Deney, Çıktı ve Göreli Sıklık",
+      "Deneysel Olasılık"
     ],
     "7": [
-      "Tam Sayılarla İşlemler",
-      "Rasyonel Sayılar ve Rasyonel Sayılarla İşlemler",
-      "Cebirsel İfadeler ve Denklem Çözme",
-      "Eşitlik ve Denklem",
+      // 1. Tema: Sayılar ve Nicelikler
+      "Tam Sayılar ve Sayı Doğrusu",
+      "Rasyonel Sayılar ve Farklı Gösterimleri",
+      "Rasyonel Sayılarla Dört İşlem",
+      "Rasyonel Sayılarla Problemler",
       "Oran ve Orantı",
-      "Yüzdeler",
+      "Doğru Orantı ve Orantı Problemleri",
+      // 2. Tema: İşlemlerle Cebirsel Düşünme ve Değişimler
+      "Cebirsel İfadeler ve İşlemler",
+      "Eşitlik ve Denklemler",
+      "Gerçek Yaşam Problemlerinin Cebirle Modellenmesi",
+      // 3. Tema: Dönüşüm
+      "Geometrik Dönüşümler (Öteleme ve Yansıma)",
+      "Dönüşümlerin Geometrik Şekillere Etkisi",
+      // 4. Tema: Geometrik Nicelikler
+      "Uzunluk ve Alan İlişkileri",
+      "Çevre, Çember ve Daire",
+      "Geometrik Ölçme Problemleri",
+      // 5. Tema: Geometrik Şekiller
       "Doğrular ve Açılar",
-      "Çokgenler",
-      "Çember ve Daire",
-      "Veri Analizi",
-      "Cisimlerin Farklı Yönlerden Görünümleri"
+      "Üçgenler ve Çokgenlerin Özellikleri",
+      // 6. Tema: İstatistiksel Araştırma Süreci
+      "Araştırma Soruları ve Veri Toplama Planı",
+      "Veri Dağılımları, Grafikler ve Veri Analizi",
+      "Sonuçları Yorumlama",
+      // 7. Tema: Veriden Olasılığa
+      "Ayrık ve Ayrık Olmayan Olaylar",
+      "Eşit ve Eşit Olmayan Olasılıklı Olaylar",
+      "Tümleyen Olay ve Teorik Olasılık"
     ],
     "8": [
-      "Çarpanlar ve Katlar",
-      "Üslü İfadeler",
-      "Kareköklü İfadeler",
-      "Veri Analizi",
+      // 1. Ünite (MEB Güncel Programı)
+      "Çarpanlar ve Katlar (EBOB - EKOK)",
+      "Üslü İfadeler ve Bilimsel Gösterim",
+      // 2. Ünite
+      "Kareköklü İfadeler ve Gerçek Sayılar",
+      "Veri Analizi (Çizgi, Sütun, Daire Grafiği)",
+      // 3. Ünite
       "Basit Olayların Olma Olasılığı",
-      "Cebirsel İfadeler ve Özdeşlikler",
-      "Doğrusal Denklemler",
-      "Eşitsizlikler",
-      "Üçgenler",
+      "Cebirsel İfadeler, Özdeşlikler ve Çarpanlara Ayırma",
+      // 4. Ünite
+      "Doğrusal Denklemler, Eğim ve Grafikler",
+      "Birinci Dereceden Eşitsizlikler",
+      // 5. Ünite
+      "Üçgenler ve Pisagor Bağıntısı",
       "Eşlik ve Benzerlik",
-      "Dönüşüm Geometrisi",
-      "Geometrik Cisimler"
+      // 6. Ünite
+      "Dönüşüm Geometrisi (Öteleme, Yansıma)",
+      "Geometrik Cisimler (Prizma, Silindir, Piramit, Koni)"
     ],
     "9": [
-      "Sayılar",
-      "Nicelikler ve Değişimler",
-      "Algoritma ve Bilişim",
-      "Geometrik Şekiller",
-      "Analitik İnceleme",
-      "İstatistiksel Araştırma Süreci",
-      "Veriden Olasılığa"
+      // 1. Tema: Sayılar
+      "Gerçek Sayılar, Aralıklar ve Sayı Kümeleri",
+      "Üslü ve Köklü İfadeler",
+      "Kümeler ve Küme İşlemleri",
+      "Özdeşlikler ve Çarpanlara Ayırma",
+      // 2. Tema: Nicelikler ve Değişimler (38 Saat)
+      "Fonksiyon Kavramı ve Doğrusal Fonksiyonlar",
+      "Mutlak Değer Fonksiyonu",
+      "Denklem ve Eşitsizlikler",
+      "Fonksiyonlarla Modellenen Problemler",
+      // 3. Tema: Geometrik Şekiller
+      "Üçgenler ve Açı Özellikleri",
+      "Üçgende Kenar Özellikleri ve Üçgen Eşitsizliği",
+      // 4. Tema: Eşlik ve Benzerlik
+      "Öteleme, Yansıma ve Dönme",
+      "Eşlik ve Benzerlik",
+      "Tales Teoremi, Öklid Bağıntıları ve Pisagor Teoremi",
+      // 5. Tema: Algoritma ve Bilişim
+      "Algoritmik Düşünme ve Problem Çözme Algoritmaları",
+      "Mantık, Mantık Bağlaçları ve Niceleyiciler",
+      "Matematiksel Problemlerin Algoritmik Çözümü",
+      // 6. Tema: İstatistiksel Araştırma Süreci
+      "Araştırma Sorusu, Veri Toplama ve Veri Analizi",
+      "Veri Dağılımları ve Standart Sapma",
+      // 7. Tema: Veriden Olasılığa (18 Saat)
+      "Deneysel Olasılık ve Teorik Olasılık İlişkisi",
+      "Olası Durumlar ve Göreli Sıklık"
     ],
     "10": [
-      "Sayılar",
-      "Nicelikler ve Değişimler",
-      "Sayma, Algoritma ve Bilişim",
-      "Geometrik Şekiller",
-      "Analitik İnceleme",
-      "İstatistiksel Araştırma Süreci",
-      "Veriden Olasılığa"
+      // 1. Tema: Geometrik Şekiller (36 Saat)
+      "Dik Üçgen ve Trigonometrik Oranlar (Sin, Cos, Tan, Cot)",
+      "Temel Trigonometrik Özdeşlikler",
+      "Üçgenin Yardımcı Elemanları ve Üçgende Alan",
+      "Sinüs Teoremi ve Kosinüs Teoremi",
+      // 2. Tema: İstatistiksel Araştırma Süreci (24 Saat)
+      "İki Kategorik Değişken ve İki Yönlü Tablolar",
+      "Kategorik Veri Analizi ve İstatistiksel Değerlendirme",
+      // 3. Tema: Sayılar (20 Saat)
+      "Asal Çarpanlar, Bölenler, EBOB ve EKOK",
+      "Bölünebilme Kuralları ve Kalan Bulma",
+      "Sayı Problemleri",
+      // 4. Tema: Nicelikler ve Değişimler (58 Saat)
+      "Fonksiyon Olma Şartları ve Nitel Özellikleri",
+      "Karesel, Karekök ve Rasyonel Fonksiyonlar",
+      "Referans Fonksiyonlardan Türetilenler ve Fonksiyon Dönüşümleri",
+      "Ters Fonksiyon",
+      "Fonksiyonlarla İlgili Denklem ve Eşitsizlikler",
+      "Fonksiyon Problemleri",
+      // 5. Tema: Sayma, Algoritma ve Bilişim (28 Saat)
+      "Sayma Yöntemleri, Stratejileri ve Problemleri",
+      "Algoritmik Problem Çözme",
+      "Cebirsel ve Fonksiyonel İşlemlerin Algoritmik Gösterimi",
+      // 6. Tema: Analitik İnceleme (22 Saat)
+      "Dik Koordinat Sistemi ve İki Nokta Arasındaki Uzaklık",
+      "Orta Nokta ve Ağırlık Merkezinin Koordinatları",
+      "Doğrunun Eğimi, Eğim Açısı ve Doğru Denklemi",
+      "Paralel, Kesişen ve Dik Doğrular",
+      // 7. Tema: Veriden Olasılığa (18 Saat)
+      "Bağımlı ve Bağımsız Olaylar",
+      "Koşullu Olasılık ve Bayes Teoremi",
+      "Ağaç Şemaları, İki Yönlü Tablolar ve Yaşamda Olasılık"
     ],
     "11": [
-      "Trigonometri (Yönlü Açılar, Fonksiyonlar, Grafikler, Teoremler)",
-      "Analitik Geometri (Doğrunun Analitik İncelenmesi)",
-      "Fonksiyonlarda Uygulamalar (Artan/Azalan, Parabol, Dönüşümler)",
-      "İkinci Dereceden Denklem ve Eşitsizlik Sistemleri",
-      "Çember ve Daire (Açı, Teğet, Uzunluk ve Alan)",
-      "Uzay Geometri (Katı Cisimler: Silindir, Koni, Küre)",
-      "Koşullu Olasılık ve Deneysel/Teorik Olasılık"
+      // 1. Tema: İstatistiksel Araştırma Süreci (24 Saat)
+      "İki Nicel Değişken Arasındaki İlişki ve İki Değişkenli Veri",
+      "Serpme Diyagramları",
+      "Korelasyon ve Korelasyon Katsayısı",
+      "Verilerin Analizi ve İstatistiksel Tahminleri Değerlendirme",
+      // 2. Tema: Geometrik Şekiller (62 Saat)
+      "Dörtgenler (Açı, Kenar, Köşegen Özellikleri, Simetri, Alan)",
+      "Özel Dörtgenler (Yamuk, Paralelkenar, Eşkenar Dörtgen, Dikdörtgen, Kare, Deltoid)",
+      "Çokgenler ve Dışbükey Çokgenler",
+      "Çokgenlerde Açı, Köşegen, Alan ve Geometrik Problemler",
+      // 3. Tema: Nicelikler ve Değişimler
+      "Trigonometrik Fonksiyonlar (Sinüs, Kosinüs, Tanjant, Kotanjant)",
+      "Trigonometrik Fonksiyonların Özellikleri ve Denklemler",
+      "Üstel Fonksiyonlar ve Logaritmik Fonksiyonlar (e Sayısı)",
+      "Üstel ve Logaritmik Denklem ve Eşitsizlikler",
+      "Fonksiyonlarda İşlemler ve Bileşke Fonksiyon"
     ],
     "12": [
-      "— TYT Matematik —",
-      "Temel Kavramlar",
-      "Sayı Basamakları",
-      "Bölme ve Bölünebilme",
-      "EBOB – EKOK",
-      "Rasyonel Sayılar",
-      "Basit Eşitsizlikler",
-      "Mutlak Değer",
-      "Üslü Sayılar",
-      "Köklü Sayılar",
-      "Çarpanlara Ayırma",
-      "Oran – Orantı",
-      "Denklemler",
-      "Sayı Problemleri",
-      "Kesir Problemleri",
-      "Yaş Problemleri",
-      "Hareket Problemleri",
-      "İşçi-Havuz Problemleri",
-      "Karışım Problemleri",
-      "Kâr-Zarar Problemleri",
-      "Kümeler ve Kartezyen Çarpım",
-      "Mantık",
-      "Fonksiyonlar (TYT)",
-      "Permütasyon",
-      "Kombinasyon",
-      "Binom",
-      "Olasılık",
-      "Veri – İstatistik",
-      "Temel Geometri",
-      "Doğruda Açılar",
-      "Üçgenler",
-      "Çokgenler",
-      "Dörtgenler",
-      "Çember ve Daire",
-      "Analitik Geometri (TYT)",
-      "Katı Cisimler",
-      "— AYT Matematik —",
-      "Fonksiyonlar (AYT)",
-      "Polinomlar",
-      "İkinci Dereceden Denklemler ve Parabol",
-      "Karmaşık Sayılar",
-      "Eşitsizlikler",
-      "Trigonometri",
-      "Logaritma",
-      "Diziler",
-      "Limit",
-      "Süreklilik",
-      "Türev",
-      "Türevin Uygulamaları",
-      "İntegral",
-      "İntegralin Uygulamaları",
-      "Analitik Geometri (AYT)",
-      "Doğrunun Analitiği",
-      "Çemberin Analitiği",
-      "Dönüşüm Geometrisi",
-      "Permütasyon (AYT)",
-      "Kombinasyon (AYT)",
-      "Binom (AYT)",
-      "Olasılık (AYT)"
+      // 1. Konu (MEB Güncel Programı)
+      "Üstel ve Logaritmik Fonksiyonlar",
+      "Logaritma Fonksiyonunun Grafiği ve Özellikleri",
+      "10 ve e Tabanında Doğal Logaritma (ln)",
+      "Üstel ve Logaritmik Denklem ve Eşitsizlikler",
+      // 2. Konu
+      "Diziler ve Genel Terim",
+      "Aritmetik Diziler ve Geometrik Diziler",
+      "Dizi Problemleri",
+      // 3. Konu
+      "Trigonometri: Toplam ve Fark Formülleri",
+      "İki Kat Açı Formülleri",
+      "Trigonometrik Denklemler ve Çözümleri",
+      // 4. Konu
+      "Dönüşümler: Analitik Düzlemde Öteleme, Yansıma, Dönme",
+      // 5. Konu
+      "Limit Kavramı, Sağdan-Soldan Limit ve Belirsizlikler",
+      "Süreklilik ve Sürekli Fonksiyonlar",
+      // 6. Konu
+      "Türev Kavramı ve Anlık Değişim Oranı",
+      "Türev Alma Kuralları ve Fonksiyonların Türevi",
+      "Türevin Geometrik Yorumu ve Teğet Denklemi",
+      "Artan-Azalan Fonksiyonlar, Maksimum-Minimum",
+      "Türevin Uygulamaları ve Optimizasyon Problemleri",
+      // 7. Konu
+      "Belirsiz İntegral ve İntegral Alma Kuralları",
+      "Belirli İntegral ve Özellikleri",
+      "İntegral ile Alan Hesabı ve Uygulamaları",
+      // 8. Konu
+      "Analitik Geometri: Çemberin Analitik İncelenmesi ve Çember Denklemi"
     ],
     "Mezun": [
       "— TYT Matematik —",
@@ -861,52 +984,24 @@ const StudentDashboard = () => {
       "Çarpanlara Ayırma",
       "Oran – Orantı",
       "Denklemler",
-      "Sayı Problemleri",
-      "Kesir Problemleri",
-      "Yaş Problemleri",
-      "Hareket Problemleri",
-      "İşçi-Havuz Problemleri",
-      "Karışım Problemleri",
-      "Kâr-Zarar Problemleri",
-      "Kümeler ve Kartezyen Çarpım",
-      "Mantık",
+      "Sayı ve Kesir Problemleri",
+      "Yaş ve Hareket Problemleri",
+      "Yüzde, Kâr-Zarar ve Karışım Problemleri",
+      "Kümeler ve Mantık",
       "Fonksiyonlar (TYT)",
-      "Permütasyon",
-      "Kombinasyon",
-      "Binom",
-      "Olasılık",
-      "Veri – İstatistik",
-      "Temel Geometri",
-      "Doğruda Açılar",
-      "Üçgenler",
-      "Çokgenler",
-      "Dörtgenler",
-      "Çember ve Daire",
-      "Analitik Geometri (TYT)",
-      "Katı Cisimler",
+      "Permütasyon, Kombinasyon, Binom, Olasılık",
+      "Veri ve İstatistik",
+      "Temel Geometri ve Üçgenler",
+      "Çokgenler, Dörtgenler, Çember ve Katı Cisimler",
       "— AYT Matematik —",
-      "Fonksiyonlar (AYT)",
-      "Polinomlar",
-      "İkinci Dereceden Denklemler ve Parabol",
-      "Karmaşık Sayılar",
-      "Eşitsizlikler",
-      "Trigonometri",
-      "Logaritma",
-      "Diziler",
-      "Limit",
-      "Süreklilik",
-      "Türev",
-      "Türevin Uygulamaları",
-      "İntegral",
-      "İntegralin Uygulamaları",
-      "Analitik Geometri (AYT)",
-      "Doğrunun Analitiği",
-      "Çemberin Analitiği",
-      "Dönüşüm Geometrisi",
-      "Permütasyon (AYT)",
-      "Kombinasyon (AYT)",
-      "Binom (AYT)",
-      "Olasılık (AYT)"
+      "Polinomlar ve 2. Dereceden Denklemler",
+      "Parabol ve Eşitsizlik Sistemleri",
+      "Trigonometri (AYT)",
+      "Logaritma ve Diziler",
+      "Limit ve Süreklilik",
+      "Türev ve Uygulamaları",
+      "İntegral ve Alan Hesabı",
+      "Analitik Geometri ve Çemberin Analitiği"
     ],
     "KPSS": [
       "Temel Kavramlar",
@@ -924,8 +1019,7 @@ const StudentDashboard = () => {
       "Problemler",
       "Kümeler",
       "Fonksiyonlar",
-      "İşlem",
-      "Modüler Aritmetik",
+      "İşlem ve Modüler Aritmetik",
       "Permütasyon – Kombinasyon – Olasılık",
       "Grafik ve Tablo Yorumlama",
       "Temel Geometri"
@@ -991,13 +1085,13 @@ const StudentDashboard = () => {
     ]
   };
 
+  const activeGradeKey = selectedCurriculumGrade || normalizeGradeKey(user?.grade);
+  const mathTopics = topicsByGrade[activeGradeKey] || topicsByGrade["5"];
 
-  const mathTopics = topicsByGrade[userGrade] || topicsByGrade["5"];
-
-
-  // Calculate topic curriculum completion rate
+  // Calculate topic curriculum completion rate for the active grade
   const totalTasks = mathTopics.length * 3;
-  const completedTasks = Object.values(topicProgress).reduce((acc, curr) => {
+  const completedTasks = mathTopics.reduce((acc, topic) => {
+    const curr = topicProgress[topic] || {};
     let count = 0;
     if (curr.work) count++;
     if (curr.solve) count++;
@@ -1007,17 +1101,36 @@ const StudentDashboard = () => {
   const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-white pb-32 md:pt-4">
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-primary/10 md:hidden bg-white sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-          <h1 className="text-lg font-black text-slate-900">Fullematematiği</h1>
+    <div className="min-h-screen bg-white pb-32">
+      {/* Top Header (Mobile & Desktop with Logout Button) */}
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="h-9 w-9 object-contain" />
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Fullematematiği</h1>
+              <span className="hidden sm:inline-block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Öğrenci Paneli</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <span className="text-xs font-black text-slate-800 block leading-tight">{user?.name}</span>
+              <span className="text-[11px] font-bold text-slate-400">
+                {user?.studentCode ? `Kod: ${user.studentCode}` : (user?.grade ? `${user.grade}. Sınıf` : 'Öğrenci')}
+              </span>
+            </div>
+            <button 
+              onClick={logout} 
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all border border-rose-100 cursor-pointer shadow-xs hover:shadow-sm"
+              title="Çıkış Yap"
+            >
+              <span className="material-symbols-outlined text-base">logout</span>
+              <span className="inline">Çıkış Yap</span>
+            </button>
+          </div>
         </div>
-        <button onClick={logout} className="p-2 text-slate-400">
-          <span className="material-symbols-outlined">logout</span>
-        </button>
-      </div>
+      </header>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* PANEL */}
@@ -1632,11 +1745,63 @@ const StudentDashboard = () => {
             {/* Sub-tab: TOPICS */}
             {activeSubTab === 'topics' && (
               <div className="space-y-6">
-                {/* Progress bar */}
+                {/* Grade Selector Pills */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  {[
+                    { key: "5", label: "5. Sınıf" },
+                    { key: "6", label: "6. Sınıf" },
+                    { key: "7", label: "7. Sınıf" },
+                    { key: "8", label: "8. Sınıf (LGS)" },
+                    { key: "9", label: "9. Sınıf" },
+                    { key: "10", label: "10. Sınıf" },
+                    { key: "11", label: "11. Sınıf" },
+                    { key: "12", label: "12. Sınıf (AYT)" },
+                    { key: "Mezun", label: "Mezun / YKS" }
+                  ].map(gradeItem => {
+                    const isStudentOwnGrade = normalizeGradeKey(user?.grade) === gradeItem.key;
+                    const isSelected = activeGradeKey === gradeItem.key;
+                    return (
+                      <button
+                        key={gradeItem.key}
+                        onClick={() => setSelectedCurriculumGrade(gradeItem.key)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
+                        }`}
+                      >
+                        <span>{gradeItem.label}</span>
+                        {isStudentOwnGrade && (
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                            isSelected ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                          }`}>
+                            Sınıfın
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Progress bar and Curriculum title */}
                 <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-black text-slate-700 uppercase tracking-widest">Matematik Müfredat İlerlemen</span>
-                    <span className="text-sm font-black text-primary">{Math.round(completionRate)}%</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary px-2.5 py-0.5 bg-primary/10 rounded-full inline-block mb-1">
+                        {['8', '12', 'Mezun'].includes(activeGradeKey) ? 'MEB Güncel Programı' : 'Türkiye Yüzyılı Maarif Modeli'}
+                      </span>
+                      <h4 className="text-sm md:text-base font-black text-slate-900">
+                        {activeGradeKey === '8'
+                          ? '8. Sınıf LGS Matematik Müfredatı'
+                          : activeGradeKey === '12'
+                          ? '12. Sınıf AYT Matematik Müfredatı'
+                          : `${activeGradeKey}. Sınıf Matematik Müfredatı`}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <span className="text-xs font-bold text-slate-500">Tamamlanma:</span>
+                      <span className="text-base font-black text-primary">{Math.round(completionRate)}%</span>
+                    </div>
                   </div>
                   <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
                     <div className="h-full bg-primary transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
@@ -2189,7 +2354,53 @@ const StudentDashboard = () => {
 
         {activeTab === 'lessons' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-black text-slate-900">Derslerin</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">Derslerin</h2>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">Matematik ve Fen Bilimleri canlı derslerine buradan katılabilir veya kayıtları izleyebilirsin.</p>
+              </div>
+            </div>
+
+            {/* Yukarıdan Fen ve Matematik Seçimi (İkiye Ayrılan Branş Sekmeleri) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setLessonSubjectFilter('MATEMATIK')}
+                className={`py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  lessonSubjectFilter === 'MATEMATIK'
+                    ? 'bg-white text-indigo-700 shadow-md border border-indigo-100 scale-[1.01]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="text-base">📐</span>
+                <span className="truncate">Matematik ({lessons.filter(l => getLessonSubject(l) === 'MATEMATIK').length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLessonSubjectFilter('FEN')}
+                className={`py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  lessonSubjectFilter === 'FEN'
+                    ? 'bg-white text-emerald-700 shadow-md border border-emerald-100 scale-[1.01]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span className="text-base">🔬</span>
+                <span className="truncate">Fen Bilimleri ({lessons.filter(l => getLessonSubject(l) === 'FEN').length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLessonSubjectFilter('ALL')}
+                className={`col-span-2 sm:col-span-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  lessonSubjectFilter === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <span>Tüm Dersler ({lessons.length})</span>
+              </button>
+            </div>
 
             {/* Ders ID ile Kayıt İzle Card */}
             <div className="p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl space-y-4">
@@ -2226,53 +2437,90 @@ const StudentDashboard = () => {
               )}
             </div>
 
-            <div className="space-y-4">
-              {lessons.map(lesson => {
-                const isPast = new Date(lesson.date).getTime() + 7200000 < Date.now();
-                return (
-                  <div key={lesson.id} className="p-6 bg-white rounded-3xl border border-primary/10 flex items-center justify-between shadow-sm">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-slate-900">{lesson.title}</h4>
-                        <span className="bg-slate-150 text-slate-600 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border border-slate-200 shadow-sm">
-                          ID: {lesson.id}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">{new Date(lesson.date).toLocaleString('tr-TR')}</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      {/* Katıl button is always visible so students can join the classroom */}
-                      <button 
-                        onClick={() => setActiveMeeting(lesson)} 
-                        className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold cursor-pointer shadow-sm hover:bg-primary/95 transition-all"
-                      >
-                        Katıl
-                      </button>
+            {/* Dersler Listesi */}
+            {(() => {
+              const currentFilteredLessons = lessons.filter(l => {
+                if (lessonSubjectFilter === 'ALL') return true;
+                return getLessonSubject(l) === lessonSubjectFilter;
+              });
 
-                      {lesson.recordingUrl ? (
-                        <button 
-                          onClick={() => handleWatchLesson(lesson.id)} 
-                          disabled={watchingLessonId === lesson.id}
-                          className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                          title="Ders Kaydını Google Drive'da İzle"
-                        >
-                          <span className="material-symbols-outlined text-base">
-                            {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
-                          </span>
-                          {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
-                        </button>
-                      ) : (
-                        isPast && (
-                          <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                            Kayıt Yok
-                          </span>
-                        )
-                      )}
-                    </div>
+              if (currentFilteredLessons.length === 0) {
+                return (
+                  <div className="text-center py-12 bg-slate-50/80 rounded-3xl border border-slate-100 p-6 space-y-2">
+                    <span className="text-4xl block mb-2">{lessonSubjectFilter === 'FEN' ? '🔬' : '📐'}</span>
+                    <h4 className="font-black text-slate-800 text-sm">
+                      {lessonSubjectFilter === 'FEN' 
+                        ? 'Planlanmış Fen Bilimleri Dersi Yok' 
+                        : lessonSubjectFilter === 'MATEMATIK' 
+                        ? 'Planlanmış Matematik Dersi Yok' 
+                        : 'Henüz Ders Bulunmuyor'}
+                    </h4>
+                    <p className="text-xs text-slate-400 font-semibold max-w-sm mx-auto">
+                      Öğretmenin yeni bir ders planladığında burada listelenecektir.
+                    </p>
                   </div>
                 );
-              })}
-            </div>
+              }
+
+              return (
+                <div className="space-y-4">
+                  {currentFilteredLessons.map(lesson => {
+                    const isPast = new Date(lesson.date).getTime() + 7200000 < Date.now();
+                    const subj = getLessonSubject(lesson);
+                    return (
+                      <div key={lesson.id} className="p-6 bg-white rounded-3xl border border-primary/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              subj === 'FEN' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                            }`}>
+                              {subj === 'FEN' ? '🔬 Fen Bilimleri' : '📐 Matematik'}
+                            </span>
+                            <h4 className="font-bold text-slate-900">{lesson.title}</h4>
+                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border border-slate-200 shadow-xs">
+                              ID: {lesson.id}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">
+                            {new Date(lesson.date).toLocaleString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 items-center self-start sm:self-center">
+                          {/* Katıl button is always visible so students can join the classroom */}
+                          <button 
+                            onClick={() => setActiveMeeting(lesson)} 
+                            className="bg-primary text-white px-5 py-2.5 rounded-xl text-xs font-black cursor-pointer shadow-sm hover:bg-primary/95 transition-all flex items-center gap-1.5"
+                          >
+                            <span className="material-symbols-outlined text-base">video_call</span>
+                            Katıl
+                          </button>
+
+                          {lesson.recordingUrl ? (
+                            <button 
+                              onClick={() => handleWatchLesson(lesson.id)} 
+                              disabled={watchingLessonId === lesson.id}
+                              className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                              title="Ders Kaydını Google Drive'da İzle"
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                {watchingLessonId === lesson.id ? 'hourglass_top' : 'play_circle'}
+                              </span>
+                              {watchingLessonId === lesson.id ? 'Açılıyor...' : 'Kaydı İzle'}
+                            </button>
+                          ) : (
+                            isPast && (
+                              <span className="bg-slate-100 text-slate-400 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                                Kayıt Yok
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

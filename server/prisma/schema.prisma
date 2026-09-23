@@ -87,6 +87,7 @@ model Lesson {
   id             Int      @id @default(autoincrement())
   title          String
   description    String?
+  subject        String?  @default("MATEMATIK") // "MATEMATIK" veya "FEN"
   date           DateTime
   zoomMeetingId  String?
   zoomJoinUrl    String?
