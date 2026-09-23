@@ -291,11 +291,166 @@ function parseLessonRecordings(rawInput) {
   return results;
 }
 
+/**
+ * Dosya adından ders ID'sini tespit eder.
+ * Örnekler: lesson_42.webm, lesson-42.mp4, lesson 42.webm, Ders_42_Kayit.mp4, 42_lesson.mp4
+ */
+function extractLessonIdFromFilename(filename) {
+  if (!filename || typeof filename !== 'string') return null;
+  const m = filename.match(/(?:lesson|ders|Ders|LESSON)[_\s-](\d+)/i);
+  if (m && m[1]) return parseInt(m[1], 10);
+  const m2 = filename.match(/^(\d+)[_\s\.]/);
+  if (m2 && m2[1]) return parseInt(m2[1], 10);
+  return null;
+}
+
+// Google Drive klasör sorgusu önbelleği (30 saniye TTL - API kotasını korur)
+let _driveFolderCache = null;
+let _driveFolderCacheTime = 0;
+const DRIVE_FOLDER_CACHE_TTL = 30 * 1000;
+
+/**
+ * Google Drive ana kayıt klasöründeki tüm video dosyalarını tarar ve ders ID'lerine göre gruplar.
+ */
+async function scanDriveFolderRecordings(getAccessTokenFn, folderIdOverride = null) {
+  const folderId = folderIdOverride || process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (!folderId || typeof getAccessTokenFn !== 'function') return _driveFolderCache || new Map();
+
+  const now = Date.now();
+  if (!folderIdOverride && _driveFolderCache && (now - _driveFolderCacheTime < DRIVE_FOLDER_CACHE_TTL)) {
+    return _driveFolderCache;
+  }
+
+  try {
+    const authData = await getAccessTokenFn();
+    if (!authData || !authData.token) return _driveFolderCache || new Map();
+
+    const cleanFolderId = String(folderId).replace(/^['"]|['"]$/g, '').trim();
+    const folderMatch = cleanFolderId.match(/folders\/([a-zA-Z0-9_-]+)/);
+    const targetFolderId = folderMatch ? folderMatch[1] : cleanFolderId;
+
+    const query = encodeURIComponent(`'${targetFolderId}' in parents and trashed = false`);
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,size,createdTime)&supportsAllDrives=true&orderBy=createdTime asc&pageSize=1000`,
+      {
+        headers: { Authorization: `Bearer ${authData.token}` }
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`[Drive Scan] Klasör listeleme uyarısı (${targetFolderId}):`, errText);
+      return _driveFolderCache || new Map();
+    }
+
+    const data = await res.json();
+    const files = data.files || [];
+
+    const lessonFilesMap = new Map();
+
+    for (const file of files) {
+      if (file.mimeType === 'application/vnd.google-apps.folder') continue;
+
+      const lessonId = extractLessonIdFromFilename(file.name);
+      if (lessonId) {
+        if (!lessonFilesMap.has(lessonId)) {
+          lessonFilesMap.set(lessonId, []);
+        }
+        lessonFilesMap.get(lessonId).push({
+          fileId: file.id,
+          name: file.name,
+          createdTime: file.createdTime
+        });
+      }
+    }
+
+    if (!folderIdOverride) {
+      _driveFolderCache = lessonFilesMap;
+      _driveFolderCacheTime = now;
+    }
+
+    return lessonFilesMap;
+  } catch (err) {
+    console.warn(`[Drive Scan Hatası]:`, err.message);
+    return _driveFolderCache || new Map();
+  }
+}
+
+/**
+ * Ders listesini Google Drive'daki güncel dosyalar ile senkronize eder.
+ * Drive'da bir derse ait 2 veya daha fazla kayıt varsa, veritabanını ve ders nesnesini
+ * otomatik olarak "drive:ID1, drive:ID2" şeklinde günceller.
+ */
+async function syncLessonsWithDrive(lessons, prisma, getAccessTokenFn) {
+  if (!lessons || lessons.length === 0) return lessons;
+
+  try {
+    const driveMap = await scanDriveFolderRecordings(getAccessTokenFn);
+    if (!driveMap || driveMap.size === 0) return lessons;
+
+    for (const lesson of lessons) {
+      const driveFiles = driveMap.get(lesson.id);
+
+      if (driveFiles && driveFiles.length > 0) {
+        const existingRecordings = parseLessonRecordings(lesson.recordingUrl);
+        const existingFileIds = new Set(existingRecordings.map(r => r.fileId).filter(Boolean));
+
+        const missingFromDb = driveFiles.filter(df => !existingFileIds.has(df.fileId));
+
+        if (missingFromDb.length > 0 || (driveFiles.length > 1 && existingRecordings.length < driveFiles.length)) {
+          const allFileIds = [];
+          const addedSet = new Set();
+
+          // İlk oluşturulan dosya 1. Kayıt, sonraki 2. Kayıt olacak şekilde Drive'daki sıralamayı koru
+          for (const df of driveFiles) {
+            if (!addedSet.has(df.fileId)) {
+              addedSet.add(df.fileId);
+              allFileIds.push(`drive:${df.fileId}`);
+              ensureDriveFileReadable(df.fileId, getAccessTokenFn).catch(() => {});
+            }
+          }
+
+          // Veritabanındaki diğer mevcut linkleri de koru
+          for (const er of existingRecordings) {
+            if (er.fileId && !addedSet.has(er.fileId)) {
+              addedSet.add(er.fileId);
+              allFileIds.push(`drive:${er.fileId}`);
+            } else if (!er.fileId && er.watchUrl && !addedSet.has(er.watchUrl)) {
+              addedSet.add(er.watchUrl);
+              allFileIds.push(er.watchUrl);
+            }
+          }
+
+          const newRecordingUrl = allFileIds.join(', ');
+          if (newRecordingUrl !== lesson.recordingUrl) {
+            lesson.recordingUrl = newRecordingUrl;
+            lesson.recordingRequested = true;
+            if (prisma && prisma.lesson) {
+              prisma.lesson.update({
+                where: { id: lesson.id },
+                data: { recordingUrl: newRecordingUrl, recordingRequested: true }
+              }).catch(e => console.warn(`[Drive Sync DB Error] Lesson ${lesson.id}:`, e.message));
+            }
+            console.log(`[Drive Sync] Lesson ${lesson.id} için Drive'dan ${driveFiles.length} adet kayıt senkronize edildi: ${newRecordingUrl}`);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Drive Sync Hatası]:', err.message);
+  }
+
+  return lessons;
+}
+
 module.exports = {
   extractDriveFileId,
   isValidDriveFileId,
   ensureDriveFileReadable,
   inspectDriveFolderSecurity,
   buildDriveWatchUrl,
-  parseLessonRecordings
+  parseLessonRecordings,
+  extractLessonIdFromFilename,
+  scanDriveFolderRecordings,
+  syncLessonsWithDrive
 };

@@ -13,7 +13,7 @@ import {
   RoomAudioRenderer,
   useDataChannel
 } from '@livekit/components-react';
-import { Track, ConnectionState, LocalVideoTrack, ScreenSharePresets, VideoPresets, AudioPresets } from 'livekit-client';
+import { Track, ConnectionState, LocalVideoTrack, ScreenSharePresets, VideoPresets, AudioPresets, RoomEvent } from 'livekit-client';
 import '@livekit/components-styles';
 import BreakOverlay from './BreakOverlay.jsx';
 
@@ -34,7 +34,6 @@ const LIVEKIT_ROOM_OPTIONS = {
     autoGainControl: true,
     echoCancellation: true,
     noiseSuppression: true,
-    channelCount: 1,
   },
   publishDefaults: {
     simulcast: false,
@@ -2806,6 +2805,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   // Device selectors state
   const [videoDevices, setVideoDevices] = useState([]);
   const [audioDevices, setAudioDevices] = useState([]);
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState('default');
+  const selectedAudioDeviceIdRef = useRef('default');
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState('default');
+  const selectedVideoDeviceIdRef = useRef('default');
   const [showCameraMenu, setShowCameraMenu] = useState(false);
   const [showMicMenu, setShowMicMenu] = useState(false);
   const [showRecordPrompt, setShowRecordPrompt] = useState(false);
@@ -2818,22 +2821,120 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   }, [connectionState, role]);
 
+  const loadDevices = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return { vDevs: [], aDevs: [] };
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const vDevs = devices.filter(d => d.kind === 'videoinput' && d.label);
+      const aDevs = devices.filter(d => d.kind === 'audioinput' && d.label);
+      setVideoDevices(vDevs);
+      setAudioDevices(aDevs);
+      return { vDevs, aDevs };
+    } catch (err) {
+      console.warn("Cihaz listeleme uyarısı:", err);
+      return { vDevs: [], aDevs: [] };
+    }
+  };
+
+  // Cihazları ilk bağlantıda yükle ve kulaklık / bluetooth bağlanıp çıkarıldığında (devicechange) otomatik uyarla
   useEffect(() => {
-    const loadDevices = async () => {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        setVideoDevices(devices.filter(d => d.kind === 'videoinput' && d.label));
-        setAudioDevices(devices.filter(d => d.kind === 'audioinput' && d.label));
-      } catch (err) {
-        console.warn("Error loading devices:", err);
-      }
-    };
-    
     if (connectionState === ConnectionState.Connected) {
       loadDevices();
     }
-  }, [connectionState]);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.addEventListener) return;
+
+    let deviceChangeTimer = null;
+
+    const handleDeviceChange = () => {
+      // Kulaklık veya Bluetooth bağlandığında tarayıcı peş peşe birden çok event tetikleyebilir; 500ms debounce
+      if (deviceChangeTimer) clearTimeout(deviceChangeTimer);
+      deviceChangeTimer = setTimeout(async () => {
+        try {
+          await loadDevices();
+
+          // Öğrencinin veya öğretmenin mikrofonu açıksa kulaklık / donanım geçişini sorunsuz devral
+          if (localParticipant && isMicrophoneEnabled) {
+            const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+            const audioTrack = micPub?.audioTrack || micPub?.track;
+            const msTrack = audioTrack?.mediaStreamTrack;
+            const isTrackStale = !msTrack || msTrack.readyState === 'ended' || msTrack.muted;
+
+            const targetDevId = selectedAudioDeviceIdRef.current || 'default';
+
+            if (room && typeof room.switchActiveDevice === 'function') {
+              try {
+                await room.switchActiveDevice('audioinput', targetDevId, false);
+              } catch (devErr) {
+                console.warn("Kulaklık ses cihazı geçiş uyarısı:", devErr);
+              }
+            }
+
+            if (isTrackStale && audioTrack && typeof audioTrack.restartTrack === 'function') {
+              try {
+                await audioTrack.restartTrack();
+              } catch (resErr) {
+                console.warn("Ses izi yeniden başlatma uyarısı:", resErr);
+              }
+            }
+          }
+
+          // Kulaklık çıkışı (hoparlör sesi duyma) kontrolü
+          if (room && !room.canPlaybackAudio) {
+            room.startAudio().catch(() => {});
+          }
+        } catch (err) {
+          console.warn("Cihaz değişimi işleme uyarısı:", err);
+        }
+      }, 500);
+    };
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    return () => {
+      if (deviceChangeTimer) clearTimeout(deviceChangeTimer);
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, [connectionState, room, localParticipant, isMicrophoneEnabled]);
+
+  // Kulaklık takıldığında veya çıkarıldığında işletim sisteminin önceki mikrofon MediaStreamTrack'ini sonlandırması durumunda anında otomatik kurtarma
+  useEffect(() => {
+    if (!localParticipant || !isMicrophoneEnabled) return;
+
+    const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+    const audioTrack = micPub?.audioTrack || micPub?.track;
+    const msTrack = audioTrack?.mediaStreamTrack;
+    if (!msTrack) return;
+
+    let recoveryTimer = null;
+    const handleTrackEnded = () => {
+      console.warn("Yerel mikrofon akışı sonlandı (kulaklık/donanım değişimi), mikrofon otomatik kurtarılıyor...");
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      recoveryTimer = setTimeout(async () => {
+        if (!localParticipant || !isMicrophoneEnabled) return;
+        try {
+          if (room && typeof room.switchActiveDevice === 'function') {
+            await room.switchActiveDevice('audioinput', selectedAudioDeviceIdRef.current || 'default', false);
+          } else if (audioTrack && typeof audioTrack.restartTrack === 'function') {
+            await audioTrack.restartTrack();
+          } else {
+            await localParticipant.setMicrophoneEnabled(true, {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            });
+          }
+        } catch (e) {
+          console.warn("Mikrofon kurtarma uyarısı:", e);
+        }
+      }, 400);
+    };
+
+    msTrack.addEventListener('ended', handleTrackEnded);
+    return () => {
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      msTrack.removeEventListener('ended', handleTrackEnded);
+    };
+  }, [localParticipant, isMicrophoneEnabled, micTracks, room]);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -2864,22 +2965,50 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   const selectMicrophone = async (deviceId) => {
     if (!localParticipant) return;
     try {
-      await localParticipant.setMicrophoneEnabled(false);
-      await localParticipant.setMicrophoneEnabled(true, { deviceId });
+      setSelectedAudioDeviceId(deviceId);
+      selectedAudioDeviceIdRef.current = deviceId;
+      if (room && typeof room.switchActiveDevice === 'function') {
+        await room.switchActiveDevice('audioinput', deviceId, false);
+      } else {
+        await localParticipant.setMicrophoneEnabled(true, {
+          deviceId,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        });
+      }
       setShowMicMenu(false);
     } catch (err) {
-      console.error("Failed to select microphone:", err);
+      console.warn("Mikrofon seçiminde doğrudan geçiş uyarısı, standart geçiş uygulanıyor:", err);
+      try {
+        await localParticipant.setMicrophoneEnabled(false);
+        await localParticipant.setMicrophoneEnabled(true, {
+          deviceId,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        });
+      } catch (e2) {
+        console.error("Mikrofon seçimi başarısız:", e2);
+      }
+      setShowMicMenu(false);
     }
   };
 
   const selectCamera = async (deviceId) => {
     if (!localParticipant) return;
     try {
-      await localParticipant.setCameraEnabled(false);
-      await localParticipant.setCameraEnabled(true, { deviceId });
+      setSelectedVideoDeviceId(deviceId);
+      selectedVideoDeviceIdRef.current = deviceId;
+      if (room && typeof room.switchActiveDevice === 'function') {
+        await room.switchActiveDevice('videoinput', deviceId, false);
+      } else {
+        await localParticipant.setCameraEnabled(true, { deviceId });
+      }
       setShowCameraMenu(false);
     } catch (err) {
-      console.error("Failed to select camera:", err);
+      console.error("Kamera seçimi hatası:", err);
+      setShowCameraMenu(false);
     }
   };
 
@@ -2991,7 +3120,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            channelCount: 1,
           });
         } catch (err) {
           console.warn("Could not auto-enable microphone:", err);
@@ -3018,11 +3146,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     window.addEventListener('click', unlockAudio, { once: true });
     window.addEventListener('touchstart', unlockAudio, { once: true });
     window.addEventListener('keydown', unlockAudio, { once: true });
+    if (typeof room.on === 'function') {
+      room.on(RoomEvent.AudioPlaybackStatusChanged, unlockAudio);
+    }
     unlockAudio();
     return () => {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
+      if (typeof room.off === 'function') {
+        room.off(RoomEvent.AudioPlaybackStatusChanged, unlockAudio);
+      }
     };
   }, [room]);
 
@@ -3377,7 +3511,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          channelCount: 1,
         });
       } else {
         await localParticipant.setMicrophoneEnabled(false);
@@ -3908,7 +4041,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
               </span>
             </button>
             <button
-              onClick={() => setShowMicMenu(!showMicMenu)}
+              onClick={async () => {
+                if (!showMicMenu && (!audioDevices || audioDevices.length === 0)) {
+                  await loadDevices();
+                }
+                setShowMicMenu(!showMicMenu);
+              }}
               className={`p-2.5 sm:p-3 rounded-r-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-r ${
                 isMicrophoneEnabled
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border-slate-750'
@@ -3922,20 +4060,29 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </button>
 
             {showMicMenu && audioDevices.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
-                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1">
-                  Mikrofonlar
+              <div className="absolute bottom-full left-0 mb-2 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
+                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1 flex items-center justify-between">
+                  <span>Mikrofonlar</span>
+                  <span className="text-[7px] text-slate-500 font-mono">({audioDevices.length})</span>
                 </div>
-                <div className="flex flex-col max-h-40 overflow-y-auto">
-                  {audioDevices.map((device) => (
-                    <button
-                      key={device.deviceId}
-                      onClick={() => selectMicrophone(device.deviceId)}
-                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-semibold truncate"
-                    >
-                      {device.label || `Mikrofon ${device.deviceId.substring(0, 4)}`}
-                    </button>
-                  ))}
+                <div className="flex flex-col max-h-48 overflow-y-auto divide-y divide-slate-800/40">
+                  {audioDevices.map((device) => {
+                    const isSelected = selectedAudioDeviceId === device.deviceId;
+                    return (
+                      <button
+                        key={device.deviceId}
+                        onClick={() => selectMicrophone(device.deviceId)}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-colors font-semibold truncate flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-primary/20 text-primary border border-primary/30 font-bold'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{device.label || `Mikrofon ${device.deviceId.substring(0, 4)}`}</span>
+                        {isSelected && <span className="material-symbols-outlined text-[12px] ml-1 text-primary">check</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -3957,7 +4104,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
               </span>
             </button>
             <button
-              onClick={() => setShowCameraMenu(!showCameraMenu)}
+              onClick={async () => {
+                if (!showCameraMenu && (!videoDevices || videoDevices.length === 0)) {
+                  await loadDevices();
+                }
+                setShowCameraMenu(!showCameraMenu);
+              }}
               className={`p-2.5 sm:p-3 rounded-r-xl transition-all font-bold flex items-center justify-center cursor-pointer shadow-md border-y border-r ${
                 isCameraEnabled
                   ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border-slate-750'
@@ -3971,20 +4123,29 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
             </button>
 
             {showCameraMenu && videoDevices.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
-                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1">
-                  Kameralar
+              <div className="absolute bottom-full left-0 mb-2 w-52 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1 z-[999999] animate-in fade-in slide-in-from-bottom-1 duration-150">
+                <div className="px-2 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800 pb-1 flex items-center justify-between">
+                  <span>Kameralar</span>
+                  <span className="text-[7px] text-slate-500 font-mono">({videoDevices.length})</span>
                 </div>
-                <div className="flex flex-col max-h-40 overflow-y-auto">
-                  {videoDevices.map((device) => (
-                    <button
-                      key={device.deviceId}
-                      onClick={() => selectCamera(device.deviceId)}
-                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-colors font-semibold truncate"
-                    >
-                      {device.label || `Kamera ${device.deviceId.substring(0, 4)}`}
-                    </button>
-                  ))}
+                <div className="flex flex-col max-h-48 overflow-y-auto divide-y divide-slate-800/40">
+                  {videoDevices.map((device) => {
+                    const isSelected = selectedVideoDeviceId === device.deviceId;
+                    return (
+                      <button
+                        key={device.deviceId}
+                        onClick={() => selectCamera(device.deviceId)}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-colors font-semibold truncate flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-primary/20 text-primary border border-primary/30 font-bold'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{device.label || `Kamera ${device.deviceId.substring(0, 4)}`}</span>
+                        {isSelected && <span className="material-symbols-outlined text-[12px] ml-1 text-primary">check</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

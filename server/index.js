@@ -14,7 +14,10 @@ const {
   isValidDriveFileId,
   ensureDriveFileReadable,
   buildDriveWatchUrl,
-  parseLessonRecordings
+  parseLessonRecordings,
+  extractLessonIdFromFilename,
+  scanDriveFolderRecordings,
+  syncLessonsWithDrive
 } = require('./services/driveService');
 const crypto = require('crypto');
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
@@ -1345,6 +1348,7 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
         }
       });
     }
+    await syncLessonsWithDrive(lessons, prisma, getGoogleDriveAccessToken);
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1789,6 +1793,9 @@ app.get(['/api/lessons/:id/watch', '/api/recordings/:id/watch'], auth, async (re
       return res.status(403).json({ error: 'Bu ders kaydını izleme yetkiniz bulunmamaktadır.' });
     }
 
+    // Google Drive'dan güncel dosya ve parçaları anında senkronize et
+    await syncLessonsWithDrive([lesson], prisma, getGoogleDriveAccessToken);
+
     if (!lesson.recordingUrl) {
       return res.status(404).json({ error: 'Bu derse ait bir kayıt henüz yüklenmemiştir.' });
     }
@@ -1841,6 +1848,59 @@ app.get(['/api/lessons/:id/watch', '/api/recordings/:id/watch'], auth, async (re
   } catch (err) {
     console.error('Watch recording authorization error:', err);
     return res.status(500).json({ error: 'Ders kaydı getirilirken sunucu hatası oluştu.' });
+  }
+});
+
+// 🔒 Ders Kayıtları Çoklu Parça Bilgisi Endpoint'i
+app.get('/api/lessons/:id/recordings', auth, async (req, res) => {
+  const lessonId = parseInt(req.params.id);
+  if (isNaN(lessonId)) {
+    return res.status(400).json({ error: 'Geçersiz ders ID.' });
+  }
+
+  try {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        teacher: { select: { id: true, name: true } },
+        student: { select: { id: true, name: true } }
+      }
+    });
+
+    if (!lesson || lesson.deletedAt) {
+      return res.status(404).json({ error: 'Ders bulunamadı.' });
+    }
+
+    const user = req.user;
+    let isAuthorized = false;
+    if (user.role === 'HEAD_TEACHER') isAuthorized = true;
+    else if (user.role === 'TEACHER') isAuthorized = (lesson.teacherId === user.id);
+    else if (user.role === 'STUDENT' || user.role === 'PARENT') {
+      if (lesson.studentId === user.id) isAuthorized = true;
+      else if (lesson.studentIds) {
+        try {
+          if (JSON.parse(lesson.studentIds).includes(user.id)) isAuthorized = true;
+        } catch {}
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Bu ders kaydını görüntüleme yetkiniz yok.' });
+    }
+
+    await syncLessonsWithDrive([lesson], prisma, getGoogleDriveAccessToken);
+    const recordings = parseLessonRecordings(lesson.recordingUrl);
+
+    return res.json({
+      success: true,
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      totalParts: recordings.length,
+      recordings
+    });
+  } catch (err) {
+    console.error('Lesson recordings fetch error:', err);
+    return res.status(500).json({ error: 'Ders kayıtları alınamadı.' });
   }
 });
 
@@ -2148,10 +2208,26 @@ async function processLessonVideo(lessonId, mimeType, fileExt) {
     }
 
     if (uploadSuccess) {
+      const existingLesson = await prisma.lesson.findUnique({
+        where: { id: lessonId },
+        select: { recordingUrl: true }
+      });
+      let mergedRecordingUrl = finalUrl;
+      if (existingLesson?.recordingUrl) {
+        const parsed = parseLessonRecordings(existingLesson.recordingUrl);
+        const fileId = extractDriveFileId(finalUrl);
+        const exists = parsed.some(r => (fileId && r.fileId === fileId) || r.raw === finalUrl || r.raw.includes(finalUrl));
+        if (!exists) {
+          mergedRecordingUrl = `${existingLesson.recordingUrl.trim()}, ${finalUrl}`;
+        } else {
+          mergedRecordingUrl = existingLesson.recordingUrl;
+        }
+      }
+
       await prisma.lesson.update({
         where: { id: lessonId },
         data: {
-          recordingUrl: finalUrl,
+          recordingUrl: mergedRecordingUrl,
           recordingRequested: true
         }
       });
@@ -3012,6 +3088,7 @@ app.get('/api/student/lessons', auth, checkRole('STUDENT'), async (req, res) => 
       }
       return false;
     });
+    await syncLessonsWithDrive(lessons, prisma, getGoogleDriveAccessToken);
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -5378,6 +5455,7 @@ app.get('/api/parent/lessons', auth, checkRole('PARENT'), async (req, res) => {
       }
       return false;
     });
+    await syncLessonsWithDrive(lessons, prisma, getGoogleDriveAccessToken);
     res.json(lessons);
   } catch (err) {
     res.status(500).json({ error: err.message });

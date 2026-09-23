@@ -2474,12 +2474,16 @@ const StudentDashboard = () => {
                           key={rec.part}
                           onClick={() => handleWatchLesson(searchMultipleRecordings.lessonId, rec.part)}
                           disabled={isWatching}
-                          className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                          className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-60 text-white px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                          title={`${rec.part}. Ders Kaydını Google Drive'da İzle`}
                         >
-                          <span className="material-symbols-outlined text-base">
+                          <span className="w-4 h-4 rounded-full bg-white/25 text-white text-[10px] font-black flex items-center justify-center">
+                            {rec.part}
+                          </span>
+                          <span className="material-symbols-outlined text-sm">
                             {isWatching ? 'hourglass_top' : 'play_circle'}
                           </span>
-                          {isWatching ? 'Açılıyor...' : `${rec.part}. Kaydı İzle`}
+                          <span>{isWatching ? 'Açılıyor...' : `${rec.part}. Kayıt`}</span>
                         </button>
                       );
                     })}
@@ -2574,13 +2578,16 @@ const StudentDashboard = () => {
                                         key={rec.part}
                                         onClick={() => handleWatchLesson(lesson.id, rec.part)} 
                                         disabled={isWatching}
-                                        className="bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                        className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-60 text-white px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm cursor-pointer whitespace-nowrap"
                                         title={`${rec.part}. Ders Kaydını Google Drive'da İzle`}
                                       >
-                                        <span className="material-symbols-outlined text-base">
+                                        <span className="w-4 h-4 rounded-full bg-white/25 text-white text-[10px] font-black flex items-center justify-center">
+                                          {rec.part}
+                                        </span>
+                                        <span className="material-symbols-outlined text-sm">
                                           {isWatching ? 'hourglass_top' : 'play_circle'}
                                         </span>
-                                        {isWatching ? 'Açılıyor...' : `${rec.part}. Kaydı İzle`}
+                                        <span>{isWatching ? 'Açılıyor...' : `${rec.part}. Kayıt`}</span>
                                       </button>
                                     );
                                   })}
