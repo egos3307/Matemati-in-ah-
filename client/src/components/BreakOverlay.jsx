@@ -1,13 +1,60 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
+// İzole Sayaç Bileşeni: Sadece sayacı günceller, video ve arka plan öğelerini re-render etmez
+const BreakTimerCounter = React.memo(({ breakEndsAt, onPhaseChange }) => {
+  const [remainingSeconds, setRemainingSeconds] = useState(() => {
+    const now = Date.now();
+    return (!breakEndsAt || breakEndsAt <= now) ? 0 : Math.max(0, Math.ceil((breakEndsAt - now) / 1000));
+  });
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = Date.now();
+      if (!breakEndsAt || breakEndsAt <= now) {
+        setRemainingSeconds(0);
+        onPhaseChange(true);
+        return;
+      }
+
+      const diff = Math.max(0, Math.ceil((breakEndsAt - now) / 1000));
+      setRemainingSeconds(prev => (prev === diff ? prev : diff));
+      onPhaseChange(diff <= 10);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 500);
+    return () => clearInterval(interval);
+  }, [breakEndsAt, onPhaseChange]);
+
+  const m = Math.floor(remainingSeconds / 60);
+  const s = remainingSeconds % 60;
+  const timeStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+  return (
+    <span
+      className="font-pixel text-2xl sm:text-4xl md:text-5xl text-[#ff6600] tracking-wider"
+      style={{
+        textShadow:
+          '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 20px rgba(255, 102, 0, 0.7)',
+        fontFamily: '"Press Start 2P", monospace, cursive, sans-serif'
+      }}
+    >
+      {timeStr}
+    </span>
+  );
+});
+
+const BreakOverlay = React.memo(({ breakEndsAt, isTeacher, onEndBreak }) => {
   const [isLast10Seconds, setIsLast10Seconds] = useState(false);
 
   const mainVideoRef = useRef(null);
   const endingVideoRef = useRef(null);
   const audioRef = useRef(null);
+
+  const handlePhaseChange = React.useCallback((isLast10) => {
+    setIsLast10Seconds(prev => (prev === isLast10 ? prev : isLast10));
+  }, []);
 
   // Background Audio Control (pages_turning_slowly.mp3 loops during break)
   useEffect(() => {
@@ -24,33 +71,6 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       }
     };
   }, []);
-
-  // 1. Timer & Phase Calculation
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = Date.now();
-      if (!breakEndsAt || breakEndsAt <= now) {
-        setRemainingSeconds(0);
-        setIsLast10Seconds(true);
-        return;
-      }
-
-      const diff = Math.max(0, Math.ceil((breakEndsAt - now) / 1000));
-      setRemainingSeconds(diff);
-
-      // Molanın başından beri sonvideo.mp4 döngüsel oynar.
-      // Son 10 saniyeye girildiğinde (diff <= 10) ilkvideo.mp4 devreye girer.
-      if (diff <= 10) {
-        setIsLast10Seconds(true);
-      } else {
-        setIsLast10Seconds(false);
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 250);
-    return () => clearInterval(interval);
-  }, [breakEndsAt]);
 
   // 2. Video Playback Control (sonvideo.mp4 -> ilkvideo.mp4)
   useEffect(() => {
@@ -79,13 +99,6 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
       }
     }
   }, [isLast10Seconds]);
-
-  // Format MM:SS
-  const formatTime = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
 
   const mountTarget = (typeof document !== 'undefined' && document.fullscreenElement) 
     ? document.fullscreenElement 
@@ -222,16 +235,7 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
 
         {/* Top Right: Retro Pixel Counter */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span
-            className="font-pixel text-2xl sm:text-4xl md:text-5xl text-[#ff6600] tracking-wider"
-            style={{
-              textShadow:
-                '3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000, 0 0 20px rgba(255, 102, 0, 0.7)',
-              fontFamily: '"Press Start 2P", monospace, cursive, sans-serif'
-            }}
-          >
-            {formatTime(remainingSeconds)}
-          </span>
+          <BreakTimerCounter breakEndsAt={breakEndsAt} onPhaseChange={handlePhaseChange} />
         </div>
       </div>
 
@@ -276,6 +280,6 @@ const BreakOverlay = ({ breakEndsAt, isTeacher, onEndBreak }) => {
     </div>,
     mountTarget
   );
-};
+});
 
 export default BreakOverlay;

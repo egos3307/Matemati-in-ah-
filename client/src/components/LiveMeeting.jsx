@@ -13,9 +13,58 @@ import {
   RoomAudioRenderer,
   useDataChannel
 } from '@livekit/components-react';
-import { Track, ConnectionState, LocalVideoTrack, ScreenSharePresets } from 'livekit-client';
+import { Track, ConnectionState, LocalVideoTrack, ScreenSharePresets, VideoPresets, AudioPresets } from 'livekit-client';
 import '@livekit/components-styles';
 import BreakOverlay from './BreakOverlay.jsx';
+
+// Geliştirme ortamı debug loglayıcı (üretimde sessiz ve güvenli)
+const isDev = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+const liveDebug = {
+  log: (...args) => { if (isDev) console.log(...args); },
+  warn: (...args) => { if (isDev) console.warn(...args); },
+  error: (...args) => { console.error(...args); }
+};
+
+// Stabil LiveKit Oda & Bağlantı Seçenekleri (Ses ve Kamera Donmalarını Önleyen Presetler)
+const LIVEKIT_ROOM_OPTIONS = {
+  adaptiveStream: true,
+  dynacast: true,
+  stopLocalTrackOnUnpublish: true,
+  audioCaptureDefaults: {
+    autoGainControl: true,
+    echoCancellation: true,
+    noiseSuppression: true,
+    channelCount: 1,
+  },
+  publishDefaults: {
+    simulcast: true,
+    videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360],
+    videoCodec: 'vp8',
+    dtx: true,
+    red: true, // RFC 2198 Redundant Audio Data: paket kaybında ses kesilmesini ve robotikleşmeyi önler
+    audioPreset: AudioPresets.speech,
+    screenShareEncoding: {
+      maxBitrate: 2500000,
+      maxFramerate: 20,
+    },
+    videoEncoding: {
+      maxBitrate: 600000,
+      maxFramerate: 24,
+    },
+  },
+  videoCaptureDefaults: {
+    resolution: VideoPresets.h540.resolution,
+    facingMode: 'user',
+    maxFramerate: 24,
+  },
+};
+
+const LIVEKIT_CONNECT_OPTIONS = {
+  autoSubscribe: true,
+  peerConnectionTimeout: 20000,
+  websocketTimeout: 20000,
+  maxRetries: 5,
+};
 
 const checkIsTeacher = (participant) => {
   try {
@@ -682,8 +731,6 @@ const DesktopPipWindow = React.memo(({
   mutingParticipant,
   chatMessages,
   sendChatMessage,
-  chatInput,
-  setChatInput,
   toggleScreenShare,
   meetingStartTime,
   breakActive = false,
@@ -691,6 +738,7 @@ const DesktopPipWindow = React.memo(({
   endBreakTeacher,
 }) => {
   const [activeOverlay, setActiveOverlay] = useState(null); // null | 'participants' | 'chat'
+  const [localChatInput, setLocalChatInput] = useState('');
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -878,15 +926,18 @@ const DesktopPipWindow = React.memo(({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                sendChatMessage();
+                if (localChatInput.trim()) {
+                  sendChatMessage(localChatInput.trim());
+                  setLocalChatInput('');
+                }
               }}
               style={{ display: 'flex', gap: '6px', paddingTop: '6px', borderTop: '1px solid #1e293b' }}
             >
               <input
                 type="text"
                 placeholder="Öğrencilere yazın..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                value={localChatInput}
+                onChange={(e) => setLocalChatInput(e.target.value)}
                 style={{ flex: 1, background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', color: '#fff', outline: 'none' }}
               />
               <button
@@ -1004,18 +1055,520 @@ const DesktopPipWindow = React.memo(({
 });
 
 
+// 1.6 İZOLE EDİLMİŞ DONANIM HIZLANDIRMALI EKRAN PAYLAŞIMI OYNATICISI (RE-RENDER KORUMALI)
+const ScreenShareViewer = React.memo(({ trackRef }) => {
+  return (
+    <div 
+      className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950 screenshare-container"
+      style={{ transform: 'translateZ(0)', willChange: 'contents' }}
+    >
+      {trackRef ? (
+        <VideoTrack 
+          trackRef={trackRef} 
+          className="w-full h-full object-contain" 
+          manageSubscription={true}
+        />
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 text-xs font-bold gap-2 select-none">
+          <span className="material-symbols-outlined text-3xl animate-pulse text-primary">screen_share</span>
+          <span>Ekran Paylaşımı Yükleniyor...</span>
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => {
+  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
+  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
+  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
+  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
+  return prevSid === nextSid && prevMuted === nextMuted;
+});
+
+// 1.7 İZOLE EDİLMİŞ KATILIMCI KAMERA KARTI (SADECE KENDİ DURUMU DEĞİŞTİĞİNDE RENDER EDİLİR)
+const PipParticipantTile = React.memo(({
+  trackRef,
+  participant,
+  isTeacher = false,
+  isLocal = false,
+  name = '',
+  initial = '?',
+  isTeacherRole = false
+}) => {
+  return (
+    <div 
+      className={`relative w-full h-full rounded-xl overflow-hidden bg-slate-950 ${
+        isTeacher ? 'border border-primary/50 shadow-md' : 'border border-slate-800 shadow-sm'
+      } flex flex-col justify-center items-center`}
+      data-pip={isTeacher ? "teacher" : "student"}
+      data-name={name}
+      style={{ transform: 'translateZ(0)' }}
+    >
+      {trackRef ? (
+        <VideoTrack
+          trackRef={trackRef}
+          className="w-full h-full object-cover"
+          style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
+          manageSubscription={true}
+        />
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-1 text-center select-none">
+          <div className={`${isTeacherRole ? 'w-8 h-8 text-xs' : 'w-5 h-5 text-[9px]'} rounded-full ${
+            isTeacher ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-300'
+          } flex items-center justify-center font-black mb-0.5 shadow-inner`}>
+            {initial}
+          </div>
+          <span className={`${isTeacherRole ? 'text-[10px]' : 'text-[7.5px]'} font-bold text-slate-300 truncate max-w-full`}>
+            {name}
+          </span>
+          {isTeacher && isTeacherRole && (
+            <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[9px]">videocam_off</span>
+              Kamera Kapalı
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Öğretmen Rozeti */}
+      {isTeacher && isTeacherRole && (
+        <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1 py-0.5 rounded text-[7px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10 select-none">
+          <span className="material-symbols-outlined text-[8px]">school</span>
+          <span>ÖĞRETMEN</span>
+        </div>
+      )}
+
+      {/* Speaking indicator */}
+      {participant?.isSpeaking && (
+        <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
+          <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
+        </div>
+      )}
+
+      {/* Name tag */}
+      <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 px-1 py-0.5 rounded text-[7px] font-extrabold flex items-center gap-0.5 border border-white/5 truncate z-10 select-none">
+        <span className="text-white truncate">
+          {name} {isLocal ? '(Sen)' : ''}
+        </span>
+      </div>
+    </div>
+  );
+}, (prev, next) => {
+  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
+  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
+  const prevSpeaking = prev.participant?.isSpeaking;
+  const nextSpeaking = next.participant?.isSpeaking;
+  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
+  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
+  return prevSid === nextSid && prevSpeaking === nextSpeaking && prevMuted === nextMuted && prev.name === next.name;
+});
+
+// 1.8 TAMAMEN İZOLE EDİLMİŞ VE TAŞINABİLİR YÜZEN KAMERA KUTUSU (ZERO RE-RENDER FOR MAIN STREAM)
+const FloatingCameraOverlay = React.memo(({
+  isTeacherRole,
+  teacherParticipant,
+  teacherTrackRef,
+  studentParticipants,
+  cameraTracks,
+  isPipActive,
+  togglePip,
+  isMicrophoneEnabled,
+  toggleMicrophone,
+  isCameraEnabled,
+  toggleCamera,
+}) => {
+  const [pos, setPos] = useState(() => {
+    if (typeof window === 'undefined') return { x: 20, y: 20 };
+    const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+    if (!isTeacherRole && isMobile) {
+      return { x: Math.max(8, window.innerWidth - 168), y: 8 };
+    }
+    return {
+      x: Math.max(10, window.innerWidth - (isTeacherRole ? 400 : 230)),
+      y: Math.max(10, window.innerHeight - (isTeacherRole ? 290 : 160))
+    };
+  });
+
+  const [studentCamScale, setStudentCamScale] = useState(1.0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const resizeStartRef = useRef({ x: 0, scale: 1.0 });
+
+  // Boyutlandırma tutamacı
+  const handleResizeStart = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    resizeStartRef.current = { x: clientX, scale: studentCamScale };
+  };
+
+  const handleResizeClick = (e) => {
+    e.stopPropagation();
+    setStudentCamScale((prev) => {
+      if (prev < 1.4) return 1.75;
+      if (prev < 2.2) return 2.5;
+      return 1.0;
+    });
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleResizeMove = (e) => {
+      if (e.touches && e.cancelable) e.preventDefault();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const deltaX = clientX - resizeStartRef.current.x;
+      const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+      const baseWidth = isMobile ? 160 : 210;
+      const deltaScale = deltaX / baseWidth;
+      const nextScale = Math.max(1.0, Math.min(2.5, Number((resizeStartRef.current.scale + deltaScale).toFixed(2))));
+      setStudentCamScale(nextScale);
+    };
+
+    const handleResizeEnd = () => setIsResizing(false);
+
+    window.addEventListener('mousemove', handleResizeMove);
+    window.addEventListener('mouseup', handleResizeEnd);
+    window.addEventListener('touchmove', handleResizeMove, { passive: false });
+    window.addEventListener('touchend', handleResizeEnd);
+    window.addEventListener('touchcancel', handleResizeEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+      window.removeEventListener('touchmove', handleResizeMove);
+      window.removeEventListener('touchend', handleResizeEnd);
+      window.removeEventListener('touchcancel', handleResizeEnd);
+    };
+  }, [isResizing]);
+
+  // Sürükleme kontrolü (GPU compositing: layout reflow yapmaz)
+  const handleMouseDown = (e) => {
+    if (e.button !== 0 || e.target.closest('button') || e.target.closest('.no-drag')) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y
+    };
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.target.closest('button') || e.target.closest('.no-drag')) return;
+    setIsDragging(true);
+    const touch = e.touches[0];
+    dragStartRef.current = {
+      x: touch.clientX - pos.x,
+      y: touch.clientY - pos.y
+    };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+    let rAF = null;
+
+    const handleMouseMove = (e) => {
+      if (e.touches && e.cancelable) e.preventDefault();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      if (rAF) cancelAnimationFrame(rAF);
+      rAF = requestAnimationFrame(() => {
+        const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+        const baseWidth = isMobile ? 160 : 210;
+        const boxWidth = isTeacherRole 
+          ? Math.min(380, window.innerWidth - 20) 
+          : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
+        const boxHeight = isTeacherRole ? 210 : Math.round((isMobile ? 100 : 115) * studentCamScale);
+
+        const minX = 6;
+        const minY = 6;
+        const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
+        const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
+
+        let newX = clientX - dragStartRef.current.x;
+        let newY = clientY - dragStartRef.current.y;
+
+        newX = Math.max(minX, Math.min(maxX, newX));
+        newY = Math.max(minY, Math.min(maxY, newY));
+
+        setPos({ x: newX, y: newY });
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (rAF) cancelAnimationFrame(rAF);
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleMouseMove, { passive: false });
+    document.addEventListener('touchend', handleMouseUp);
+    document.addEventListener('touchcancel', handleMouseUp);
+
+    return () => {
+      if (rAF) cancelAnimationFrame(rAF);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+      document.removeEventListener('touchcancel', handleMouseUp);
+    };
+  }, [isDragging, isTeacherRole, studentCamScale]);
+
+  // Pencere boyutu değiştiğinde ekranda tutma
+  useEffect(() => {
+    const handleWindowResize = () => {
+      setPos((prev) => {
+        const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
+        const baseWidth = isMobile ? 160 : 210;
+        const boxWidth = isTeacherRole 
+          ? Math.min(380, window.innerWidth - 20) 
+          : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
+        const boxHeight = isTeacherRole ? 210 : Math.round((isMobile ? 100 : 115) * studentCamScale);
+        const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
+        const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
+        return {
+          x: Math.max(6, Math.min(maxX, prev.x)),
+          y: Math.max(6, Math.min(maxY, prev.y))
+        };
+      });
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [isTeacherRole, studentCamScale]);
+
+  const isMobileScreen = typeof window !== 'undefined' && (window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024));
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      className={`fixed z-[9999] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden select-none cursor-move flex flex-col ${
+        isTeacherRole ? 'p-2.5 gap-2' : 'p-1.5 gap-1'
+      }`}
+      style={{
+        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
+        left: 0,
+        top: 0,
+        willChange: 'transform',
+        width: isTeacherRole 
+          ? 'min(380px, calc(100vw - 20px))' 
+          : `min(${Math.round((isMobileScreen ? 160 : 210) * studentCamScale)}px, calc(100vw - 16px))`,
+      }}
+    >
+      {/* Header */}
+      <div className="px-1 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-1">
+        <span className="flex items-center gap-1 truncate">
+          <span className="material-symbols-outlined text-[11px] text-primary">groups</span>
+          <span className="truncate">{isTeacherRole ? `Kameralar (1 Öğretmen + ${studentParticipants.length} Öğrenci)` : 'Kameralar'}</span>
+        </span>
+        <div className="flex items-center gap-1.5">
+          {isTeacherRole && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePip();
+              }}
+              title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç (Diğer programların üstünde gösterir)"}
+              className={`no-drag flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                isPipActive
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[11px]">
+                {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
+              </span>
+              <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
+            </button>
+          )}
+          <span className="material-symbols-outlined text-[13px] text-slate-500">drag_indicator</span>
+        </div>
+      </div>
+
+      {/* Kamera ve Mikrofon kontrol butonları (Sadece Öğretmen için) */}
+      {isTeacherRole && (
+        <div className="no-drag flex gap-1.5 px-0.5">
+          <button
+            onClick={toggleMicrophone}
+            title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-colors cursor-pointer ${
+              isMicrophoneEnabled
+                ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[13px]">
+              {isMicrophoneEnabled ? 'mic' : 'mic_off'}
+            </span>
+            <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-colors cursor-pointer ${
+              isCameraEnabled
+                ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
+                : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[13px]">
+              {isCameraEnabled ? 'videocam' : 'videocam_off'}
+            </span>
+            <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
+      <div 
+        className="flex gap-1.5 no-drag"
+        style={{
+          height: isTeacherRole 
+            ? '150px' 
+            : `${Math.round((isMobileScreen ? 75 : 85) * studentCamScale)}px`
+        }}
+      >
+        {/* SOL YARI (%50): Öğretmen Kamerası */}
+        <div className="w-1/2 h-full">
+          <PipParticipantTile
+            trackRef={teacherTrackRef}
+            participant={teacherParticipant}
+            isTeacher={true}
+            isLocal={teacherParticipant?.isLocal}
+            name={teacherParticipant?.name || 'Öğretmen'}
+            initial={teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
+            isTeacherRole={isTeacherRole}
+          />
+        </div>
+
+        {/* SAĞ YARI (%50): Öğrenciler Bölümü */}
+        <div className="w-1/2 h-full flex flex-col">
+          {studentParticipants.length === 0 ? (
+            <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-1 text-center select-none">
+              <span className="material-symbols-outlined text-slate-600 text-base mb-0.5">group</span>
+              <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">
+                Öğrenci Yok
+              </span>
+            </div>
+          ) : (
+            <div
+              className={`w-full h-full gap-1 ${
+                studentParticipants.length === 1
+                  ? 'grid grid-cols-1 grid-rows-1'
+                  : studentParticipants.length === 2
+                  ? 'grid grid-cols-1 grid-rows-2'
+                  : 'grid grid-cols-2 grid-rows-2'
+              }`}
+            >
+              {studentParticipants.slice(0, 4).map((student) => {
+                const sTrackRef = cameraTracks.find((t) => t.participant.identity === student.identity);
+                const sInitial = student.name
+                  ? student.name.charAt(0).toUpperCase()
+                  : student.identity.charAt(0).toUpperCase();
+
+                return (
+                  <PipParticipantTile
+                    key={student.identity}
+                    trackRef={sTrackRef}
+                    participant={student}
+                    isTeacher={false}
+                    isLocal={student.isLocal}
+                    name={student.name || student.identity}
+                    initial={sInitial}
+                    isTeacherRole={isTeacherRole}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Boyutlandırma Tutamacı (Sağ Alt Köşe - Sadece Öğrenci) */}
+      {!isTeacherRole && (
+        <div
+          onMouseDown={handleResizeStart}
+          onTouchStart={handleResizeStart}
+          onClick={handleResizeClick}
+          className="no-drag absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-1 cursor-nwse-resize z-30 select-none group touch-none"
+          title="Boyutlandırmak için sürükleyin veya tıklayın (1.0x - 2.5x)"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" className="text-slate-400 group-hover:text-amber-400 transition-colors pointer-events-none">
+            <line x1="9" y1="2" x2="2" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="9" y1="5.5" x2="5.5" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="9" y1="9" x2="9" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// 1.9 İZOLE EDİLMİŞ NORMAL IZGARA KAMERA KARTI (SIFIR RE-RENDER / DONMA ÖNLEYİCİ)
+const GridCameraTile = React.memo(({ trackRef, isTeacher, isLocal, name, isSpeaking }) => {
+  return (
+    <div 
+      className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] camera-item ${
+        isTeacher 
+          ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
+          : 'border-slate-800 hover:border-primary/30'
+      }`}
+      style={{ transform: 'translateZ(0)' }}
+    >
+      <VideoTrack
+        trackRef={trackRef}
+        manageSubscription={true}
+        className="w-full h-full object-cover"
+        style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
+      />
+      <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2 select-none">
+        {isTeacher ? (
+          <span className="flex items-center gap-1 text-xs text-primary font-black">
+            <span className="material-symbols-outlined text-xs">star</span>
+            {name}
+          </span>
+        ) : (
+          <span className="text-slate-200">
+            {name} {isLocal ? '(Sen)' : ''}
+          </span>
+        )}
+      </div>
+      {isSpeaking && (
+        <div className="absolute top-3 right-3 bg-primary text-white rounded-full p-1 shadow-lg shadow-primary/20 border border-white/20 animate-bounce flex items-center justify-center">
+          <span className="material-symbols-outlined text-xs font-bold">volume_up</span>
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => {
+  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
+  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
+  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
+  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
+  return prevSid === nextSid && prevMuted === nextMuted && prev.isSpeaking === next.isSpeaking && prev.name === next.name && prev.isLocal === next.isLocal;
+});
+
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
 const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) => {
   const connectionState = useConnectionState();
   const cameraTracks = useTracks([Track.Source.Camera]);
   const micTracks = useTracks([Track.Source.Microphone]);
-  const screenShareTracks = useTracks([Track.Source.ScreenShare]).filter(
-    (track) => track.publication?.kind === 'video' || track.track?.kind === 'video'
-  );
+  const rawScreenTracks = useTracks([Track.Source.ScreenShare]);
+  const activeScreenTrackRef = React.useMemo(() => {
+    return rawScreenTracks.find(
+      (track) => track.publication?.kind === 'video' || track.track?.kind === 'video'
+    ) || null;
+  }, [rawScreenTracks]);
+  const isScreenSharing = Boolean(activeScreenTrackRef);
+  const screenShareTracks = React.useMemo(() => (activeScreenTrackRef ? [activeScreenTrackRef] : []), [activeScreenTrackRef]);
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const room = useMaybeRoomContext();
   const isTeacherRole = role === 'TEACHER' || role === 'HEAD_TEACHER';
+  const trackSubscribedHandlerRef = useRef(null);
 
   const isParticipantTeacher = (p) => {
     if (!p) return false;
@@ -1065,7 +1618,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   }, [breakEndsAt]);
 
   const applyStartBreak = async (endsAt, duration) => {
-    console.log('[MOLA] applyStartBreak triggered. EndsAt:', new Date(endsAt).toISOString());
+    liveDebug.log('[MOLA] applyStartBreak triggered. EndsAt:', new Date(endsAt).toISOString());
     setBreakEndsAt(endsAt);
     setBreakDuration(duration);
     setBreakActive(true);
@@ -1103,18 +1656,12 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       }
     }
 
-    // 3. Stop screen share if active
-    if (localParticipant && localParticipant.isScreenShareEnabled) {
-      try {
-        await localParticipant.setScreenShareEnabled(false);
-      } catch (e) {
-        console.warn('Break screen share stop error:', e);
-      }
-    }
+    // ÖNEMLİ: Ekran paylaşımı (screen share) track'i mola sırasında kapatılmaz!
+    // BreakOverlay tam ekran kapladığı için görüntü gizlenir, mola bitiminde ekran paylaşımı kesintisiz devam eder.
   };
 
   const applyEndBreak = () => {
-    console.log('[MOLA] applyEndBreak triggered.');
+    liveDebug.log('[MOLA] applyEndBreak triggered.');
     setBreakActive(false);
     setBreakEndsAt(0);
     setBreakDuration(0);
@@ -1198,40 +1745,46 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   // Poll room break status from backend (supports late joiners & reconnects)
   useEffect(() => {
     const roomName = `lesson_${lessonId}`;
+    let isCancelled = false;
+
     const pollBreakStatus = async () => {
       try {
         const res = await axios.get('/api/livekit/break-status', { params: { roomName } });
+        if (isCancelled) return;
         if (res.data && res.data.breakActive) {
           if (res.data.breakEndsAt > Date.now()) {
-            setBreakEndsAt(res.data.breakEndsAt);
-            setBreakDuration(res.data.breakDuration);
-            setBreakActive(true);
+            setBreakEndsAt((prev) => (prev === res.data.breakEndsAt ? prev : res.data.breakEndsAt));
+            setBreakDuration((prev) => (prev === res.data.breakDuration ? prev : res.data.breakDuration));
+            setBreakActive((prev) => (prev === true ? prev : true));
 
             // Force turn off active mic/cam during break
-            if (localParticipant && isMicrophoneEnabled) {
+            if (localParticipant?.isMicrophoneEnabled) {
               localParticipant.setMicrophoneEnabled(false).catch(() => {});
             }
-            if (localParticipant && isCameraEnabled) {
+            if (localParticipant?.isCameraEnabled) {
               localParticipant.setCameraEnabled(false).catch(() => {});
             }
           } else {
-            setBreakActive(false);
+            setBreakActive((prev) => (prev === false ? prev : false));
           }
         } else {
           // Öğretmenin yerel olarak başlattığı aktif molayı sunucu gecikmesinde kapatma
           if (!isTeacherRole || !breakEndsAtRef.current || Date.now() >= breakEndsAtRef.current) {
-            setBreakActive(false);
+            setBreakActive((prev) => (prev === false ? prev : false));
           }
         }
       } catch (err) {
-        console.warn('Break status polling error:', err);
+        // Sessiz yakala (arka plan poll)
       }
     };
 
     pollBreakStatus();
-    const interval = setInterval(pollBreakStatus, 3000);
-    return () => clearInterval(interval);
-  }, [lessonId, localParticipant, isMicrophoneEnabled, isCameraEnabled, isTeacherRole]);
+    const interval = setInterval(pollBreakStatus, 4000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [lessonId]);
 
   const muteParticipantTrack = async (participant, trackType) => {
     const tracks = trackType === 'audio' ? micTracks : cameraTracks;
@@ -1319,8 +1872,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   });
 
-  const sendChatMessage = () => {
-    const text = chatInput.trim();
+  const sendChatMessage = (customText) => {
+    const text = (typeof customText === 'string' ? customText : chatInput).trim();
     if (!text || !localParticipant) return;
 
     const packet = {
@@ -1336,7 +1889,9 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     sendChatData(encoder.encode(JSON.stringify(packet)), { reliable: true });
     // LiveKit veri kanalı mesajı gönderene geri yansıtmaz, o yüzden kendi mesajımızı elle ekliyoruz
     setChatMessages((prev) => [...prev, packet]);
-    setChatInput('');
+    if (typeof customText !== 'string') {
+      setChatInput('');
+    }
   };
 
   const mediaRecorderRef = useRef(null);
@@ -1565,18 +2120,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       // Draw first real frame to canvas so stream starts with video, not black
       ctx.drawImage(video, 0, 0, w, h);
 
-      // Capture canvas stream before starting the loop
-      const canvasStream = canvas.captureStream(30);
+      // Capture canvas stream before starting the loop at 24 FPS
+      const canvasStream = canvas.captureStream(24);
       const processedVideoTrack = canvasStream.getVideoTracks()[0];
 
       // Ref'i loop başlamadan true yap — yoksa ilk iterasyonda hemen çıkıyor
       virtualBgEnabledRef.current = true;
 
-      // Start segmentation loop
+      // Start segmentation loop throttled to 24 FPS (prevents CPU choking audio thread)
+      let lastSegTime = 0;
       const runFrame = async () => {
         if (!virtualBgEnabledRef.current) return;
-        if (video.readyState >= 2) {
-          try { await segmenter.send({ image: video }); } catch (e) { /* skip frame */ }
+        const now = performance.now();
+        if (now - lastSegTime >= 40) {
+          lastSegTime = now;
+          if (video.readyState >= 2) {
+            try { await segmenter.send({ image: video }); } catch (e) { /* skip frame */ }
+          }
         }
         virtualBgFrameRef.current = requestAnimationFrame(runFrame);
       };
@@ -1875,12 +2435,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           });
         });
 
-        // Dynamic track subscription hook
-        room.on('trackSubscribed', (track, publication, participant) => {
+        // Dynamic track subscription hook (cleaned up on stop / unmount to avoid listener leaks)
+        if (trackSubscribedHandlerRef.current) {
+          room.off('trackSubscribed', trackSubscribedHandlerRef.current);
+        }
+        const onSubscribed = (track) => {
           if (track.kind === 'audio' && track.mediaStreamTrack) {
             connectAudioTrackToMixer(track.mediaStreamTrack);
           }
-        });
+        };
+        trackSubscribedHandlerRef.current = onSubscribed;
+        room.on('trackSubscribed', onSubscribed);
       }
 
       // 4. Setup hidden canvas video capture loop
@@ -2157,6 +2722,10 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           } catch (ctxErr) {}
           audioContextRef.current = null;
         }
+        if (trackSubscribedHandlerRef.current && room) {
+          room.off('trackSubscribed', trackSubscribedHandlerRef.current);
+          trackSubscribedHandlerRef.current = null;
+        }
 
         try {
           const actualMime = recorder.mimeType || 'video/webm';
@@ -2248,7 +2817,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
-  const isScreenSharing = screenShareTracks.length > 0;
   const isLocalScreenSharing = isScreenShareEnabled;
 
   // Custom UI view toggle states
@@ -2412,23 +2980,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
   }, []);
 
-  // Dragging state for camera feeds when screen sharing is active
-  const [floatingPos, setFloatingPos] = useState(() => {
-    if (typeof window === 'undefined') return { x: 100, y: 100 };
-    const isMob = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
-    if (!isTeacherRole && isMob) {
-      // Mobilde öğrenci için sağ üst köşeye temiz ve ekranı kesinlikle taşırmayan yerleşim
-      const boxW = 160;
-      return { x: Math.max(8, window.innerWidth - boxW - 8), y: 8 };
-    }
-    return {
-      x: Math.max(10, window.innerWidth - (isTeacherRole ? 400 : 230)),
-      y: Math.max(10, window.innerHeight - (isTeacherRole ? 290 : 160))
-    };
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-
   // Body scroll lock
   useEffect(() => {
     const originalStyle = document.body.style.overflow;
@@ -2438,48 +2989,62 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
   }, []);
 
-  // Monitor connection health. If connection hangs or fails, call error handler to fallback
+  // Monitor initial connection health. If initial handshake hangs beyond 25s, fallback
   useEffect(() => {
-    if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
+    if (connectionState === ConnectionState.Connecting) {
       const timeout = setTimeout(() => {
-        console.warn("LiveKit connection timed out. Activating Jitsi fallback.");
+        console.warn("LiveKit initial connection timed out (25s). Activating fallback.");
         if (onLiveKitError) onLiveKitError();
-      }, 6000); // 6 seconds timeout
+      }, 25000);
       return () => clearTimeout(timeout);
     }
   }, [connectionState, onLiveKitError]);
 
   // Request media streams gracefully AFTER connecting (prevents startup crash if permission blocked/no camera)
+  const hasStartedStreamsRef = useRef(false);
   useEffect(() => {
-    if (connectionState === ConnectionState.Connected && localParticipant) {
+    if (connectionState === ConnectionState.Connected && localParticipant && !hasStartedStreamsRef.current) {
+      hasStartedStreamsRef.current = true;
       const startStreams = async () => {
         try {
-          await localParticipant.setMicrophoneEnabled(true);
+          await localParticipant.setMicrophoneEnabled(true, {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          });
         } catch (err) {
           console.warn("Could not auto-enable microphone:", err);
-          alert(
-            "Mikrofon Otomatik Başlatılamadı!\n\n" +
-            "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
-            "Lütfen adres çubuğunun solundaki kilit simgesinden mikrofon iznini 'İzin Ver' olarak ayarlayın."
-          );
         }
 
         try {
           await localParticipant.setCameraEnabled(true);
         } catch (err) {
           console.warn("Could not auto-enable camera:", err);
-          alert(
-            "Kamera Otomatik Başlatılamadı!\n\n" +
-            "Hata: " + (err.name || "Error") + " - " + err.message + "\n\n" +
-            "Lütfen:\n" +
-            "1. Adres çubuğundaki kilit simgesinden kamera iznini açın.\n" +
-            "2. Kameranın başka bir uygulama tarafından kullanılmadığından emin olun."
-          );
         }
       };
       startStreams();
     }
   }, [connectionState, localParticipant]);
+
+  // Tarayıcı otomatik ses engeli (Autoplay Policy) nedeniyle seslerin durmasını önle
+  useEffect(() => {
+    if (!room) return;
+    const unlockAudio = () => {
+      if (!room.canPlaybackAudio) {
+        room.startAudio().catch(() => {});
+      }
+    };
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+    unlockAudio();
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [room]);
 
   // Picture-in-Picture logic for background screen sharing
   useEffect(() => {
@@ -2499,7 +3064,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     document.body.appendChild(pipVideo);
     pipVideoRef.current = pipVideo;
 
-    const drawFrame = () => {
+    let lastDrawTime = 0;
+    const drawFrame = (timestamp) => {
+      const now = timestamp || performance.now();
+      if (now - lastDrawTime < 66) {
+        if (document.pictureInPictureElement === pipVideo) {
+          animationFrameId = requestAnimationFrame(drawFrame);
+        }
+        return;
+      }
+      lastDrawTime = now;
+
       // Clear canvas with dark slate background matching app theme
       ctx.fillStyle = '#080b11';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2715,15 +3290,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       }
     };
 
-    const handleWindowBlur = () => {
-      // Windows'ta pencere paylaşırken öğretmen Chrome dışındaki programa (PDF vb.) tıkladığında blur tetiklenir
-      if (!isScreenSharing) return;
-      if (docPipWindowRef.current || (typeof window !== 'undefined' && window.documentPictureInPicture && window.documentPictureInPicture.window)) {
-        return;
-      }
-      enterPip();
-    };
-
     const handleLeavePiP = () => {
       setIsPipActive(false);
       if (animationFrameId) {
@@ -2744,7 +3310,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
     pipVideo.addEventListener('leavepictureinpicture', handleLeavePiP);
     pipVideo.addEventListener('enterpictureinpicture', handleEnterPiP);
 
@@ -2757,7 +3322,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
       pipVideo.removeEventListener('leavepictureinpicture', handleLeavePiP);
       pipVideo.removeEventListener('enterpictureinpicture', handleEnterPiP);
       if (animationFrameId) {
@@ -2820,166 +3384,6 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
-  // Öğrenci ekranındaki yüzen kamera kutusu ölçeklendirme durumu (1.0x - 2.5x)
-  const [studentCamScale, setStudentCamScale] = useState(1.0);
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeStartRef = useRef({ x: 0, scale: 1.0 });
-
-  const handleResizeStart = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsResizing(true);
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    resizeStartRef.current = {
-      x: clientX,
-      scale: studentCamScale
-    };
-  };
-
-  const handleResizeClick = (e) => {
-    e.stopPropagation();
-    // Tıklandığında boyut döngüsü: 1.0x (normal) -> 1.75x (orta) -> 2.5x (büyük) -> 1.0x
-    setStudentCamScale((prev) => {
-      if (prev < 1.4) return 1.75;
-      if (prev < 2.2) return 2.5;
-      return 1.0;
-    });
-  };
-
-  useEffect(() => {
-    const handleResizeMove = (e) => {
-      if (!isResizing) return;
-      if (e.touches && e.cancelable) {
-        e.preventDefault();
-      }
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const deltaX = clientX - resizeStartRef.current.x;
-      const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
-      const baseWidth = isMobile ? 160 : 210;
-      const deltaScale = deltaX / baseWidth;
-      const nextScale = Math.max(1.0, Math.min(2.5, Number((resizeStartRef.current.scale + deltaScale).toFixed(2))));
-      setStudentCamScale(nextScale);
-    };
-
-    const handleResizeEnd = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      window.addEventListener('mousemove', handleResizeMove);
-      window.addEventListener('mouseup', handleResizeEnd);
-      window.addEventListener('touchmove', handleResizeMove, { passive: false });
-      window.addEventListener('touchend', handleResizeEnd);
-      window.addEventListener('touchcancel', handleResizeEnd);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleResizeMove);
-      window.removeEventListener('mouseup', handleResizeEnd);
-      window.removeEventListener('touchmove', handleResizeMove);
-      window.removeEventListener('touchend', handleResizeEnd);
-      window.removeEventListener('touchcancel', handleResizeEnd);
-    };
-  }, [isResizing]);
-
-  const handleMouseDown = (e) => {
-    if (e.button !== 0 || e.target.closest('button') || e.target.closest('.no-drag')) return;
-    setIsDragging(true);
-    dragStart.current = {
-      x: e.clientX - floatingPos.x,
-      y: e.clientY - floatingPos.y
-    };
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.target.closest('button') || e.target.closest('.no-drag')) return;
-    setIsDragging(true);
-    const touch = e.touches[0];
-    dragStart.current = {
-      x: touch.clientX - floatingPos.x,
-      y: touch.clientY - floatingPos.y
-    };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      
-      // Prevent browser default scroll during touch drag
-      if (e.touches && e.cancelable) {
-        e.preventDefault();
-      }
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
-      let newX = clientX - dragStart.current.x;
-      let newY = clientY - dragStart.current.y;
-
-      const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
-      const baseWidth = isMobile ? 160 : 210;
-      const boxWidth = isTeacherRole 
-        ? Math.min(380, window.innerWidth - 20) 
-        : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
-      const boxHeight = isTeacherRole 
-        ? 210 
-        : Math.round((isMobile ? 100 : 115) * studentCamScale);
-      const minX = 6;
-      const minY = 6;
-      const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
-      const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
-
-      newX = Math.max(minX, Math.min(maxX, newX));
-      newY = Math.max(minY, Math.min(maxY, newY));
-
-      setFloatingPos({ x: newX, y: newY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleMouseMove, { passive: false });
-      document.addEventListener('touchend', handleMouseUp);
-      document.addEventListener('touchcancel', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleMouseMove);
-      document.removeEventListener('touchend', handleMouseUp);
-      document.removeEventListener('touchcancel', handleMouseUp);
-    };
-  }, [isDragging, isTeacherRole, studentCamScale]);
-
-  // Maintain floating window placement on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      setFloatingPos((prev) => {
-        const isMobile = window.innerWidth < 768 || (window.innerHeight < 550 && window.innerWidth < 1024);
-        const baseWidth = isMobile ? 160 : 210;
-        const boxWidth = isTeacherRole 
-          ? Math.min(380, window.innerWidth - 20) 
-          : Math.min(window.innerWidth - 12, Math.round(baseWidth * studentCamScale));
-        const boxHeight = isTeacherRole 
-          ? 210 
-          : Math.round((isMobile ? 100 : 115) * studentCamScale);
-        const maxX = Math.max(6, window.innerWidth - boxWidth - 6);
-        const maxY = Math.max(6, window.innerHeight - boxHeight - 6);
-        return {
-          x: Math.max(6, Math.min(maxX, prev.x)),
-          y: Math.max(6, Math.min(maxY, prev.y))
-        };
-      });
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isTeacherRole, studentCamScale]);
-
   const toggleMicrophone = async () => {
     if (!localParticipant) return;
     if (breakActive) {
@@ -2987,7 +3391,17 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       return;
     }
     try {
-      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      const nextState = !isMicrophoneEnabled;
+      if (nextState) {
+        await localParticipant.setMicrophoneEnabled(true, {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        });
+      } else {
+        await localParticipant.setMicrophoneEnabled(false);
+      }
     } catch (err) {
       console.error("Audio toggle failed:", err);
       alert(
@@ -3057,11 +3471,23 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
         }
 
         try {
-          await localParticipant.setScreenShareEnabled(true, {
+          const trackPub = await localParticipant.setScreenShareEnabled(true, {
             resolution: ScreenSharePresets.h1080fps15.resolution,
             contentHint: 'detail',
             suppressLocalAudioPlayback: true
+          }, {
+            videoCodec: 'vp8',
+            maxBitrate: 2500000,
+            dtx: true
           });
+
+          // Tarayıcının kendi "Paylaşımı Durdur" butonuna basıldığında PiP penceresini otomatik kapat
+          const mediaTrack = trackPub?.track?.mediaStreamTrack;
+          if (mediaTrack) {
+            mediaTrack.addEventListener('ended', () => {
+              exitPip();
+            }, { once: true });
+          }
         } catch (shareErr) {
           // Kullanıcı ekran seçme diyaloğunu iptal ederse açılan pencereyi kapat
           if (openedWin) {
@@ -3140,8 +3566,8 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
     }
   };
 
-  // Render loading state if connection is not ready
-  if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting) {
+  // Render loading state ONLY during initial room connecting (never tear down during brief reconnection)
+  if (connectionState === ConnectionState.Connecting) {
     return (
       <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center gap-4 text-white font-sans overflow-hidden" style={{ backgroundColor: '#0a1628' }}>
         <div className="relative w-12 h-12 flex items-center justify-center">
@@ -3149,7 +3575,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           <div className="absolute w-full h-full border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
-          {connectionState === ConnectionState.Connecting ? 'Sınıf Sunucusuna Bağlanılıyor...' : 'Yeniden Bağlanılıyor...'}
+          Sınıf Sunucusuna Bağlanılıyor...
         </p>
       </div>
     );
@@ -3160,6 +3586,14 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       className="fixed inset-0 z-[99999] flex flex-col font-sans text-slate-100 overflow-hidden"
       style={{ backgroundColor: '#0a1628' }}
     >
+      {/* Reconnecting subtle banner (keeps video and DOM intact) */}
+      {connectionState === ConnectionState.Reconnecting && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[100000] bg-amber-500/95 text-slate-950 font-black text-xs px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-2 animate-pulse select-none border border-amber-400">
+          <span className="material-symbols-outlined text-sm">sync</span>
+          <span>Bağlantı yenileniyor, lütfen bekleyin...</span>
+        </div>
+      )}
+
       {/* Top Header - Mobilde tamamen gizlenir, derse maksimum alan açılır */}
       <div 
         className={`px-5 py-3.5 items-center justify-between border-b border-[#162540] z-10 shadow-sm relative shrink-0 ${isMobileScreen ? 'hidden' : 'hidden md:flex'}`} 
@@ -3224,441 +3658,44 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
           >
             <Whiteboard role={role} whiteboardCanvasRef={whiteboardCanvasRef} />
             
-            {/* Webcams Float Box (Draggable) */}
-            <div 
-              onMouseDown={handleMouseDown}
-              onTouchStart={handleTouchStart}
-              className="fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col p-2.5 gap-2 cursor-move"
-              style={{
-                left: `${floatingPos.x}px`,
-                top: `${floatingPos.y}px`,
-                width: '210px',
-              }}
-            >
-              {/* Header */}
-              <div className="px-1.5 py-0.5 text-[9px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-2">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px] text-primary">group</span>
-                  Katılımcılar
-                </span>
-                <span className="material-symbols-outlined text-[14px] text-slate-500">drag_indicator</span>
-              </div>
-
-              {/* Kamera ve Mikrofon kontrol butonları */}
-              <div className="no-drag flex gap-1.5 px-0.5">
-                <button
-                  onClick={toggleMicrophone}
-                  title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    isMicrophoneEnabled
-                      ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[13px]">
-                    {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                  </span>
-                  <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
-                </button>
-
-                <button
-                  onClick={toggleCamera}
-                  title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    isCameraEnabled
-                      ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[13px]">
-                    {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                  </span>
-                  <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
-                </button>
-              </div>
-
-              {/* Videos */}
-              <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto no-drag pr-0.5">
-                {participants.map((p) => {
-                  const isTeacher = checkIsTeacher(p);
-                  const trackRef = cameraTracks.find(t => t.participant.identity === p.identity);
-                  const initial = p.name ? p.name.charAt(0).toUpperCase() : p.identity.charAt(0).toUpperCase();
-
-                  if (trackRef) {
-                    const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${p.identity}_camera`;
-                    return (
-                      <div
-                        key={trackKey}
-                        className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border shadow-md camera-item ${
-                          isTeacher ? 'border-primary/50 shadow-primary/5' : 'border-slate-800'
-                        }`}
-                      >
-                        <VideoTrack trackRef={trackRef} className="w-full h-full object-cover animate-in fade-in duration-300" style={p.isLocal ? { transform: 'scaleX(-1)' } : undefined} />
-
-                        {/* Kendi kamerası için mikrofon ve kamera toggle butonları */}
-                        {p.isLocal && (
-                          <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
-                              title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                isMicrophoneEnabled
-                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[11px] font-bold">
-                                {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                              </span>
-                            </button>
-
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
-                              title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                isCameraEnabled
-                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[11px] font-bold">
-                                {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                              </span>
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Speaking indicator overlay */}
-                        {p.isSpeaking && (
-                          <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                            <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
-                          </div>
-                        )}
-
-                        {/* Status name tags */}
-                        <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-extrabold flex items-center gap-1 border border-white/5 max-w-[85%] truncate">
-                          {isTeacher && <span className="text-[7px] bg-primary text-slate-950 font-black px-1 rounded-sm">HOCA</span>}
-                          <span className="text-white truncate">{p.name || p.identity} {p.isLocal ? '(Sen)' : ''}</span>
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div
-                        key={`${p.identity}_placeholder`}
-                        className={`relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950/80 border shadow-sm flex flex-col items-center justify-center p-2 camera-item ${
-                          isTeacher ? 'border-primary/30' : 'border-slate-900'
-                        }`}
-                      >
-                        {p.isLocal && (
-                          <div className="no-drag absolute top-1 left-1 z-20 flex gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleMicrophone(); }}
-                              title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                isMicrophoneEnabled
-                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[11px] font-bold">
-                                {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                              </span>
-                            </button>
-
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
-                              title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                              className={`flex items-center justify-center w-6 h-6 rounded-full shadow-md border transition-all duration-150 cursor-pointer ${
-                                isCameraEnabled
-                                  ? 'bg-slate-800/90 text-slate-200 border-slate-600/60 hover:bg-red-500/80 hover:text-white hover:border-red-400'
-                                  : 'bg-red-500/90 text-white border-red-400/60 hover:bg-red-600'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[11px] font-bold">
-                                {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                              </span>
-                            </button>
-                          </div>
-                        )}
-
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shadow-inner ${
-                          isTeacher ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'
-                        }`}>
-                          {initial}
-                        </div>
-                        <div className="text-[8px] font-extrabold mt-1 text-slate-350 max-w-full truncate px-1 flex items-center gap-1">
-                          {isTeacher && <span className="text-[7px] bg-primary/20 text-primary font-black px-1 rounded-sm">HOCA</span>}
-                          <span className="truncate">{p.name || p.identity} {p.isLocal ? '(Sen)' : ''}</span>
-                        </div>
-                        <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
-                          <span className="material-symbols-outlined text-[8px]">videocam_off</span>
-                          Kamera Kapalı
-                        </span>
-
-                        {/* Speaking indicator overlay */}
-                        {p.isSpeaking && (
-                          <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                            <span className="material-symbols-outlined text-[10px] font-bold">volume_up</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                })}
-                {participants.length === 0 && (
-                  <div className="text-center py-4 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                    Aktif kamera yok
-                  </div>
-                )}
-              </div>
-            </div>
+            {showWhiteboard && (
+              <FloatingCameraOverlay
+                isTeacherRole={isTeacherRole}
+                teacherParticipant={teacherParticipant}
+                teacherTrackRef={teacherTrackRef}
+                studentParticipants={studentParticipants}
+                cameraTracks={cameraTracks}
+                isPipActive={isPipActive}
+                togglePip={togglePip}
+                isMicrophoneEnabled={isMicrophoneEnabled}
+                toggleMicrophone={toggleMicrophone}
+                isCameraEnabled={isCameraEnabled}
+                toggleCamera={toggleCamera}
+              />
+            )}
           </div>
 
           {/* Screen Share / Grid views - rendered when whiteboard is not active */}
           {!showWhiteboard && (
             isScreenSharing ? (
-              // A. LAYOUT: SCREEN SHARING ACTIVE
+              // A. LAYOUT: SCREEN SHARING ACTIVE (HARDWARE ACCELERATED & ZERO RE-RENDER)
               <div className="w-full h-full flex items-center justify-center p-3 relative bg-black">
-                <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-850 shadow-inner bg-slate-950 screenshare-container">
-                  <VideoTrack 
-                    trackRef={screenShareTracks[0]} 
-                    className="w-full h-full object-contain" 
-                  />
-                </div>
+                <ScreenShareViewer trackRef={activeScreenTrackRef} />
 
-                {/* Webcams Float Box (Draggable) - 50% Teacher / 50% Students */}
-                <div
-                  onMouseDown={handleMouseDown}
-                  onTouchStart={handleTouchStart}
-                  className={`fixed z-[9999] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden select-none cursor-move flex flex-col ${
-                    isTeacherRole ? 'p-2.5 gap-2' : 'p-1.5 gap-1'
-                  }`}
-                  style={{
-                    left: `${floatingPos.x}px`,
-                    top: `${floatingPos.y}px`,
-                    width: isTeacherRole 
-                      ? 'min(380px, calc(100vw - 20px))' 
-                      : `min(${Math.round((isMobileScreen ? 160 : 210) * studentCamScale)}px, calc(100vw - 16px))`,
-                  }}
-                >
-                  {/* Header */}
-                  <div className="px-1 py-0.5 text-[8px] text-slate-400 font-extrabold uppercase tracking-widest border-b border-slate-800/60 select-none flex justify-between items-center pb-1">
-                    <span className="flex items-center gap-1 truncate">
-                      <span className="material-symbols-outlined text-[11px] text-primary">groups</span>
-                      <span className="truncate">{isTeacherRole ? `Kameralar (1 Öğretmen + ${studentParticipants.length} Öğrenci)` : 'Kameralar'}</span>
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {isTeacherRole && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePip();
-                          }}
-                          title={isPipActive ? "Masaüstü Küçük Pencereyi Kapat" : "Masaüstü Küçük Pencereyi Aç (Diğer programların üstünde gösterir)"}
-                          className={`no-drag flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                            isPipActive
-                              ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[11px]">
-                            {isPipActive ? 'pip_exit' : 'picture_in_picture_alt'}
-                          </span>
-                          <span>{isPipActive ? 'Masaüstünde Açık' : 'Masaüstüne Al'}</span>
-                        </button>
-                      )}
-                      <span className="material-symbols-outlined text-[13px] text-slate-500">drag_indicator</span>
-                    </div>
-                  </div>
-
-                  {/* Kamera ve Mikrofon kontrol butonları (Sadece Öğretmen için) */}
-                  {isTeacherRole && (
-                    <div className="no-drag flex gap-1.5 px-0.5">
-                      {/* Mikrofon butonu */}
-                      <button
-                        onClick={toggleMicrophone}
-                        title={isMicrophoneEnabled ? 'Mikrofonu Kapat' : 'Mikrofonu Aç'}
-                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                          isMicrophoneEnabled
-                            ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">
-                          {isMicrophoneEnabled ? 'mic' : 'mic_off'}
-                        </span>
-                        <span>{isMicrophoneEnabled ? 'Mikrofon' : 'Sessiz'}</span>
-                      </button>
-
-                      {/* Kamera butonu */}
-                      <button
-                        onClick={toggleCamera}
-                        title={isCameraEnabled ? 'Kamerayı Kapat' : 'Kamerayı Aç'}
-                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                          isCameraEnabled
-                            ? 'bg-slate-700/80 text-slate-200 hover:bg-red-500/80 hover:text-white border border-slate-600/60'
-                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/40 border border-red-500/40'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">
-                          {isCameraEnabled ? 'videocam' : 'videocam_off'}
-                        </span>
-                        <span>{isCameraEnabled ? 'Kamera' : 'Kapalı'}</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* 50% Öğretmen / 50% Öğrenciler Split Video Alanı */}
-                  <div 
-                    className="flex gap-1.5 no-drag"
-                    style={{
-                      height: isTeacherRole 
-                        ? '150px' 
-                        : `${Math.round((isMobileScreen ? 75 : 85) * studentCamScale)}px`
-                    }}
-                  >
-                    {/* SOL YARI (%50): Öğretmen Kamerası */}
-                    <div 
-                      className="w-1/2 h-full relative rounded-xl overflow-hidden bg-slate-950 border border-primary/50 shadow-md flex flex-col justify-center items-center"
-                      data-pip="teacher"
-                      data-name={teacherParticipant?.name || 'Öğretmen'}
-                    >
-                      {teacherTrackRef ? (
-                        <VideoTrack
-                          trackRef={teacherTrackRef}
-                          className="w-full h-full object-cover animate-in fade-in duration-300"
-                          style={teacherParticipant?.isLocal ? { transform: 'scaleX(-1)' } : undefined}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-1 text-center">
-                          <div className={`${isTeacherRole ? 'w-8 h-8 text-xs' : 'w-5 h-5 text-[9px]'} rounded-full bg-primary/20 text-primary flex items-center justify-center font-black mb-0.5 shadow-inner`}>
-                            {teacherParticipant?.name ? teacherParticipant.name.charAt(0).toUpperCase() : 'H'}
-                          </div>
-                          <span className={`${isTeacherRole ? 'text-[10px]' : 'text-[7.5px]'} font-bold text-slate-300 truncate max-w-full`}>
-                            {teacherParticipant?.name || 'Öğretmen'}
-                          </span>
-                          {isTeacherRole && (
-                            <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-[9px]">videocam_off</span>
-                              Kamera Kapalı
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Öğretmen Rozeti (Sadece Öğretmen Görünümünde) */}
-                      {isTeacherRole && (
-                        <div className="absolute top-1 left-1 bg-primary text-slate-950 px-1 py-0.5 rounded text-[7px] font-black tracking-wider flex items-center gap-0.5 shadow-sm z-10">
-                          <span className="material-symbols-outlined text-[8px]">school</span>
-                          <span>ÖĞRETMEN</span>
-                        </div>
-                      )}
-
-                      {/* Speaking indicator (Sadece Öğretmen Görünümünde) */}
-                      {isTeacherRole && teacherParticipant?.isSpeaking && (
-                        <div className="absolute top-1 right-1 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                          <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
-                        </div>
-                      )}
-
-                      {/* Name tag */}
-                      <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/70 backdrop-blur-sm px-1 py-0.5 rounded text-[7px] font-extrabold flex items-center gap-0.5 border border-white/5 truncate z-10">
-                        <span className="text-white truncate">
-                          {teacherParticipant?.name || teacherParticipant?.identity || 'Öğretmen'}
-                          {teacherParticipant?.isLocal ? ' (Sen)' : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* SAĞ YARI (%50): Öğrenciler Bölümü (1, 2, 3 veya 4 Öğrenci Izgarası) */}
-                    <div className="w-1/2 h-full flex flex-col">
-                      {studentParticipants.length === 0 ? (
-                        <div className="w-full h-full rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center p-1 text-center">
-                          <span className="material-symbols-outlined text-slate-600 text-base mb-0.5">group</span>
-                          <span className="text-[7px] text-slate-500 font-bold uppercase tracking-wider">
-                            Öğrenci Yok
-                          </span>
-                        </div>
-                      ) : (
-                        <div
-                          className={`w-full h-full gap-1 ${
-                            studentParticipants.length === 1
-                              ? 'grid grid-cols-1 grid-rows-1'
-                              : studentParticipants.length === 2
-                              ? 'grid grid-cols-1 grid-rows-2'
-                              : 'grid grid-cols-2 grid-rows-2'
-                          }`}
-                        >
-                          {studentParticipants.slice(0, 4).map((student) => {
-                            const trackRef = cameraTracks.find((t) => t.participant.identity === student.identity);
-                            const initial = student.name
-                              ? student.name.charAt(0).toUpperCase()
-                              : student.identity.charAt(0).toUpperCase();
-
-                            return (
-                              <div
-                                key={student.identity}
-                                className="relative w-full h-full rounded-lg overflow-hidden bg-slate-950 border border-slate-800 shadow-sm flex items-center justify-center"
-                                data-pip="student"
-                                data-name={student.name || student.identity}
-                              >
-                                {trackRef ? (
-                                  <VideoTrack
-                                    trackRef={trackRef}
-                                    className="w-full h-full object-cover animate-in fade-in duration-300"
-                                    style={student.isLocal ? { transform: 'scaleX(-1)' } : undefined}
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/80 p-0.5 text-center">
-                                    <div className="w-4 h-4 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[7px]">
-                                      {initial}
-                                    </div>
-                                    <span className="text-[6.5px] text-slate-400 font-medium truncate max-w-full mt-0.5 px-0.5">
-                                      {student.name || student.identity}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Speaking indicator (Sadece Öğretmen Görünümünde) */}
-                                {isTeacherRole && student.isSpeaking && (
-                                  <div className="absolute top-0.5 right-0.5 bg-primary text-slate-950 rounded-full p-0.5 shadow-md flex items-center justify-center z-10">
-                                    <span className="material-symbols-outlined text-[8px] font-bold">volume_up</span>
-                                  </div>
-                                )}
-
-                                {/* Student Name tag */}
-                                <div className="absolute bottom-0.5 left-0.5 right-0.5 bg-black/75 backdrop-blur-sm px-1 py-0.5 rounded text-[6.5px] font-bold flex items-center gap-0.5 border border-white/5 truncate z-10">
-                                  <span className="text-white truncate">
-                                    {student.name || student.identity}
-                                    {student.isLocal ? ' (Sen)' : ''}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Boyutlandırma Tutamacı (Sağ Alt Köşe - Sadece Öğrenci) */}
-                  {!isTeacherRole && (
-                    <div
-                      onMouseDown={handleResizeStart}
-                      onTouchStart={handleResizeStart}
-                      onClick={handleResizeClick}
-                      className="no-drag absolute bottom-0 right-0 w-6 h-6 flex items-end justify-end p-1 cursor-nwse-resize z-30 select-none group touch-none"
-                      title="Boyutlandırmak için sürükleyin veya tıklayın (1.0x - 2.5x)"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" className="text-slate-400 group-hover:text-amber-400 transition-colors pointer-events-none">
-                        <line x1="9" y1="2" x2="2" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                        <line x1="9" y1="5.5" x2="5.5" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                        <line x1="9" y1="9" x2="9" y2="9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
+                {/* Webcams Float Box (Draggable, isolated from ScreenShare) */}
+                <FloatingCameraOverlay
+                  isTeacherRole={isTeacherRole}
+                  teacherParticipant={teacherParticipant}
+                  teacherTrackRef={teacherTrackRef}
+                  studentParticipants={studentParticipants}
+                  cameraTracks={cameraTracks}
+                  isPipActive={isPipActive}
+                  togglePip={togglePip}
+                  isMicrophoneEnabled={isMicrophoneEnabled}
+                  toggleMicrophone={toggleMicrophone}
+                  isCameraEnabled={isCameraEnabled}
+                  toggleCamera={toggleCamera}
+                />
               </div>
             ) : (
               // B. LAYOUT: NORMAL GRID OF WEBCAMS
@@ -3668,43 +3705,16 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
                     const isTeacher = checkIsTeacher(trackRef.participant);
                     const isLocal = trackRef.participant.isLocal;
                     const trackKey = trackRef.publication?.trackSid || trackRef.track?.sid || `${trackRef.participant.identity}_${trackRef.source}`;
+                    const name = trackRef.participant.name || trackRef.participant.identity;
                     return (
-                      <div 
-                        key={trackKey} 
-                        className={`relative aspect-video rounded-3xl overflow-hidden bg-slate-900 border transition-all duration-300 shadow-xl group hover:scale-[1.01] camera-item ${
-                          isTeacher 
-                            ? 'border-primary/50 shadow-lg shadow-primary/5 hover:border-primary' 
-                            : 'border-slate-800 hover:border-primary/30'
-                        }`}
-                      >
-                        {/* Kendi kameran ayna gibi görünür, karşı taraf seni ters görmez */}
-                        <VideoTrack
-                          trackRef={trackRef}
-                          className="w-full h-full object-cover animate-in fade-in duration-300"
-                          style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
-                        />
-
-                        {/* Floating tag inside camera panel */}
-                        <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2">
-                          {isTeacher ? (
-                            <span className="flex items-center gap-1 text-xs text-primary font-black">
-                              <span className="material-symbols-outlined text-xs">star</span>
-                              {trackRef.participant.name || trackRef.participant.identity}
-                            </span>
-                          ) : (
-                            <span className="text-slate-200">
-                              {trackRef.participant.name || trackRef.participant.identity} {trackRef.participant.identity.includes(localParticipant?.identity) ? '(Sen)' : ''}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Speaking indicator overlay */}
-                        {trackRef.participant.isSpeaking && (
-                          <div className="absolute top-3 right-3 bg-primary text-white rounded-full p-1 shadow-lg shadow-primary/20 border border-white/20 animate-bounce flex items-center justify-center">
-                            <span className="material-symbols-outlined text-xs font-bold">volume_up</span>
-                          </div>
-                        )}
-                      </div>
+                      <GridCameraTile
+                        key={trackKey}
+                        trackRef={trackRef}
+                        isTeacher={isTeacher}
+                        isLocal={isLocal}
+                        name={name}
+                        isSpeaking={trackRef.participant.isSpeaking}
+                      />
                     );
                   })}
 
@@ -4510,17 +4520,18 @@ const LiveMeeting = ({ lessonId, role, userName, userId, onClose }) => {
     <LiveKitRoom
       token={token}
       serverUrl={serverUrl}
-      onDisconnected={handleLiveKitError} // Auto-fallback if network drops or connection fails during room
+      onDisconnected={(reason) => {
+        console.warn("LiveKit room disconnected:", reason);
+        if (!isLeavingRef.current) {
+          handleLiveKitError();
+        }
+      }}
       onError={(err) => {
         console.error("LiveKit connection error:", err);
-        alert(`LiveKit Bağlantı Hatası:\n${err.message}\n\nYedek sunucu moduna geçiş yapılıyor.`);
         handleLiveKitError();
       }}
-      connectOptions={{ autoSubscribe: true }}
-      options={{
-        adaptiveStream: true,
-        dynacast: true,
-      }}
+      connectOptions={LIVEKIT_CONNECT_OPTIONS}
+      options={LIVEKIT_ROOM_OPTIONS}
       className="fixed inset-0 z-[99999] w-screen h-screen bg-slate-950 overflow-hidden"
     >
       <MeetingSession 
