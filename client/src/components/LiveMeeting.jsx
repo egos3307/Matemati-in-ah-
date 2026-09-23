@@ -27,8 +27,8 @@ const liveDebug = {
 
 // Stabil LiveKit Oda & Bağlantı Seçenekleri (Ses ve Kamera Donmalarını Önleyen Presetler)
 const LIVEKIT_ROOM_OPTIONS = {
-  adaptiveStream: true,
-  dynacast: true,
+  adaptiveStream: false,
+  dynacast: false,
   stopLocalTrackOnUnpublish: true,
   audioCaptureDefaults: {
     autoGainControl: true,
@@ -37,8 +37,7 @@ const LIVEKIT_ROOM_OPTIONS = {
     channelCount: 1,
   },
   publishDefaults: {
-    simulcast: true,
-    videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360],
+    simulcast: false,
     videoCodec: 'vp8',
     dtx: true,
     red: true, // RFC 2198 Redundant Audio Data: paket kaybında ses kesilmesini ve robotikleşmeyi önler
@@ -48,7 +47,7 @@ const LIVEKIT_ROOM_OPTIONS = {
       maxFramerate: 20,
     },
     videoEncoding: {
-      maxBitrate: 600000,
+      maxBitrate: 700000,
       maxFramerate: 24,
     },
   },
@@ -1066,7 +1065,6 @@ const ScreenShareViewer = React.memo(({ trackRef }) => {
         <VideoTrack 
           trackRef={trackRef} 
           className="w-full h-full object-contain" 
-          manageSubscription={true}
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 text-xs font-bold gap-2 select-none">
@@ -1076,12 +1074,6 @@ const ScreenShareViewer = React.memo(({ trackRef }) => {
       )}
     </div>
   );
-}, (prev, next) => {
-  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
-  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
-  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
-  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
-  return prevSid === nextSid && prevMuted === nextMuted;
 });
 
 // 1.7 İZOLE EDİLMİŞ KATILIMCI KAMERA KARTI (SADECE KENDİ DURUMU DEĞİŞTİĞİNDE RENDER EDİLİR)
@@ -1094,6 +1086,10 @@ const PipParticipantTile = React.memo(({
   initial = '?',
   isTeacherRole = false
 }) => {
+  const track = trackRef?.publication?.track || trackRef?.track;
+  const isMuted = trackRef?.publication?.isMuted ?? (!track);
+  const hasLiveVideo = Boolean(track && !isMuted);
+
   return (
     <div 
       className={`relative w-full h-full rounded-xl overflow-hidden bg-slate-950 ${
@@ -1103,12 +1099,11 @@ const PipParticipantTile = React.memo(({
       data-name={name}
       style={{ transform: 'translateZ(0)' }}
     >
-      {trackRef ? (
+      {trackRef && hasLiveVideo ? (
         <VideoTrack
           trackRef={trackRef}
           className="w-full h-full object-cover"
           style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
-          manageSubscription={true}
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950/90 p-1 text-center select-none">
@@ -1152,14 +1147,6 @@ const PipParticipantTile = React.memo(({
       </div>
     </div>
   );
-}, (prev, next) => {
-  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
-  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
-  const prevSpeaking = prev.participant?.isSpeaking;
-  const nextSpeaking = next.participant?.isSpeaking;
-  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
-  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
-  return prevSid === nextSid && prevSpeaking === nextSpeaking && prevMuted === nextMuted && prev.name === next.name;
 });
 
 // 1.8 TAMAMEN İZOLE EDİLMİŞ VE TAŞINABİLİR YÜZEN KAMERA KUTUSU (ZERO RE-RENDER FOR MAIN STREAM)
@@ -1520,8 +1507,7 @@ const GridCameraTile = React.memo(({ trackRef, isTeacher, isLocal, name, isSpeak
     >
       <VideoTrack
         trackRef={trackRef}
-        manageSubscription={true}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover animate-in fade-in duration-300"
         style={isLocal ? { transform: 'scaleX(-1)' } : undefined}
       />
       <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow-md border border-white/5 flex items-center gap-2 select-none">
@@ -1543,12 +1529,6 @@ const GridCameraTile = React.memo(({ trackRef, isTeacher, isLocal, name, isSpeak
       )}
     </div>
   );
-}, (prev, next) => {
-  const prevSid = prev.trackRef?.publication?.trackSid || prev.trackRef?.track?.sid;
-  const nextSid = next.trackRef?.publication?.trackSid || next.trackRef?.track?.sid;
-  const prevMuted = prev.trackRef?.publication?.isMuted || prev.trackRef?.track?.isMuted;
-  const nextMuted = next.trackRef?.publication?.isMuted || next.trackRef?.track?.isMuted;
-  return prevSid === nextSid && prevMuted === nextMuted && prev.isSpeaking === next.isSpeaking && prev.name === next.name && prev.isLocal === next.isLocal;
 });
 
 // 2. LIVEKIT SESSION COMPONENT WITH PREMIUM CUSTOM UI
