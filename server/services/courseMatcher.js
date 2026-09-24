@@ -79,7 +79,7 @@ async function matchCoursePackagesWithGemini({ title, grade, topic, category, ta
   }));
 
   const prompt = `
-Sen Fullematematiği'nin Yapay Zeka Ders Danışmanısın (Gemini AI).
+Sen Yapay Zeka Ders ve Eğitim Danışmanısın.
 Aşağıdaki blog yazısını incele ve sitede şu an aktif olan ders paketleri arasından:
 1. Bu yazıya EN UYGUN BİRİNCİL DERS PAKETİNİ
 2. Birincil paket silinirse veya kapandığında kullanılacak İKİNCİL (YEDEK) DERS PAKETİNİ seç.

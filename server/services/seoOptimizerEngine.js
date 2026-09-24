@@ -16,7 +16,7 @@ const { callAiWithFallback, cleanAndParseJson } = require('../lib/ai');
 async function fetchPageAndQueryGscData() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  const siteUrl = process.env.GSC_SITE_URL || 'https://fullematematigi.com.tr';
+  const siteUrl = process.env.GSC_SITE_URL || process.env.FRONTEND_URL || 'https://example.com';
 
   if (!serviceAccountEmail || !privateKey) {
     return { connected: false, rows: [], note: 'Search Console (.env) kimlik bilgileri eksik.' };
@@ -74,13 +74,13 @@ async function fetchPageAndQueryGscData() {
     const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const fiftySixDaysAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    const cleanUrl = siteUrl.replace(/\/$/, '');
+    const domainMatch = cleanUrl.replace(/^https?:\/\//, '');
     const siteCandidates = Array.from(new Set([
       siteUrl,
-      'https://fullematematigi.com.tr',
-      'https://fullematematigi.com.tr/',
-      'sc-domain:fullematematigi.com.tr',
-      'https://www.fullematematigi.com.tr/',
-      'https://www.fullematematigi.com.tr'
+      cleanUrl,
+      `${cleanUrl}/`,
+      `sc-domain:${domainMatch}`
     ]));
 
     let currentRows = [];
@@ -347,7 +347,8 @@ async function runSeoOptimizerScan() {
 
   // Also include published blog posts that might not have GSC impressions yet
   for (const post of existingPosts) {
-    const postUrl = `https://fullematematigi.com.tr/blog/${post.slug}`;
+    const baseUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
+    const postUrl = `${baseUrl}/blog/${post.slug}`;
     if (!pageAggregatesMap.has(postUrl)) {
       pageAggregatesMap.set(postUrl, {
         pageUrl: postUrl,
@@ -477,7 +478,7 @@ async function runSeoOptimizerScan() {
  */
 async function analyzePageOptimizationWithAi({ pageUrl, currentContent, gscData, targetKeyword, sitePages }) {
   const prompt = `
-Sen Fullematematiği'nin Baş SEO ve Matematik Kıdemli Öğretmenisin.
+Sen alanında uzman Baş SEO ve Matematik Kıdemli Danışmanısın.
 Google'da gösterim almaya başlayan veya sıralaması değişen aşağıdaki sayfa ve performans verilerini analiz et.
 
 SAYFA BİLGİLERİ:

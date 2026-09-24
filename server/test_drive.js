@@ -131,9 +131,9 @@ async function testUpload() {
       return;
     }
 
-    const assembledBuffer = Buffer.from('Fullematematiği Drive test dosyası!');
+    const assembledBuffer = Buffer.from('Platform Drive test dosyasi!');
     const metadata = {
-      name: 'fullemat_test.txt',
+      name: 'drive_test.txt',
       mimeType: 'text/plain',
       ...(resolvedFolderId ? { parents: [resolvedFolderId] } : {}),
     };

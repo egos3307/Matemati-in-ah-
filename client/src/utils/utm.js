@@ -42,8 +42,7 @@ export const appendUtmToUrl = (urlStr) => {
   if (!utm || Object.keys(utm).length === 0 || !urlStr) return urlStr;
   
   try {
-    const isRelative = urlStr.startsWith('/');
-    const dummyBase = 'https://fullematematigi.com.tr';
+    const dummyBase = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://example.com';
     const urlObj = new URL(isRelative ? dummyBase + urlStr : urlStr);
     
     Object.keys(utm).forEach(key => {

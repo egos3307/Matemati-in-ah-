@@ -1,6 +1,6 @@
 /**
  * Google Drive Video Kayıtları Yardımcı Servisi
- * Fullematematiği - Hızlı ve Güvenli İzleme Sistemi
+ * Hızlı ve Güvenli İzleme Sistemi
  */
 
 /**

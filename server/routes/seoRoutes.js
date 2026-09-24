@@ -417,11 +417,12 @@ router.post('/drafts/:id/publish', auth, checkRole('HEAD_TEACHER'), async (req, 
     }
 
     // Automatically submit published URL to Google Indexing API & update Google Sitemap
-    const publishedUrl = `https://fullematematigi.com.tr/blog/${blogPost.slug}`;
+    const frontendUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
+    const publishedUrl = `${frontendUrl}/blog/${blogPost.slug}`;
     submitUrlToGoogleIndexingApi(publishedUrl).catch(idxErr => {
       console.warn('[Auto Indexing API Warning]:', idxErr.message);
     });
-    submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(smErr => {
+    submitSitemapToGoogleSearchConsole(`${frontendUrl}/sitemap.xml`).catch(smErr => {
       console.warn('[Auto Sitemap API Warning]:', smErr.message);
     });
 
@@ -515,7 +516,10 @@ router.post('/settings', auth, checkRole('HEAD_TEACHER'), async (req, res) => {
  * Protected by CRON_SECRET token
  */
 router.get('/cron/scan', async (req, res) => {
-  const cronSecret = process.env.CRON_SECRET || 'fullematematik_cron_secret_123';
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return res.status(500).json({ error: 'CRON_SECRET is not configured on the server' });
+  }
   const authHeader = req.headers.authorization;
   const tokenQuery = req.query.secret;
 
@@ -839,8 +843,9 @@ router.post('/optimizer/pages/:id/apply', auth, checkRole('HEAD_TEACHER'), async
     });
 
     // Automatically submit to Google Indexing API & Sitemap API
+    const frontendUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
     submitUrlToGoogleIndexingApi(pageOpt.pageUrl).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
-    submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
+    submitSitemapToGoogleSearchConsole(`${frontendUrl}/sitemap.xml`).catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
 
     res.json({ success: true, pageOptimization: updatedOpt });
   } catch (err) {

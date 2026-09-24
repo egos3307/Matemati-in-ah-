@@ -124,7 +124,7 @@ async function generateBlogDraftContent({ keyword, analysis = {}, existingSitePa
   const recTitle = analysis.recommendedTitle || `${keyword} Konu Anlatımı ve Örnek Soru Çözümleri`;
 
   const prompt = `
-Sen Fullematematiği'nin Baş Öğretmenisin. LGS ve YKS derece öğrencileri yetiştiren tecrübeli bir matematik müfredat yazarısın.
+Sen alanında uzman Baş Öğretmensin. Derece öğrencileri yetiştiren tecrübeli bir matematik müfredat yazarısın.
 
 HEDEF:
 Aşağıdaki bilgiler doğrultusunda öğrenciler için son derece kaliteli, eğitici, anlaşılır ve SEO uyumlu bir blog yazısı taslağı hazırla.
@@ -225,7 +225,7 @@ Yalnızca ve yalnızca yukarıdaki JSON nesnesini döndür.
  */
 async function refineBlogDraftWithInstruction({ existingDraft, instruction }) {
   const prompt = `
-Sen Fullematematiği'nin Baş Öğretmenisin. Mevcut bir blog taslağını, diğer Baş Öğretmen'in verdiği özel talimata göre yeniden düzenleyeceksin.
+Sen alanında uzman Baş Öğretmensin. Mevcut bir blog taslağını verilen özel talimata göre yeniden düzenleyeceksin.
 
 MEVCUT DRAFT:
 - Başlık: "${existingDraft.title}"

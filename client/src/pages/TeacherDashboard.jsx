@@ -460,8 +460,8 @@ const TeacherDashboard = () => {
   const handleFirstMessage = (e, student) => {
     e.stopPropagation();
     const phone = student.studentTel || student.parentTel;
-    if (!phone) return;
-    const message = `Merhaba! Yeni sistemimizi hayata geçirdik.\n\nÖğrenci giriş kodu: ${student.studentCode}\nVeli giriş kodu: ${student.parentCode || '-'}\n\nGiriş adresi: https://fullematematigi.com.tr/giris`;
+    const loginUrl = `${window.location.origin}/giris`;
+    const message = `Merhaba! Yeni sistemimizi hayata geçirdik.\n\nÖğrenci giriş kodu: ${student.studentCode}\nVeli giriş kodu: ${student.parentCode || '-'}\n\nGiriş adresi: ${loginUrl}`;
     const newMessaged = [...messagedStudentIds, student.id];
     setMessagedStudentIds(newMessaged);
     localStorage.setItem('fulle_messaged_students', JSON.stringify(newMessaged));
@@ -5752,7 +5752,7 @@ const TeacherDashboard = () => {
                 meetingPassword={password}
                 role="TEACHER"
                 userName={user?.name || 'Öğretmen'}
-                userEmail={user?.email || 'info@fullematematigi.com.tr'}
+                userEmail={user?.email || 'teacher@local'}
                 onClose={() => setActiveMeeting(null)}
               />
             );

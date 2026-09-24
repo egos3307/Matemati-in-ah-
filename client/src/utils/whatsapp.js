@@ -6,8 +6,8 @@
 import { appendUtmToUrl } from './utm';
 
 export const getDynamicWhatsAppLink = (postOrCategory, customMessage) => {
-  const phoneNumber = '905350598950';
-  let message = 'Merhaba, Fullematematiği dersleri hakkında bilgi almak istiyorum.';
+  const phoneNumber = import.meta.env.VITE_WHATSAPP_PHONE || '905350598950';
+  let message = 'Merhaba, dersler hakkında bilgi almak istiyorum.';
 
   if (customMessage) {
     message = customMessage;

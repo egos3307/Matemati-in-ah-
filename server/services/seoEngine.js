@@ -68,7 +68,7 @@ function generateGoogleAccessToken(clientEmail, privateKey, scope) {
 async function fetchGoogleSearchConsoleData() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  const siteUrl = process.env.GSC_SITE_URL || 'https://fullematematigi.com.tr';
+  const siteUrl = process.env.GSC_SITE_URL || process.env.FRONTEND_URL || 'https://example.com';
 
   if (!serviceAccountEmail || !privateKey) {
     return {
@@ -112,13 +112,13 @@ async function fetchGoogleSearchConsoleData() {
     const today = new Date().toISOString().split('T')[0];
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    const cleanUrl = siteUrl.replace(/\/$/, '');
+    const domainMatch = cleanUrl.replace(/^https?:\/\//, '');
     const siteCandidates = Array.from(new Set([
       siteUrl,
-      'https://fullematematigi.com.tr',
-      'https://fullematematigi.com.tr/',
-      'sc-domain:fullematematigi.com.tr',
-      'https://www.fullematematigi.com.tr/',
-      'https://www.fullematematigi.com.tr'
+      cleanUrl,
+      `${cleanUrl}/`,
+      `sc-domain:${domainMatch}`
     ]));
 
     let apiRes = null;
@@ -248,10 +248,11 @@ async function submitUrlToGoogleIndexingApi(targetUrl) {
 /**
  * Automatically submit updated sitemap XML URL to Google Search Console API & Ping Service
  */
-async function submitSitemapToGoogleSearchConsole(sitemapUrl = 'https://fullematematigi.com.tr/sitemap.xml') {
+async function submitSitemapToGoogleSearchConsole(sitemapUrl = null) {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  const siteUrl = process.env.GSC_SITE_URL || 'https://fullematematigi.com.tr';
+  const siteUrl = process.env.GSC_SITE_URL || process.env.FRONTEND_URL || 'https://example.com';
+  const effectiveSitemapUrl = sitemapUrl || `${siteUrl.replace(/\/$/, '')}/sitemap.xml`;
 
   if (!serviceAccountEmail || !privateKey) {
     return { success: false, note: 'Service Account credentials missing' };
@@ -259,7 +260,7 @@ async function submitSitemapToGoogleSearchConsole(sitemapUrl = 'https://fullemat
 
   try {
     // 1. Send public ping to Google Sitemap crawler
-    fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`).catch(() => null);
+    fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(effectiveSitemapUrl)}`).catch(() => null);
 
     // 2. Submit sitemap via Google Search Console API
     const jwtAssertion = generateGoogleAccessToken(
@@ -285,18 +286,18 @@ async function submitSitemapToGoogleSearchConsole(sitemapUrl = 'https://fullemat
 
     const { access_token } = await tokenRes.json();
 
+    const cleanUrl = siteUrl.replace(/\/$/, '');
+    const domainMatch = cleanUrl.replace(/^https?:\/\//, '');
     const siteCandidates = Array.from(new Set([
       siteUrl,
-      'https://fullematematigi.com.tr',
-      'https://fullematematigi.com.tr/',
-      'sc-domain:fullematematigi.com.tr',
-      'https://www.fullematematigi.com.tr/',
-      'https://www.fullematematigi.com.tr'
+      cleanUrl,
+      `${cleanUrl}/`,
+      `sc-domain:${domainMatch}`
     ]));
 
     let submitted = false;
     for (const candidate of siteCandidates) {
-      const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(candidate)}/sitemaps/${encodeURIComponent(sitemapUrl)}`;
+      const apiUrl = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(candidate)}/sitemaps/${encodeURIComponent(effectiveSitemapUrl)}`;
       const res = await fetch(apiUrl, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${access_token}` }

@@ -1,7 +1,48 @@
+# Dependencies
 node_modules/
-.env
+.pnp
+.pnp.js
+
+# Production build outputs
 dist/
-.DS_Store
+client/dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Databases & Backups
 *.db
 *.sqlite
-!server/dev.db
+*.sqlite3
+*.sql
+*backup*
+*.dump
+dev.db
+
+# Credentials & Keys
+*credentials*
+*service-account*
+*.pem
+*.key
+*.cert
+*.crt
+
+# OS & Logs
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+
+# Local generated
+/generated/prisma

@@ -1,9 +1,18 @@
-node_modules
-# Keep environment variables out of version control
+node_modules/
 .env
-
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*backup*
+*.dump
+dev.db
+*credentials*
+*service-account*
+*.pem
+*.key
 /generated/prisma
-
-# OAuth helper scripts (hassas, repoya gitmesin)
 get_refresh_token.js
 test_drive.js

@@ -4,32 +4,26 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('123', 10);
-  
-  try {
-    await prisma.user.delete({
-      where: { email: 'ogretmen@fullematematik.com' }
-    });
-  } catch (e) {
-    // ignore
-  }
+  const teacherEmail = process.env.INITIAL_TEACHER_EMAIL || process.env.ADMIN_EMAIL || 'ogretmen@example.com';
+  const teacherPassword = process.env.INITIAL_TEACHER_PASSWORD || 'ChangeMe123!';
+  const hashedPassword = await bcrypt.hash(teacherPassword, 10);
 
   const teacher = await prisma.user.upsert({
-    where: { email: 'ogretmen@test.com' },
+    where: { email: teacherEmail },
     update: {
       password: hashedPassword,
-      name: 'Baş Öğretmen',
-      role: 'TEACHER'
+      name: 'Yönetici Öğretmen',
+      role: 'HEAD_TEACHER'
     },
     create: {
-      email: 'ogretmen@test.com',
+      email: teacherEmail,
       password: hashedPassword,
-      name: 'Baş Öğretmen',
-      role: 'TEACHER',
+      name: 'Yönetici Öğretmen',
+      role: 'HEAD_TEACHER',
     },
   });
 
-  console.log({ teacher });
+  console.log('Seed tamamlandı:', { teacher: teacher.email });
 }
 
 main()

@@ -7,7 +7,7 @@ dotenv.config();
 async function sendNetgsmSMS(to, message) {
   const usercode = process.env.NETGSM_USERCODE;
   const password = process.env.NETGSM_PASSWORD;
-  const header = process.env.NETGSM_HEADER || "FULLEMAT";
+  const header = process.env.NETGSM_HEADER || "BILDIRIM";
 
   if (!usercode || !password) {
     console.warn("Netgsm credentials not found in env. SMS not sent.");
@@ -96,7 +96,7 @@ async function sendUltraMsgWhatsApp(to, message) {
  * General Notify function
  */
 async function notifyLessonStart(student, lesson) {
-  const frontendUrl = process.env.FRONTEND_URL || 'https://fullematematigi.com';
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://example.com').replace(/\/$/, '');
   const message = `Merhaba ${student.name}, "${lesson.title}" dersimiz başlamak üzere! Derse katılmak için öğrenci panelinize giriş yapabilirsiniz: ${frontendUrl}/ogrenci`;
 
   console.log(`Sending notification to student ${student.name}...`);

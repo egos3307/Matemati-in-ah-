@@ -670,11 +670,12 @@ async function publishAllGradeBlogs() {
       });
 
       publishedCount++;
-      const fullUrl = `https://fullematematigi.com.tr/blog/${blogPost.slug}`;
+      const baseUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
+      const fullUrl = `${baseUrl}/blog/${blogPost.slug}`;
 
       // Submit to Google Indexing API & Sitemap API
       submitUrlToGoogleIndexingApi(fullUrl).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
-      submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
+      submitSitemapToGoogleSearchConsole(`${baseUrl}/sitemap.xml`).catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
 
       console.log(`[Grade Blog Publisher] Successfully published grade ${item.grade} blog: "${blogPost.title}"`);
       results.push({ title: blogPost.title, grade: item.grade, slug: blogPost.slug, status: 'PUBLISHED' });

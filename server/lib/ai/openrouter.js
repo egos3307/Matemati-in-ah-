@@ -35,8 +35,8 @@ async function generateOpenRouter(prompt, options = {}) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://fullematematigi.com.tr',
-        'X-Title': 'Fullematematigi AI Blog System'
+        'HTTP-Referer': process.env.FRONTEND_URL || 'https://example.com',
+        'X-Title': process.env.APP_NAME || 'AI Education Platform'
       },
       body: JSON.stringify(payload),
       signal: controller.signal

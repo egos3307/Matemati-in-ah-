@@ -19,6 +19,7 @@ const {
   scanDriveFolderRecordings,
   syncLessonsWithDrive
 } = require('./services/driveService');
+const breakStateService = require('./services/breakStateService');
 const crypto = require('crypto');
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 const rateLimit = require('express-rate-limit');
@@ -71,10 +72,26 @@ const fs = require('fs');
 const app = express();
 const prisma = new PrismaClient();
 
+function isDatabaseConfigured() {
+  const url = process.env.DATABASE_URL;
+  return Boolean(
+    url &&
+    !url.includes('username:password') &&
+    !url.includes('your-neon-url') &&
+    (url.startsWith('postgres://') || url.startsWith('postgresql://'))
+  );
+}
+
+function getWhatsAppLink(phone = process.env.WHATSAPP_PHONE || process.env.CONTACT_PHONE || '', text = '') {
+  const cleanPhone = String(phone).replace(/\D/g, '');
+  if (!cleanPhone) return '';
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+}
+
 // Safely ensure production Postgres DB schema has new nullable columns (zero data loss)
 let dbMigrated = false;
 async function ensureDbColumnsExist() {
-  if (dbMigrated) return;
+  if (dbMigrated || !isDatabaseConfigured()) return;
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE "Lesson" ADD COLUMN IF NOT EXISTS "subject" TEXT DEFAULT 'MATEMATIK';`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "BlogPost" ADD COLUMN IF NOT EXISTS "relatedCourseId" INTEGER;`);
@@ -160,83 +177,18 @@ async function ensureDbColumnsExist() {
         CONSTRAINT "ContactMessage_pkey" PRIMARY KEY ("id")
       );
     `);
+    await breakStateService.ensureBreakTableExists(prisma);
     dbMigrated = true;
   } catch (err) {
     console.warn('[DbMigration] Schema column check:', err.message);
   }
 }
-ensureDbColumnsExist();
-
-// Silinmiş Ders 243'ü geri yükleme, FM303 kodlu öğrenciye ve Mihrimah/Muhammet'e bağlama işlemi
-let lesson243Restored = false;
-async function restoreLesson243(preferredTeacherId = null) {
-  try {
-    // 1. FM303 kodlu öğrenciyi ve Mihrimah/Muhammet isimli öğrencileri veritabanından bul
-    const allStudents = await prisma.user.findMany({
-      where: { role: 'STUDENT' },
-      select: { id: true, name: true, email: true, studentCode: true, teacherId: true }
-    });
-
-    const targetStudents = allStudents.filter(s => {
-      const code = (s.studentCode || '').toUpperCase().trim();
-      const nameLower = (s.name || '').toLocaleLowerCase('tr-TR');
-      return code === 'FM303' || code.includes('303') || nameLower.includes('mihrimah') || nameLower.includes('muhammet') || nameLower.includes('muhammed');
-    });
-
-    // Özellikle FM303 kodlu öğrenciyi bul
-    const studentFM303 = allStudents.find(s => (s.studentCode || '').toUpperCase().trim() === 'FM303') || targetStudents[0];
-
-    const studentIds = targetStudents.map(s => s.id);
-    console.log('[Restore243] FM303 ve eşleşen öğrenciler:', targetStudents.map(s => `#${s.id} - ${s.name} (Kod: ${s.studentCode}, Email: ${s.email})`));
-
-    // 2. Ders 243'ü bul ve geri yükle
-    const lesson = await prisma.lesson.findUnique({
-      where: { id: 243 }
-    });
-
-    if (lesson) {
-      let existingIds = [];
-      if (lesson.studentIds) {
-        try { existingIds = JSON.parse(lesson.studentIds); } catch {}
-      }
-      const finalStudentIds = [...new Set([...existingIds, ...studentIds])];
-
-      const effectiveTeacherId = preferredTeacherId || lesson.teacherId || studentFM303?.teacherId;
-
-      const updateData = {
-        deletedAt: null,
-        recordingRequested: true,
-        studentIds: finalStudentIds.length > 0 ? JSON.stringify(finalStudentIds) : null,
-        studentId: studentFM303 ? studentFM303.id : (finalStudentIds.length > 0 ? finalStudentIds[0] : lesson.studentId)
-      };
-
-      if (effectiveTeacherId) {
-        updateData.teacherId = effectiveTeacherId;
-      }
-
-      const updated = await prisma.lesson.update({
-        where: { id: 243 },
-        data: updateData
-      });
-      lesson243Restored = true;
-      console.log(`[Restore243] Ders #243 ("${updated.title}") FM303 (${studentFM303?.name}) öğrencisine ve öğretmen #${updated.teacherId}'ye bağlandı!`, finalStudentIds);
-      return { success: true, lesson: updated, students: targetStudents, studentFM303 };
-    } else {
-      console.warn('[Restore243] Ders #243 veritabanında bulunamadı.');
-      return { success: false, error: 'Ders #243 veritabanında bulunamadı.', students: targetStudents };
-    }
-  } catch (err) {
-    console.error('[Restore243] Geri yükleme hatası:', err.message);
-    return { success: false, error: err.message };
-  }
-}
-restoreLesson243();
 
 const { FALLBACK_BLOGS } = require('./data/staticBlogsSeed');
 
 let blogsSeeded = false;
 async function seedMissingStaticBlogs() {
-  if (blogsSeeded) return;
+  if (blogsSeeded || !isDatabaseConfigured()) return;
   try {
     const existingPosts = await prisma.blogPost.findMany({ select: { id: true, slug: true, authorId: true } });
     const validAuthorId = (existingPosts.length > 0 && existingPosts[0].authorId) ? existingPosts[0].authorId : 1;
@@ -276,10 +228,10 @@ async function seedMissingStaticBlogs() {
     console.warn('[SeedBlog] Error seeding/updating static blogs:', err.message);
   }
 }
-seedMissingStaticBlogs();
 
 // Seed camps if none exist
 async function seedCamps() {
+  if (!isDatabaseConfigured()) return;
   try {
     const count = await prisma.camp.count();
     if (count === 0) {
@@ -306,7 +258,7 @@ async function seedCamps() {
               'LGS ve okul sınavları için sağlam altyapı oluştur'
             ]),
             price: '2500 TL',
-            whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+            whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, Ortaokul Yeni Nesil Soru Çözüm Kampı hakkında bilgi almak istiyorum.')
           },
           {
             badge: 'Lisans & Ön Lisans Adayları',
@@ -328,7 +280,7 @@ async function seedCamps() {
               'Sınava sağlam ve eksiksiz bir hazırlık süreci'
             ]),
             price: '3500 TL',
-            whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+            whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, KPSS Lisans & Ön Lisans Matematik Kampı hakkında bilgi almak istiyorum.')
           }
         ]
       });
@@ -338,7 +290,14 @@ async function seedCamps() {
     console.error('Error seeding camps:', err);
   }
 }
-seedCamps();
+
+if (isDatabaseConfigured()) {
+  ensureDbColumnsExist();
+  seedMissingStaticBlogs();
+  seedCamps();
+} else {
+  console.log('ℹ️ [Database] DATABASE_URL henüz tanımlanmadı veya placeholder içeriyor. Sunucu hazır, veritabanı migration ve seed işlemleri yeni DATABASE_URL verildiğinde otomatik çalışacaktır.');
+}
 
 const PORT = process.env.PORT || 5000;
 
@@ -346,11 +305,13 @@ const PORT = process.env.PORT || 5000;
 app.set('trust proxy', 1);
 
 app.use(async (req, res, next) => {
-  if (!dbMigrated) {
-    await ensureDbColumnsExist();
-  }
-  if (!blogsSeeded) {
-    await seedMissingStaticBlogs();
+  if (isDatabaseConfigured()) {
+    if (!dbMigrated) {
+      await ensureDbColumnsExist();
+    }
+    if (!blogsSeeded) {
+      await seedMissingStaticBlogs();
+    }
   }
   next();
 });
@@ -505,11 +466,12 @@ const publicFormLimiter = rateLimit({
 });
 
 app.get('/', (req, res) => {
-  res.send('Fullematematik API is running...');
+  res.send(`${process.env.APP_NAME || 'Platform'} API is running...`);
 });
 
 // 🤖 Robots.txt Route
 app.get(['/robots.txt', '/api/robots.txt'], (req, res) => {
+  const baseUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
   const robotsTxt = `User-agent: *
 Allow: /
 Allow: /blog
@@ -553,7 +515,7 @@ Disallow: /api/drive
 Disallow: /api/drive/*
 Disallow: /api/
 
-Sitemap: https://fullematematigi.com.tr/sitemap.xml`;
+Sitemap: ${baseUrl}/sitemap.xml`;
 
   res.header('Content-Type', 'text/plain');
   res.send(robotsTxt);
@@ -562,7 +524,7 @@ Sitemap: https://fullematematigi.com.tr/sitemap.xml`;
 // 🗺️ Dynamic Sitemap XML Generator Route
 app.get(['/sitemap.xml', '/api/sitemap.xml'], async (req, res) => {
   try {
-    const baseUrl = 'https://fullematematigi.com.tr';
+    const baseUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
     const staticPages = [
       { url: '/', priority: '1.0', changefreq: 'daily' },
       { url: '/blog', priority: '0.9', changefreq: 'daily' },
@@ -743,13 +705,14 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
         });
       }
 
-      // Auto upgrade specific emails to HEAD_TEACHER
-      if ((normalizedCode === 'burakcelik@fullematematigi.com.tr' || normalizedCode === 'test@fulle.com') && user.role !== 'HEAD_TEACHER') {
+      // Auto upgrade configured ADMIN_EMAIL to HEAD_TEACHER
+      const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+      if (adminEmail && normalizedCode === adminEmail && user.role !== 'HEAD_TEACHER') {
         user = await prisma.user.update({
           where: { email: normalizedCode },
           data: { role: 'HEAD_TEACHER' }
         });
-        console.log(`User ${normalizedCode} automatically upgraded to HEAD_TEACHER in DB`);
+        console.log(`User ${normalizedCode} upgraded to HEAD_TEACHER via ADMIN_EMAIL config`);
       }
     }
 
@@ -829,8 +792,9 @@ app.post('/api/register-student', publicFormLimiter, async (req, res) => {
       if (!existing) isUnique = true;
     }
 
-    const finalEmail = (email && email.trim()) ? email.trim() : `${studentCode.toLowerCase()}@fulle.com`;
-    const initialPassword = password || 'fulle123';
+    const defaultEmailDomain = process.env.DEFAULT_EMAIL_DOMAIN || 'student.internal';
+    const finalEmail = (email && email.trim()) ? email.trim() : `${studentCode.toLowerCase()}@${defaultEmailDomain}`;
+    const initialPassword = password || process.env.DEFAULT_STUDENT_PASSWORD || 'student123';
     const hashedPassword = await bcrypt.hash(initialPassword, 10);
 
     // Check if email is already taken
@@ -908,7 +872,8 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
       if (!existing) isUnique = true;
     }
 
-    const finalEmail = email || `${studentCode.toLowerCase()}@fulle.com`;
+    const defaultEmailDomain = process.env.DEFAULT_EMAIL_DOMAIN || 'student.internal';
+    const finalEmail = email || `${studentCode.toLowerCase()}@${defaultEmailDomain}`;
 
     const student = await prisma.user.create({
       data: {
@@ -1016,7 +981,8 @@ app.post('/api/teacher/create-lesson', auth, checkRole('TEACHER'), async (req, r
     }
     if (!finalUrl) {
       const uniqueId = Math.random().toString(36).substring(2, 9);
-      finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
+      const roomPrefix = (process.env.APP_NAME || 'LiveLesson').replace(/[^a-zA-Z0-9]/g, '');
+      finalUrl = `https://meet.jit.si/${roomPrefix}_${uniqueId}`;
     }
 
     let targetIds = [];
@@ -1073,7 +1039,8 @@ app.post('/api/teacher/create-recurring-lessons', auth, checkRole('TEACHER'), as
     }
     if (!finalUrl) {
       const uniqueId = Math.random().toString(36).substring(2, 9);
-      finalUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
+      const roomPrefix = (process.env.APP_NAME || 'LiveLesson').replace(/[^a-zA-Z0-9]/g, '');
+      finalUrl = `https://meet.jit.si/${roomPrefix}_${uniqueId}`;
     }
 
     // İlk dersin tarihini bul: seçilen başlangıç tarihi varsa ondan başlar, yoksa gün farkı ile hesaplar
@@ -1356,9 +1323,7 @@ app.get('/api/teacher/lessons', auth, checkRole('TEACHER'), async (req, res) => 
 });
 
 app.post('/api/teacher/lessons/restore-243', auth, checkRole('TEACHER'), async (req, res) => {
-  lesson243Restored = false; // Manuel tetiklemede tekrar çalıştır
-  const result = await restoreLesson243(req.user.id);
-  res.json(result);
+  res.json({ success: true, message: 'Restore 243 is deprecated' });
 });
 
 app.post('/api/teacher/migrate-catbox-recordings', auth, checkRole('TEACHER'), async (req, res) => {
@@ -3323,7 +3288,8 @@ app.post('/api/teacher/trial-requests/:id/approve', auth, checkRole('TEACHER'), 
     let zoomJoinUrl = await createDailyRoom();
     if (!zoomJoinUrl) {
       const uniqueId = Math.random().toString(36).substring(2, 9);
-      zoomJoinUrl = `https://meet.jit.si/FulleMatematik_${uniqueId}`;
+      const roomPrefix = (process.env.APP_NAME || 'LiveLesson').replace(/[^a-zA-Z0-9]/g, '');
+      zoomJoinUrl = `https://meet.jit.si/${roomPrefix}_${uniqueId}`;
     }
 
     // 4. Create the trial lesson
@@ -3583,8 +3549,9 @@ app.post('/api/teacher/blog', auth, checkRole('TEACHER'), async (req, res) => {
     // Automatically submit to Google Indexing API & Google Search Console Sitemap
     try {
       const { submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('./services/seoEngine');
-      submitUrlToGoogleIndexingApi(`https://fullematematigi.com.tr/blog/${post.slug}`).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
-      submitSitemapToGoogleSearchConsole('https://fullematematigi.com.tr/sitemap.xml').catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
+      const baseUrl = (process.env.FRONTEND_URL || process.env.BASE_URL || 'https://example.com').replace(/\/$/, '');
+      submitUrlToGoogleIndexingApi(`${baseUrl}/blog/${post.slug}`).catch(e => console.warn('[Auto Indexing Warning]:', e.message));
+      submitSitemapToGoogleSearchConsole(`${baseUrl}/sitemap.xml`).catch(e => console.warn('[Auto Sitemap Warning]:', e.message));
     } catch (e) {
       console.warn('[Auto Indexing Import Warning]:', e.message);
     }
@@ -4315,7 +4282,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 6,
     price: '3.500 TL',
     image: '/IMG_2943.jpeg',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20TYT%20Matematik%20Kampı%20hakkında%20bilgi%20ve%20kontenjan%20ayırtmak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, YKS 2027 TYT Matematik Kampı hakkında bilgi ve kontenjan ayırtmak istiyorum.')
   },
   {
     id: 2,
@@ -4328,7 +4295,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 4,
     price: '4.000 TL',
     image: '/IMG_2999.jpeg',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20AYT%20Matematik%20Kampı%20hakkında%20bilgi%20ve%20kontenjan%20ayırtmak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, YKS 2027 AYT Matematik Kampı hakkında bilgi ve kontenjan ayırtmak istiyorum.')
   },
   {
     id: 3,
@@ -4341,7 +4308,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 3,
     price: '2.500 TL',
     image: '/IMG_3002.png',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20YKS%202027%20Geometri%20Grubu%20hakkında%20bilgi%20almak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, YKS 2027 Geometri Grubu hakkında bilgi almak istiyorum.')
   },
   {
     id: 4,
@@ -4354,7 +4321,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 5,
     price: '3.000 TL',
     image: '/IMG_3001.jpeg',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20LGS%202027%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, LGS 2027 Matematik Kampı hakkında bilgi almak istiyorum.')
   },
   {
     id: 5,
@@ -4367,7 +4334,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 8,
     price: '3.500 TL',
     image: '/IMG_2999.jpeg',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%202027%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, KPSS 2027 Matematik Kampı hakkında bilgi almak istiyorum.')
   },
   {
     id: 6,
@@ -4380,7 +4347,7 @@ const DEFAULT_QUOTA_COURSES = [
     remainingQuota: 7,
     price: '3.500 TL',
     image: '/IMG_3002.png',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Maarif%20Modeli%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
+    whatsappLink: getWhatsAppLink(process.env.WHATSAPP_PHONE, 'Merhaba, Maarif Modeli Matematik Kampı hakkında bilgi almak istiyorum.')
   }
 ];
 
@@ -4580,26 +4547,30 @@ app.put('/api/teacher/quota-applications/:id', auth, checkRole('TEACHER'), async
 
 
 // Access Code Routes (Shopier / Özel Erişim Kodları)
+const defaultDriveFolderUrl = process.env.GOOGLE_DRIVE_FOLDER_ID 
+  ? `https://drive.google.com/drive/folders/${process.env.GOOGLE_DRIVE_FOLDER_ID}`
+  : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+
 const DEFAULT_ACCESS_CODES = [
   {
     id: 1,
     code: 'SHOP-8A92K',
-    personName: 'Ahmet Yılmaz',
-    packageName: 'Shopier LGS Matematik Kayıtları',
-    driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+    personName: 'Örnek Öğrenci',
+    packageName: 'Matematik Kayıtları Paketi',
+    driveUrl: defaultDriveFolderUrl
   },
   {
     id: 2,
     code: 'DEMO123',
     personName: 'Örnek Öğrenci',
-    packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+    packageName: 'Özel Matematik Ders Kayıtları (Demo)',
     driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
   },
   {
     id: 3,
     code: '1234',
     personName: 'Örnek Öğrenci',
-    packageName: 'Shopier Özel Matematik Ders Kayıtları (Demo)',
+    packageName: 'Özel Matematik Ders Kayıtları (Demo)',
     driveUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
   }
 ];
@@ -4633,9 +4604,9 @@ app.get('/api/access-codes', auth, checkRole('TEACHER'), async (req, res) => {
       const defaultCode = await prisma.accessCode.create({
         data: {
           code: 'SHOP-8A92K',
-          personName: 'Ahmet Yılmaz',
-          packageName: 'Shopier LGS Matematik Kayıtları',
-          driveUrl: 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+          personName: 'Örnek Öğrenci',
+          packageName: 'Matematik Kayıtları Paketi',
+          driveUrl: defaultDriveFolderUrl
         }
       }).catch(() => null);
       codes = defaultCode ? [defaultCode] : DEFAULT_ACCESS_CODES;
@@ -4656,7 +4627,7 @@ app.post('/api/access-codes', auth, checkRole('TEACHER'), async (req, res) => {
         code: rawCode,
         personName: personName?.trim() || 'Öğrenci',
         packageName: packageName?.trim() || 'Ders Kayıt Paketi',
-        driveUrl: driveUrl?.trim() || 'https://drive.google.com/drive/u/0/folders/1PwOkf-1M80Ar-ct9TiiwRMdPW5G9d73-'
+        driveUrl: driveUrl?.trim() || defaultDriveFolderUrl
       }
     });
     res.json(newCode);
@@ -4852,9 +4823,8 @@ app.post('/api/livekit/mute-participant', auth, checkRole('TEACHER'), async (req
 });
 
 // ═══════════════════════════════════════════════════════════
-// MOLA MODU (BREAK MODE) ODA SEYİYESİ STATE YÖNETİMİ
+// MOLA MODU (BREAK MODE) ODA SEVİYESİ STATE YÖNETİMİ
 // ═══════════════════════════════════════════════════════════
-const LESSON_BREAK_STATES = new Map();
 
 // Öğretmenin mola başlatması (Server-side onay ve senkronizasyon)
 app.post('/api/livekit/start-break', auth, checkRole('TEACHER'), async (req, res) => {
@@ -4863,21 +4833,14 @@ app.post('/api/livekit/start-break', auth, checkRole('TEACHER'), async (req, res
     return res.status(400).json({ error: 'Geçerli oda adı (roomName) ve mola süresi (dakika) gereklidir.' });
   }
 
-  const durationSec = Math.round(Number(durationMinutes) * 60);
-  const now = Date.now();
-  const breakEndsAt = now + durationSec * 1000;
-
-  const breakState = {
-    breakActive: true,
-    breakStartedAt: now,
-    breakEndsAt,
-    breakDuration: durationSec,
-    breakStartedBy: req.user ? req.user.id : 'TEACHER'
-  };
-
-  LESSON_BREAK_STATES.set(roomName, breakState);
-  console.log(`[MOLA] Oda: ${roomName} için ${durationMinutes} dakikalık mola başlatıldı. Bitiş: ${new Date(breakEndsAt).toISOString()}`);
-  res.json({ success: true, ...breakState });
+  try {
+    const breakState = await breakStateService.startBreak(roomName, durationMinutes, req.user ? req.user.id : 'TEACHER', prisma);
+    console.log(`[MOLA] Oda: ${roomName} için ${durationMinutes} dakikalık mola başlatıldı.`);
+    res.json({ success: true, ...breakState });
+  } catch (err) {
+    console.error('[MOLA Error] start-break:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Öğretmenin molayı erken bitirmesi
@@ -4887,9 +4850,14 @@ app.post('/api/livekit/end-break', auth, checkRole('TEACHER'), async (req, res) 
     return res.status(400).json({ error: 'Oda adı (roomName) gereklidir.' });
   }
 
-  LESSON_BREAK_STATES.delete(roomName);
-  console.log(`[MOLA] Oda: ${roomName} için mola sonlandırıldı.`);
-  res.json({ success: true, breakActive: false });
+  try {
+    const result = await breakStateService.endBreak(roomName, prisma);
+    console.log(`[MOLA] Oda: ${roomName} için mola sonlandırıldı.`);
+    res.json(result);
+  } catch (err) {
+    console.error('[MOLA Error] end-break:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Derse yeni katılan / yenileyen kullanıcının mola durumunu sorgulaması (herkes sorgulayabilir)
@@ -4899,22 +4867,13 @@ app.get('/api/livekit/break-status', async (req, res) => {
     return res.status(400).json({ error: 'Oda adı (roomName) gereklidir.' });
   }
 
-  const state = LESSON_BREAK_STATES.get(roomName);
-  if (!state || !state.breakActive) {
-    return res.json({ breakActive: false });
+  try {
+    const status = await breakStateService.getBreakStatus(roomName, prisma);
+    res.json(status);
+  } catch (err) {
+    console.error('[MOLA Error] break-status:', err.message);
+    res.json({ breakActive: false });
   }
-
-  const now = Date.now();
-  if (now >= state.breakEndsAt) {
-    LESSON_BREAK_STATES.delete(roomName);
-    return res.json({ breakActive: false });
-  }
-
-  const remainingSeconds = Math.max(0, Math.ceil((state.breakEndsAt - now) / 1000));
-  res.json({
-    ...state,
-    remainingSeconds
-  });
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -5024,8 +4983,8 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
           headers: {
             'Authorization': `Bearer ${openrouterKey}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://fullematematik.com',
-            'X-Title': 'Fullematematik AI'
+            'HTTP-Referer': process.env.FRONTEND_URL || 'https://example.com',
+            'X-Title': process.env.APP_NAME || 'AI Assistant'
           },
           body: JSON.stringify({
             model,
@@ -5099,7 +5058,7 @@ async function executeAI({ systemPrompt, userText, base64Image, jsonFormat = fal
 app.post('/api/ai/ask', auth, async (req, res) => {
   const { question, image } = req.body;
   try {
-    const systemPrompt = "Sen Fullematematiği Asistanı adında uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver.";
+    const systemPrompt = "Sen uzman bir matematik öğretmenisin. Öğrencinin gönderdiği matematik sorularını adım adım, anlaşılır ve eğitici bir dille çözmelisin. Eğer gönderilen görsel veya metin matematik ile ilgili değilse, öğrenciye sadece matematik konularında yardımcı olabileceğini kibarca hatırlat. Yanıtını Türkçe olarak ver.";
     const userText = question && question.trim() ? question : "Bu sorunun çözümünü adım adım açıklayarak yapabilir misin?";
     const answer = await executeAI({ systemPrompt, userText, base64Image: image, jsonFormat: false });
     res.json({ answer });
@@ -5633,24 +5592,10 @@ const YT_CACHE_MS = 30 * 60 * 1000;
 const YT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 async function resolveYouTubeChannelId() {
-  // Kanal ID'yi bilinen bir videodan çek (en güvenilir yöntem)
-  const seedUrl = 'https://www.youtube.com/shorts/-vOHsGTrevA';
-  const res = await axios.get(seedUrl, {
-    headers: { 'User-Agent': YT_USER_AGENT },
-    timeout: 10000,
-  });
-  const match = res.data.match(/"channelId":"(UC[a-zA-Z0-9_-]+)"/);
-  if (match) return match[1];
-
-  // Fallback: kanal sayfasından çek
-  const pageRes = await axios.get('https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0', {
-    headers: { 'User-Agent': YT_USER_AGENT },
-    timeout: 10000,
-  });
-  const m2 = pageRes.data.match(/"channelId":"(UC[a-zA-Z0-9_-]+)"/);
-  if (m2) return m2[1];
-
-  throw new Error('Kanal ID bulunamadı');
+  if (process.env.YOUTUBE_CHANNEL_ID) {
+    return process.env.YOUTUBE_CHANNEL_ID.trim();
+  }
+  return null;
 }
 
 let cachedChannelId = null;
@@ -5665,12 +5610,21 @@ app.get('/api/social/youtube-feed', async (req, res) => {
       cachedChannelId = await resolveYouTubeChannelId();
     }
 
-    const rssRes = await axios.get(
-      `https://www.youtube.com/feeds/videos.xml?channel_id=${cachedChannelId}`,
-      { headers: { 'User-Agent': YT_USER_AGENT }, timeout: 10000 }
-    );
+    if (!cachedChannelId) {
+      return res.json([]);
+    }
 
-    const entries = rssRes.data.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+    const response = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${cachedChannelId}`, {
+      headers: { 'User-Agent': YT_USER_AGENT },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      return res.json([]);
+    }
+
+    const xmlText = await response.text();
+    const entries = xmlText.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
     const videos = entries.slice(0, 3).map(entry => {
       const videoId = (entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/) || [])[1];
       const rawTitle = (entry.match(/<title>(.*?)<\/title>/) || [])[1] || '';
@@ -5691,9 +5645,9 @@ app.get('/api/social/youtube-feed', async (req, res) => {
     ytCacheTime = Date.now();
     res.json(videos);
   } catch (err) {
-    console.error('YouTube feed error:', err.message);
+    console.warn('YouTube feed error:', err.message);
     if (ytCacheData) return res.json(ytCacheData);
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 

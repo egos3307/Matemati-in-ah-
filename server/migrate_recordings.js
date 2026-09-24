@@ -1,6 +1,6 @@
 /**
  * Ders Kayıtları - Google Drive Migration & Backfill Scripti
- * Fullematematiği - Idempotent, Güvenli, Non-Destructive
+ * Idempotent, Güvenli, Non-Destructive
  * 
  * Kullanım:
  *   node migrate_recordings.js --dry-run   (Sadece analiz yapar, değişiklik yapmaz)
@@ -177,30 +177,8 @@ async function runMigration() {
       }
     });
   } catch (dbErr) {
-    // Eğer DATABASE_URL tanımlı değilse ve dev.db varsa lokal SQLite ile devam et
-    const fs = require('fs');
-    const devDbPath = path.join(__dirname, 'dev.db');
-    if (fs.existsSync(devDbPath)) {
-      try {
-        console.log('ℹ️ DATABASE_URL bulunamadı, lokal dev.db (SQLite) veritabanı inceleniyor...');
-        const { DatabaseSync } = require('node:sqlite');
-        sqliteDb = new DatabaseSync(devDbPath);
-        isSqlite = true;
-        const rows = sqliteDb.prepare('SELECT id, title, recordingUrl, recordingRequested, teacherId, studentId, date FROM Lesson').all();
-        allLessons = rows.map(r => ({
-          ...r,
-          recordingRequested: Boolean(r.recordingRequested),
-          teacher: { id: r.teacherId, name: `Öğretmen #${r.teacherId}` },
-          student: r.studentId ? { id: r.studentId, name: `Öğrenci #${r.studentId}` } : null
-        }));
-      } catch (sqErr) {
-        console.error('❌ Veritabanı sorgu hatası:', dbErr.message);
-        process.exit(1);
-      }
-    } else {
-      console.error('❌ Veritabanı sorgu hatası:', dbErr.message);
-      process.exit(1);
-    }
+    console.error('❌ Veritabanı sorgu hatası: DATABASE_URL geçerli bir PostgreSQL veritabanına işaret etmelidir.', dbErr.message);
+    process.exit(1);
   }
 
   console.log(`Toplam Aktif Ders Sayısı: ${allLessons.length}`);
