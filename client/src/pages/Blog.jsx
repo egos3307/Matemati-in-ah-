@@ -154,7 +154,7 @@ const Blog = () => {
                   </h2>
 
                   <div className="flex items-center gap-3 text-xs font-bold text-slate-400 mb-4 uppercase tracking-tighter">
-                    <span>{(!post.author?.name || post.author.name.toLowerCase().includes('test')) ? 'Burak Çelik' : post.author.name}</span>
+                    <span>{post.author?.name || 'Öğretmen'}</span>
                     <span>•</span>
                     <span>{new Date(post.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   </div>

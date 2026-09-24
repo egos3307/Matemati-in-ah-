@@ -2,54 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import SEO from '../components/SEO';
 
-const FALLBACK_CAMPS = [
-  {
-    id: 'fallback-1',
-    badge: '5, 6, 7 ve 8. Sınıflar',
-    title: 'Ortaokul Yeni Nesil Soru Çözüm Kampı',
-    subtitle: 'LGS ve Okul Sınavları İçin Sağlam Altyapı',
-    image: '/IMG_3001.jpeg',
-    details: [
-      { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 6 Eylül' },
-      { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 4 Ders' },
-      { icon: 'filter_list', label: 'Toplam', value: '18 Canlı Ders' },
-      { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
-    ],
-    description: 'Ders kayıtları Google Drive üzerinden paylaşılacak ve öğrenciler istedikleri zaman tekrar izleyebilecektir. Ders notları ve ödevlendirme desteği mevcuttur.',
-    highlights: [
-      'Yeni nesil soru mantığını öğren',
-      'Matematiksel okuma ve yorumlama becerini geliştir',
-      'Temel eksiklerini tamamla',
-      'Çözümlü örneklerle soru çözüm tekniklerini öğren',
-      'LGS ve okul sınavları için sağlam altyapı oluştur'
-    ],
-    price: '2500 TL',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20Ortaokul%20Yeni%20Nesil%20Soru%20Çözüm%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
-  },
-  {
-    id: 'fallback-2',
-    badge: 'Lisans & Ön Lisans Adayları',
-    title: 'KPSS Lisans & Ön Lisans Matematik Kampı',
-    subtitle: 'Matematikte Eksiklerini Kapat, Netlerini Zirveye Taşı!',
-    image: '/IMG_2999.jpeg',
-    details: [
-      { icon: 'calendar_month', label: 'Tarih', value: '3 Temmuz - 4 Eylül (Lisans Bitiş)' },
-      { icon: 'schedule', label: 'Ders Programı', value: 'Haftada 6 Ders (Dersler 40 dk)' },
-      { icon: 'filter_list', label: 'Toplam', value: '54 Canlı Ders' },
-      { icon: 'videocam', label: 'Eğitim Türü', value: 'Online Canlı Eğitim (Zoom)' }
-    ],
-    description: 'Kaçırılan dersler için Google Drive üzerinden kayıt erişimi sağlanır. KPSS Lisans ve Ön Lisans Matematik konularının tamamı, konu anlatımları, çözümlü ders notları (PDF), çıkmış soruların detaylı çözümleri ve 35+ çözümlü PDF soru havuzunu içerir.',
-    highlights: [
-      'Tüm KPSS Lisans ve Ön Lisans matematik konuları',
-      'Detaylı konu anlatımları ve çıkmış soruların pratik çözümleri',
-      'Özel çözümlü ders notları (PDF) ve 35+ çözümlü PDF soruları',
-      'Kaçırılan dersleri dilediğiniz zaman tekrar izleme imkanı',
-      'Sınava sağlam ve eksiksiz bir hazırlık süreci'
-    ],
-    price: '3500 TL',
-    whatsappLink: 'https://wa.me/905350598950?text=Merhaba,%20KPSS%20Lisans%20&%20Ön%20Lisans%20Matematik%20Kampı%20hakkında%20bilgi%20almak%20istiyorum.'
-  }
-];
+const FALLBACK_CAMPS = [];
 
 const Derslerimiz = () => {
   const [camps, setCamps] = useState([]);
@@ -114,8 +67,15 @@ const Derslerimiz = () => {
 
       {/* Main Grid */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 lg:px-8">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {camps.map((camp) => (
+        {camps.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm max-w-xl mx-auto p-8">
+            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">event_busy</span>
+            <h3 className="text-lg font-bold text-slate-700">Aktif Kamp Bulunmuyor</h3>
+            <p className="text-sm text-slate-400 mt-2">Yeni dönem canlı kamp ve ders programlarımız çok yakında burada duyurulacaktır.</p>
+          </div>
+        ) : (
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {camps.map((camp) => (
             <div 
               key={camp.id} 
               className="flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
@@ -201,7 +161,8 @@ const Derslerimiz = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* General Contact Info Banner */}
         <div className="mt-16 rounded-2xl border border-primary/20 bg-primary/5 p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8">

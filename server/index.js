@@ -291,8 +291,6 @@ async function seedCamps() {
 
 if (isDatabaseConfigured()) {
   ensureDbColumnsExist();
-  seedMissingStaticBlogs();
-  seedCamps();
 } else {
   console.log('ℹ️ [Database] DATABASE_URL henüz tanımlanmadı veya placeholder içeriyor. Sunucu hazır, veritabanı migration ve seed işlemleri yeni DATABASE_URL verildiğinde otomatik çalışacaktır.');
 }
@@ -306,9 +304,6 @@ app.use(async (req, res, next) => {
   if (isDatabaseConfigured()) {
     if (!dbMigrated) {
       await ensureDbColumnsExist();
-    }
-    if (!blogsSeeded) {
-      await seedMissingStaticBlogs();
     }
   }
   next();
