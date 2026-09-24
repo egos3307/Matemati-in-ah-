@@ -33,7 +33,7 @@ const WhatsAppButton = () => {
 
   return (
     <a
-      href="https://wa.me/905350598950?text=Merhaba,%20Fullematemati%C4%9Fi%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
+      href="https://wa.me/905350598950?text=Merhaba,%20Matemati%C4%9Fin%20%C5%9Eah%C4%B1%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
       target="_blank"
       rel="noopener noreferrer"
       title="WhatsApp'tan ulaşın"

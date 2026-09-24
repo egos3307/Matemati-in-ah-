@@ -6,7 +6,7 @@ import { FALLBACK_BLOGS } from '../src/data/staticBlogs.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = process.env.FRONTEND_URL || 'https://fullematematigi.com.tr';
+const BASE_URL = process.env.FRONTEND_URL || 'https://matematikinsahi.com';
 const DIST_DIR = path.resolve(__dirname, '../dist');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 
@@ -28,18 +28,18 @@ function stripTags(html) {
 const STATIC_PAGES = [
   {
     path: '/',
-    title: 'KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders | Fullematematiği',
-    description: 'KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Fullematematiği ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!',
-    keywords: 'kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Fullematematiği',
+    title: 'KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders | Matematiğin Şahı',
+    description: 'KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Matematiğin Şahı ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!',
+    keywords: 'kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Matematiğin Şahı',
     heading: 'Matematik Online Özel Ders & Canlı Ders Platformu',
-    intro: 'Türkiye\'nin 1 numaralı matematik online özel ders ve canlı ders platformu Fullematematiği ile YKS, LGS ve KPSS\'de netlerinizi zirveye taşıyın. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.',
+    intro: 'Türkiye\'nin 1 numaralı matematik online özel ders ve canlı ders platformu Matematiğin Şahı ile YKS, LGS ve KPSS\'de netlerinizi zirveye taşıyın. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.',
     type: 'website',
     priority: '1.0',
     changefreq: 'daily'
   },
   {
     path: '/blog',
-    title: 'Matematik Rehberleri & Sınav Taktikleri | Fullematematiği Blog',
+    title: 'Matematik Rehberleri & Sınav Taktikleri | Matematiğin Şahı Blog',
     description: 'LGS, TYT, AYT ve KPSS matematik ve geometri konu anlatımları, 9. sınıf müfredatı, soru dağılımları ve derece çalışma rehberleri.',
     keywords: 'matematik konuları, tyt matematik konuları, lgs matematik konuları, 9 sınıf matematik konuları, geometri taktikleri, matematik rehberleri',
     heading: 'Matematik & Sınav Başarı Rehberleri',
@@ -50,7 +50,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/ucretsiz-tanisma-dersi',
-    title: 'Ücretsiz Canlı Tanışma Dersi Planla | Fullematematiği',
+    title: 'Ücretsiz Canlı Tanışma Dersi Planla | Matematiğin Şahı',
     description: '15 Dakikada matematik seviyenizi belirleyelim, hedefinize özel çalışma haritanızı ve en uygun canlı ders kampını ücretsiz planlayalım.',
     keywords: 'ücretsiz matematik dersi, ücretsiz tanışma dersi, canlı matematik deneme dersi, online matematik özel ders randevu',
     heading: 'Ücretsiz Canlı Tanışma Dersi Randevusu',
@@ -61,10 +61,10 @@ const STATIC_PAGES = [
   },
   {
     path: '/derslerimiz',
-    title: 'Online Matematik Canlı Ders Kampları & Özel Ders | Fullematematiği',
+    title: 'Online Matematik Canlı Ders Kampları & Özel Ders | Matematiğin Şahı',
     description: 'YKS, LGS ve KPSS için online matematik canlı ders paketleri ve geometri kampları. Sınıf seviyenize en uygun canlı dersi seçin, ilk ders ücretsiz!',
     keywords: 'matematik canlı ders, online matematik canlı ders, geometri canlı ders, YKS matematik canlı ders, LGS matematik canlı ders, KPSS matematik canlı ders, matematik canlı kurs',
-    heading: 'Sınavlara Fullematematiği Canlı Ders Kampları ile Hazırlanın',
+    heading: 'Sınavlara Matematiğin Şahı Canlı Ders Kampları ile Hazırlanın',
     intro: 'Ortaokul LGS, YKS ve KPSS sınavlarına hazırlıkta uzman öğretmen kadromuzla canlı Zoom eğitimleri, çözümlü ders notları ve birebir ödev takibi.',
     type: 'website',
     priority: '0.8',
@@ -72,7 +72,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/pdf-notlari',
-    title: 'Canlı Ders PDF Matematik Notları ve Geometri Testleri | Fullematematiği',
+    title: 'Canlı Ders PDF Matematik Notları ve Geometri Testleri | Matematiğin Şahı',
     description: 'Online matematik canlı ders notları, geometri formül kağıtları, YKS, LGS, KPSS ve okul seviyelerine özel çözümlü PDF fasikülleri ücretsiz indirin!',
     keywords: 'matematik canlı ders pdf, online matematik pdf notları, geometri ders notları pdf, YKS matematik canlı ders notu, LGS matematik canlı ders pdf',
     heading: 'Ücretsiz Matematik PDF Ders Notları ve Testler',
@@ -83,7 +83,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/camps',
-    title: 'Matematik Kamp Programları | Fullematematiği',
+    title: 'Matematik Kamp Programları | Matematiğin Şahı',
     description: 'LGS, YKS ve KPSS hazırlığı için yeni nesil soru çözüm kampları ve canlı grup dersleri.',
     keywords: 'matematik kampı, lgs matematik kampı, kpss matematik kampı, tyt matematik kampı',
     heading: 'Özel Matematik ve Geometri Kamp Programları',
@@ -94,7 +94,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/kontenjan-kurslari',
-    title: 'Kontenjanlı Özel Matematik Kursları | Fullematematiği',
+    title: 'Kontenjanlı Özel Matematik Kursları | Matematiğin Şahı',
     description: 'Sınırlı kontenjanlı online matematik canlı ders grupları ve birebir koçluk destekli eğitim paketleri.',
     keywords: 'kontenjanlı matematik kursu, online matematik grubu, birebir matematik koçluğu',
     heading: 'Kontenjanlı Canlı Ders Grupları',
@@ -105,7 +105,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/kontenjan-dersleri',
-    title: 'Kontenjanlı Matematik Ders Seçimi | Fullematematiği',
+    title: 'Kontenjanlı Matematik Ders Seçimi | Matematiğin Şahı',
     description: 'LGS, YKS, KPSS ve Lise matematik seviyenize uygun sınırlı kontenjanlı canlı ders grupları.',
     keywords: 'kontenjanlı ders seçimi, online matematik canlı ders, lgs ders seçimi',
     heading: 'Kontenjanlı Canlı Ders Grupları',
@@ -116,9 +116,9 @@ const STATIC_PAGES = [
   },
   {
     path: '/iletisim',
-    title: 'İletişim & Ücretsiz Tanışma Dersi Başvurusu | Fullematematiği',
-    description: 'Fullematematiği online matematik özel ders platformu iletişim bilgileri, telefon numarası ve WhatsApp randevu hattı.',
-    keywords: 'fullematematiği iletişim, matematik özel ders başvuru, tanışma dersi randevu',
+    title: 'İletişim & Ücretsiz Tanışma Dersi Başvurusu | Matematiğin Şahı',
+    description: 'Matematiğin Şahı online matematik özel ders platformu iletişim bilgileri, telefon numarası ve WhatsApp randevu hattı.',
+    keywords: 'Matematiğin Şahı iletişim, matematik özel ders başvuru, tanışma dersi randevu',
     heading: 'Bizimle İletişime Geçin',
     intro: 'Canlı tanışma dersi başvurusu ve eğitim paketlerimiz hakkında bilgi almak için 0535 059 89 50 numaralı telefondan veya WhatsApp üzerinden ulaşabilirsiniz.',
     type: 'website',
@@ -127,9 +127,9 @@ const STATIC_PAGES = [
   },
   {
     path: '/kvkk',
-    title: 'KVKK ve Gizlilik Politikası | Fullematematiği',
-    description: 'Fullematematiği Kişisel Verilerin Korunması Kanunu (KVKK) aydınlatma metni ve gizlilik politikası.',
-    keywords: 'fullematematiği kvkk, gizlilik politikası',
+    title: 'KVKK ve Gizlilik Politikası | Matematiğin Şahı',
+    description: 'Matematiğin Şahı Kişisel Verilerin Korunması Kanunu (KVKK) aydınlatma metni ve gizlilik politikası.',
+    keywords: 'Matematiğin Şahı kvkk, gizlilik politikası',
     heading: 'KVKK ve Gizlilik Politikası',
     intro: 'Kişisel verilerinizin korunması ve işlenmesi ile ilgili yasal haklarınız ve politikalarımız.',
     type: 'website',
@@ -138,7 +138,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/tarsus-matematik-ozel-ders',
-    title: 'Tarsus Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Rehberi | Fullematematiği',
+    title: 'Tarsus Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Rehberi | Matematiğin Şahı',
     description: 'Tarsus yüz yüze matematik özel ders rehberi. Ortaokul LGS, lise 9-12. sınıf, TYT ve AYT matematik konularında birebir yüz yüze eğitim metodolojimiz.',
     keywords: 'Tarsus matematik özel ders, Tarsus özel ders, Tarsus yüz yüze matematik özel ders, Tarsus TYT matematik özel ders, Tarsus AYT matematik özel ders, Tarsus LGS matematik özel ders',
     heading: 'Tarsus Matematik Özel Ders & Yüz Yüze Başarı Rehberi',
@@ -149,7 +149,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/malatya-matematik-ozel-ders',
-    title: 'Malatya Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Eğitimi | Fullematematiği',
+    title: 'Malatya Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Eğitimi | Matematiğin Şahı',
     description: 'Malatya yüz yüze matematik özel ders rehberi. LGS, YKS TYT-AYT ve ortaokul-lise müfredatına uygun birebir yüz yüze matematik ders çalışma metodolojisi ve sınav hazırlığı.',
     keywords: 'Malatya matematik özel ders, Malatya özel ders, Malatya yüz yüze matematik özel ders, Malatya TYT matematik özel ders, Malatya AYT matematik özel ders, Malatya LGS matematik özel ders',
     heading: 'Malatya Matematik Özel Ders & Yüz Yüze Başarı Rehberi',
@@ -160,7 +160,7 @@ const STATIC_PAGES = [
   },
   {
     path: '/malatya-fen-ozel-ders',
-    title: 'Malatya Fen Özel Ders | Ortaokul & LGS Yüz Yüze Fen Bilimleri Eğitimi | Fullematematiği',
+    title: 'Malatya Fen Özel Ders | Ortaokul & LGS Yüz Yüze Fen Bilimleri Eğitimi | Matematiğin Şahı',
     description: 'Malatya yüz yüze fen özel ders ve LGS fen bilimleri rehberi. 5, 6, 7 ve 8. sınıf ortaokul öğrencileri için birebir yüz yüze fen bilimleri ders çalışma yöntemleri.',
     keywords: 'Malatya fen özel ders, Malatya fen bilimleri özel ders, Malatya ortaokul fen özel ders, Malatya LGS fen özel ders, Malatya yüz yüze fen özel ders',
     heading: 'Malatya Ortaokul Fen Özel Ders & LGS Fen Bilimleri Rehberi',
@@ -173,7 +173,7 @@ const STATIC_PAGES = [
 
 // Helper to construct structured HTML for Googlebot pre-rendering
 function generatePageHtml(meta) {
-  const fullTitle = meta.title.includes('Fullematematiği') ? meta.title : `${meta.title} | Fullematematiği`;
+  const fullTitle = meta.title.includes('Matematiğin Şahı') ? meta.title : `${meta.title} | Matematiğin Şahı`;
   const canonicalUrl = meta.path === '/' ? `${BASE_URL}/` : `${BASE_URL}${meta.path}`;
   const ogImage = meta.image ? (meta.image.startsWith('http') ? meta.image : `${BASE_URL}${meta.image.startsWith('/') ? '' : '/'}${meta.image}`) : `${BASE_URL}/logo.png`;
   
@@ -229,12 +229,12 @@ function generatePageHtml(meta) {
         dateModified: meta.updatedAt || meta.publishedAt || '2026-08-18T10:00:00.000Z',
         author: {
           '@type': 'Organization',
-          name: meta.authorName || 'Fullematematiği Eğitim Kadrosu',
+          name: meta.authorName || 'Matematiğin Şahı Eğitim Kadrosu',
           url: BASE_URL
         },
         publisher: {
           '@type': 'EducationalOrganization',
-          name: 'Fullematematiği',
+          name: 'Matematiğin Şahı',
           logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo.png` }
         },
         inLanguage: 'tr-TR'
@@ -262,21 +262,21 @@ function generatePageHtml(meta) {
         '@type': 'WebSite',
         '@id': `${BASE_URL}/#website`,
         url: `${BASE_URL}/`,
-        name: 'Fullematematiği',
+        name: 'Matematiğin Şahı',
         description: 'Türkiye\'nin LGS, TYT, AYT ve KPSS online matematik ve geometri platformu.',
         inLanguage: 'tr-TR'
       },
       {
         '@type': 'EducationalOrganization',
         '@id': `${BASE_URL}/#organization`,
-        name: 'Fullematematiği',
+        name: 'Matematiğin Şahı',
         url: `${BASE_URL}/`,
         logo: `${BASE_URL}/logo.png`,
         image: ogImage,
         description: 'Türkiye\'de LGS, TYT, AYT ve KPSS öğrencileri için online matematik konu anlatımı, özel ders ve rehberlik platformu.',
         sameAs: [
-          'https://www.instagram.com/fullematematigi',
-          'https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0'
+          'https://instagram.com/matematikinsahi',
+          'https://www.youtube.com/@matematikinsahi'
         ]
       },
       breadcrumbSchema
@@ -301,7 +301,7 @@ function generatePageHtml(meta) {
             ${meta.category ? `<span class="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary mb-3">${meta.category}</span>` : ''}
             <h1 class="text-3xl font-black text-slate-900 md:text-4xl leading-tight mb-4">${meta.h1Title}</h1>
             <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">
-              Yazar: ${meta.authorName || 'Fullematematiği Kadrosu'} | Güncelleme: ${new Date(meta.updatedAt || meta.publishedAt || Date.now()).toLocaleDateString('tr-TR')}
+              Yazar: ${meta.authorName || 'Matematiğin Şahı Kadrosu'} | Güncelleme: ${new Date(meta.updatedAt || meta.publishedAt || Date.now()).toLocaleDateString('tr-TR')}
             </div>
           </header>
           ${meta.coverImage ? `<div class="w-full max-h-[400px] overflow-hidden rounded-2xl mb-6"><img src="${meta.coverImage}" alt="${meta.h1Title}" class="w-full h-full object-cover"/></div>` : ''}
@@ -497,10 +497,10 @@ async function main() {
 
     const blogMeta = {
       path: `/blog/${post.slug}`,
-      title: post.metaTitle || `${post.title} | Fullematematiği`,
+      title: post.metaTitle || `${post.title} | Matematiğin Şahı`,
       h1Title: post.title,
       description: post.description || post.excerpt || post.title,
-      keywords: post.targetKeyword ? `${post.targetKeyword}, ${post.relatedKeywords ? post.relatedKeywords.join(', ') : ''}` : 'matematik konuları, Fullematematiği',
+      keywords: post.targetKeyword ? `${post.targetKeyword}, ${post.relatedKeywords ? post.relatedKeywords.join(', ') : ''}` : 'matematik konuları, Matematiğin Şahı',
       type: 'article',
       category: post.category,
       coverImage: post.coverImage,

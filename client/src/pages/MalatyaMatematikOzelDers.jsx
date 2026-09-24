@@ -32,26 +32,26 @@ const MalatyaMatematikOzelDers = () => {
     '@graph': [
       {
         '@type': 'WebPage',
-        '@id': 'https://fullematematigi.com.tr/malatya-matematik-ozel-ders/#webpage',
-        url: 'https://fullematematigi.com.tr/malatya-matematik-ozel-ders',
+        '@id': 'https://matematikinsahi.com/malatya-matematik-ozel-ders/#webpage',
+        url: 'https://matematikinsahi.com/malatya-matematik-ozel-ders',
         name: 'Malatya Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Eğitimi',
         description: 'Malatya yüz yüze matematik özel ders rehberi. LGS, YKS TYT-AYT ve ortaokul-lise müfredatına uygun birebir yüz yüze matematik ders çalışma metodolojisi ve sınav hazırlığı.',
         inLanguage: 'tr-TR'
       },
       {
         '@type': 'EducationalOrganization',
-        '@id': 'https://fullematematigi.com.tr/#organization',
-        name: 'Fullematematiği',
-        url: 'https://fullematematigi.com.tr/',
-        logo: 'https://fullematematigi.com.tr/logo.png',
+        '@id': 'https://matematikinsahi.com/#organization',
+        name: 'Matematiğin Şahı',
+        url: 'https://matematikinsahi.com/',
+        logo: 'https://matematikinsahi.com/logo.png',
         description: 'Türkiye\'de LGS, TYT, AYT ve KPSS öğrencileri için matematik özel ders ve akademik rehberlik platformu.'
       },
       {
         '@type': 'Service',
-        '@id': 'https://fullematematigi.com.tr/malatya-matematik-ozel-ders/#service',
+        '@id': 'https://matematikinsahi.com/malatya-matematik-ozel-ders/#service',
         name: 'Malatya Yüz Yüze Matematik Özel Ders Hizmeti',
         serviceType: 'Matematik Özel Ders',
-        provider: { '@id': 'https://fullematematigi.com.tr/#organization' },
+        provider: { '@id': 'https://matematikinsahi.com/#organization' },
         areaServed: {
           '@type': 'AdministrativeArea',
           name: 'Malatya'
@@ -60,7 +60,7 @@ const MalatyaMatematikOzelDers = () => {
       },
       {
         '@type': 'FAQPage',
-        '@id': 'https://fullematematigi.com.tr/malatya-matematik-ozel-ders/#faq',
+        '@id': 'https://matematikinsahi.com/malatya-matematik-ozel-ders/#faq',
         mainEntity: faqList.map((item) => ({
           '@type': 'Question',
           name: item.question,

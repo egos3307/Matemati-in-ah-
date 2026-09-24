@@ -44,7 +44,7 @@ const BlogEndConversion = ({ post }) => {
       <div className="relative z-10 text-center max-w-3xl mx-auto space-y-6">
         <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-indigo-200 border border-white/10">
           <span className="material-symbols-outlined text-sm">workspace_premium</span>
-          <span>Fullematematiği Özel Öğretim Sistemi</span>
+          <span>Matematiğin Şahı Özel Öğretim Sistemi</span>
         </div>
 
         <h3 className="text-2xl md:text-3xl font-black tracking-tight leading-snug">

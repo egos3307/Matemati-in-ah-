@@ -1099,7 +1099,7 @@ const SeoAiManager = () => {
                 {editingDraft.metaTitle || editingDraft.title}
               </div>
               <div className="text-emerald-700 text-xs">
-                https://fullematematigi.com.tr/blog/{editingDraft.slug}
+                https://matematikinsahi.com/blog/{editingDraft.slug}
               </div>
               <div className="text-slate-600 text-xs line-clamp-2">
                 {editingDraft.metaDescription || editingDraft.excerpt}

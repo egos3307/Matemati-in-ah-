@@ -32,26 +32,26 @@ const TarsusMatematikOzelDers = () => {
     '@graph': [
       {
         '@type': 'WebPage',
-        '@id': 'https://fullematematigi.com.tr/tarsus-matematik-ozel-ders/#webpage',
-        url: 'https://fullematematigi.com.tr/tarsus-matematik-ozel-ders',
+        '@id': 'https://matematikinsahi.com/tarsus-matematik-ozel-ders/#webpage',
+        url: 'https://matematikinsahi.com/tarsus-matematik-ozel-ders',
         name: 'Tarsus Matematik Özel Ders | Yüz Yüze LGS, TYT & AYT Matematik Rehberi',
         description: 'Tarsus yüz yüze matematik özel ders rehberi. Ortaokul LGS, lise 9-12. sınıf, TYT ve AYT matematik konularında birebir yüz yüze eğitim metodolojimiz.',
         inLanguage: 'tr-TR'
       },
       {
         '@type': 'EducationalOrganization',
-        '@id': 'https://fullematematigi.com.tr/#organization',
-        name: 'Fullematematiği',
-        url: 'https://fullematematigi.com.tr/',
-        logo: 'https://fullematematigi.com.tr/logo.png',
+        '@id': 'https://matematikinsahi.com/#organization',
+        name: 'Matematiğin Şahı',
+        url: 'https://matematikinsahi.com/',
+        logo: 'https://matematikinsahi.com/logo.png',
         description: 'Türkiye\'de LGS, TYT, AYT ve KPSS öğrencileri için matematik özel ders ve akademik rehberlik platformu.'
       },
       {
         '@type': 'Service',
-        '@id': 'https://fullematematigi.com.tr/tarsus-matematik-ozel-ders/#service',
+        '@id': 'https://matematikinsahi.com/tarsus-matematik-ozel-ders/#service',
         name: 'Tarsus Yüz Yüze Matematik Özel Ders Hizmeti',
         serviceType: 'Matematik Özel Ders',
-        provider: { '@id': 'https://fullematematigi.com.tr/#organization' },
+        provider: { '@id': 'https://matematikinsahi.com/#organization' },
         areaServed: {
           '@type': 'AdministrativeArea',
           name: 'Tarsus, Mersin'
@@ -60,7 +60,7 @@ const TarsusMatematikOzelDers = () => {
       },
       {
         '@type': 'FAQPage',
-        '@id': 'https://fullematematigi.com.tr/tarsus-matematik-ozel-ders/#faq',
+        '@id': 'https://matematikinsahi.com/tarsus-matematik-ozel-ders/#faq',
         mainEntity: faqList.map((item) => ({
           '@type': 'Question',
           name: item.question,

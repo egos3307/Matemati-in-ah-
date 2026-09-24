@@ -87,7 +87,7 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
           button_text: 'Öğrenci Kaydını Tamamla'
         });
         const studentInfo = res.data.student || res.data;
-        const tempPass = res.data.initialPassword || formData.password || 'fulle123';
+        const tempPass = res.data.initialPassword || formData.password || 'sahi123';
         setRegisteredStudent({ ...studentInfo, tempPass });
         if (onSuccess) onSuccess(studentInfo);
       }
@@ -190,7 +190,7 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
             Hedef Başarı 🎯 🚀
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Fullematematiği Öğrenci Kayıt Formu
+            Matematiğin Şahı Öğrenci Kayıt Formu
           </h1>
           <p className="text-slate-500 text-sm mt-2 font-medium">
             Lütfen aşağıdaki bilgileri eksiksiz ve doğru şekilde doldurunuz.
@@ -546,7 +546,7 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
                   className="mt-1 w-5 h-5 rounded text-primary focus:ring-primary"
                 />
                 <span className="text-xs font-bold text-slate-800">
-                  Fulle Matematiği’nin bilgilendirme ve ders ile ilgili iletişim göndermesini kabul ediyorum.
+                  Matematiğin Şahı’nin bilgilendirme ve ders ile ilgili iletişim göndermesini kabul ediyorum.
                 </span>
               </label>
 

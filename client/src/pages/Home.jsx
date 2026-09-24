@@ -4,8 +4,8 @@ import axios from 'axios';
 import SEO from '../components/SEO';
 import { trackEvent } from '../utils/analytics';
 
-const YT_CHANNEL_URL = 'https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0';
-const IG_URL = 'https://www.instagram.com/fullematematigi';
+const YT_CHANNEL_URL = 'https://www.youtube.com/@matematikinsahi';
+const IG_URL = 'https://instagram.com/matematikinsahi';
 
 const IgIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
@@ -227,11 +227,11 @@ const Home = () => {
     '@graph': [
       {
         '@type': 'EducationalOrganization',
-        '@id': 'https://fullematematigi.com.tr/#organization',
-        'name': 'Fullematematiği',
-        'url': 'https://fullematematigi.com.tr',
-        'logo': 'https://fullematematigi.com.tr/logo.png',
-        'description': 'Türkiye\'nin lider online matematik canlı ders ve geometri özel ders platformu Fullematematiği. YKS, LGS ve KPSS eğitimleri.',
+        '@id': 'https://matematikinsahi.com/#organization',
+        'name': 'Matematiğin Şahı',
+        'url': 'https://matematikinsahi.com',
+        'logo': 'https://matematikinsahi.com/logo.png',
+        'description': 'Türkiye\'nin lider online matematik canlı ders ve geometri özel ders platformu Matematiğin Şahı. YKS, LGS ve KPSS eğitimleri.',
         'telephone': '+90-535-059-8950',
         'aggregateRating': {
           '@type': 'AggregateRating',
@@ -274,24 +274,24 @@ const Home = () => {
       },
       {
         '@type': 'Service',
-        '@id': 'https://fullematematigi.com.tr/#service-math-tutoring',
-        'name': 'Fullematematiği Online Matematik ve Geometri Özel Ders',
+        '@id': 'https://matematikinsahi.com/#service-math-tutoring',
+        'name': 'Matematiğin Şahı Online Matematik ve Geometri Özel Ders',
         'serviceType': 'Online Education & Tutoring',
         'provider': {
           '@type': 'EducationalOrganization',
-          'name': 'Fullematematiği'
+          'name': 'Matematiğin Şahı'
         }
       },
       {
         '@type': 'FAQPage',
-        '@id': 'https://fullematematigi.com.tr/#faq',
+        '@id': 'https://matematikinsahi.com/#faq',
         'mainEntity': [
           {
             '@type': 'Question',
             'name': 'Online matematik canlı ders nasıl işlenmektedir?',
             'acceptedAnswer': {
               '@type': 'Answer',
-              'text': 'Fullematematiği canlı dersleri Zoom üzerinden interaktif biçimde işlenir. Öğrenciler anlık soru sorabilir, çözümleri canlı takip eder ve tüm ders kayıtlarına Google Drive üzerinden 7/24 erişebilir.'
+              'text': 'Matematiğin Şahı canlı dersleri Zoom üzerinden interaktif biçimde işlenir. Öğrenciler anlık soru sorabilir, çözümleri canlı takip eder ve tüm ders kayıtlarına Google Drive üzerinden 7/24 erişebilir.'
             }
           },
           {
@@ -299,7 +299,7 @@ const Home = () => {
             'name': 'Matematik canlı ders için ücretsiz deneme dersi var mıdır?',
             'acceptedAnswer': {
               '@type': 'Answer',
-              'text': 'Evet! Fullematematiği platformunda ilk matematik canlı dersiniz tamamen ücretsizdir. Hiçbir taahhüt gerekmeden tanışma dersi talep edebilirsiniz.'
+              'text': 'Evet! Matematiğin Şahı platformunda ilk matematik canlı dersiniz tamamen ücretsizdir. Hiçbir taahhüt gerekmeden tanışma dersi talep edebilirsiniz.'
             }
           },
           {
@@ -319,9 +319,9 @@ const Home = () => {
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <SEO
         title="KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders"
-        description="KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Fullematematiği ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!"
+        description="KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Matematiğin Şahı ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!"
         path="/"
-        keywords="kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Fullematematiği"
+        keywords="kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Matematiğin Şahı"
         schemaData={homeSchema}
       />
       <main className="flex-1">
@@ -337,7 +337,7 @@ const Home = () => {
                 Matematik <span className="text-primary">Online Özel Ders</span> & Canlı Ders Platformu
               </h1>
               <p className="text-lg leading-relaxed text-slate-600">
-                Türkiye'nin 1 numaralı matematik online özel ders ve canlı ders platformu Fullematematiği ile YKS, LGS ve KPSS'de netlerini zirveye taşı. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.
+                Türkiye'nin 1 numaralı matematik online özel ders ve canlı ders platformu Matematiğin Şahı ile YKS, LGS ve KPSS'de netlerini zirveye taşı. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
@@ -420,10 +420,10 @@ const Home = () => {
           <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
             <div className="mb-16 flex flex-col items-center text-center">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-primary mb-4 backdrop-blur-md shadow-sm">
-                ✨ Fullematematiği Farkı
+                ✨ Matematiğin Şahı Farkı
               </span>
               <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-5xl drop-shadow-sm">
-                Neden Fullematematiği?
+                Neden Matematiğin Şahı?
               </h2>
               <p className="max-w-2xl text-base md:text-lg text-slate-700 font-semibold leading-relaxed drop-shadow-sm">
                 Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
@@ -477,10 +477,10 @@ const Home = () => {
           </div>
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4 lg:gap-8">
             {[
-              { id: 1, name: 'DGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 2, name: 'YKS / AYT MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 3, name: 'KPSS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 4, name: 'LGS MATEMATİK Tüm Konular Çözümlü Ders Notları (FulleMatematigi Özel PDF)', price: '150 TL', image: '/IMG_2943.jpeg' }
+              { id: 1, name: 'DGS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
+              { id: 2, name: 'YKS / AYT MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
+              { id: 3, name: 'KPSS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
+              { id: 4, name: 'LGS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '150 TL', image: '/IMG_2943.jpeg' }
             ].map((product) => (
               <div key={product.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white transition-all hover:shadow-xl">
                 <div className="aspect-[3/4] overflow-hidden">
@@ -490,7 +490,7 @@ const Home = () => {
                   <h3 className="text-sm font-bold text-slate-900 sm:text-base">{product.name}</h3>
                   <p className="text-primary font-black">{product.price}</p>
                   <a
-                    href="https://www.shopier.com/fullematematigi"
+                    href="https://www.shopier.com/matematikinsahi"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 flex h-10 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white transition-colors hover:bg-slate-800"
@@ -503,7 +503,7 @@ const Home = () => {
           </div>
           <div className="mt-12 text-center">
             <a 
-              href="https://www.shopier.com/fullematematigi" 
+              href="https://www.shopier.com/matematikinsahi" 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full border-2 border-slate-900 px-8 py-3 text-sm font-bold text-slate-900 hover:bg-slate-900 hover:text-white transition-all"
@@ -824,7 +824,7 @@ const Home = () => {
                   Canlı matematik dersi ücretsiz denenebilir mi?
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Evet! Fullematematiği'nde <strong>ilk matematik canlı dersiniz tamamen ücretsizdir</strong>. Formu doldurarak herhangi bir taahhüt veya ücret ödemeden canlı tanışma dersimize katılabilir, eğitim kalitemizi kendiniz deneyimleyebilirsiniz.
+                  Evet! Matematiğin Şahı'nde <strong>ilk matematik canlı dersiniz tamamen ücretsizdir</strong>. Formu doldurarak herhangi bir taahhüt veya ücret ödemeden canlı tanışma dersimize katılabilir, eğitim kalitemizi kendiniz deneyimleyebilirsiniz.
                 </p>
               </div>
 
@@ -960,14 +960,14 @@ const Home = () => {
           <div className="grid gap-12 border-b border-slate-100 pb-12 md:grid-cols-4">
             <div className="col-span-2 flex flex-col gap-6">
               <div className="flex items-center gap-3 text-slate-900">
-                <img src="/logo.png" alt="Fullematematiği Logo" className="h-10 w-10 object-contain" />
-                <h2 className="text-xl font-bold tracking-tight">Fullematematiği</h2>
+                <img src="/logo.png" alt="Matematiğin Şahı Logo" className="h-10 w-10 object-contain" />
+                <h2 className="text-xl font-bold tracking-tight">Matematiğin Şahı</h2>
               </div>
               <p className="max-w-md leading-relaxed text-sm">
                 Türkiye'nin en interaktif matematik platformu olarak, öğrencilerin hedeflerine ulaşmasında en büyük destekçisiyiz. Kaliteli içerik ve uzman kadromuzla yanınızdayız.
               </p>
               <div className="flex gap-4">
-                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="https://instagram.com/fullematematigi" target="_blank" rel="noopener noreferrer" title="Instagram">
+                <a className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-primary hover:text-white" href="https://instagram.com/matematikinsahi" target="_blank" rel="noopener noreferrer" title="Instagram">
                   <span className="material-symbols-outlined">camera_alt</span>
                 </a>
               </div>
@@ -996,7 +996,7 @@ const Home = () => {
             </div>
           </div>
           <div className="flex flex-col items-center justify-between gap-6 pt-12 md:flex-row">
-            <p className="text-sm">© 2026 Fullematematiği. Tüm hakları saklıdır.</p>
+            <p className="text-sm">© 2026 Matematiğin Şahı. Tüm hakları saklıdır.</p>
             <div className="flex gap-8 text-sm">
               <Link className="hover:text-primary transition-colors" to="/kvkk">Gizlilik & KVKK</Link>
               <Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link>

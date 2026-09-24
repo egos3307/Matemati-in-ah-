@@ -1,9 +1,9 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_NAME = 'Fullematematiği';
-const BASE_URL = 'https://fullematematigi.com.tr';
+const SITE_NAME = 'Matematiğin Şahı';
+const BASE_URL = 'https://matematikinsahi.com';
 const DEFAULT_IMAGE = `${BASE_URL}/logo.png`;
-const DEFAULT_KEYWORDS = 'matematik, matematik online ders, matematik özel ders, matematik canlı ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, 9 sınıf matematik konuları, lgs matematik konuları, tyt matematik konuları, Fullematematiği';
+const DEFAULT_KEYWORDS = 'matematik, matematik online ders, matematik özel ders, matematik canlı ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, 9 sınıf matematik konuları, lgs matematik konuları, tyt matematik konuları, Matematiğin Şahı';
 
 const SEO = ({
   title,
@@ -19,7 +19,7 @@ const SEO = ({
   noindex = false
 }) => {
   const fullTitle = !title
-    ? `Fullematematiği | LGS, TYT, AYT ve KPSS Matematik`
+    ? `Matematiğin Şahı | LGS, TYT, AYT ve KPSS Matematik`
     : title.includes(SITE_NAME)
     ? title
     : `${title} | ${SITE_NAME}`;
@@ -85,12 +85,12 @@ const SEO = ({
             dateModified: updatedAt || publishedAt || new Date().toISOString(),
             author: {
               '@type': 'Organization',
-              name: authorName || 'Fullematematiği Eğitim Kadrosu',
+              name: authorName || 'Matematiğin Şahı Eğitim Kadrosu',
               url: BASE_URL
             },
             publisher: {
               '@type': 'EducationalOrganization',
-              name: 'Fullematematiği',
+              name: 'Matematiğin Şahı',
               logo: {
                 '@type': 'ImageObject',
                 url: `${BASE_URL}/logo.png`
@@ -109,21 +109,21 @@ const SEO = ({
             '@type': 'WebSite',
             '@id': `${BASE_URL}/#website`,
             url: BASE_URL,
-            name: 'Fullematematiği',
+            name: 'Matematiğin Şahı',
             description: 'Türkiye\'nin LGS, TYT, AYT ve KPSS online matematik ve geometri platformu.',
             inLanguage: 'tr-TR'
           },
           {
             '@type': 'EducationalOrganization',
             '@id': `${BASE_URL}/#organization`,
-            name: 'Fullematematiği',
+            name: 'Matematiğin Şahı',
             url: BASE_URL,
             logo: `${BASE_URL}/logo.png`,
             image: ogImage,
             description: 'Türkiye\'de LGS, TYT, AYT ve KPSS öğrencileri için online matematik konu anlatımı, özel ders ve rehberlik platformu.',
             sameAs: [
-              'https://www.instagram.com/fullematematigi',
-              'https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0'
+              'https://instagram.com/matematikinsahi',
+              'https://www.youtube.com/@matematikinsahi'
             ]
           },
           breadcrumbSchema

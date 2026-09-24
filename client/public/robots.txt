@@ -41,4 +41,4 @@ Disallow: /api/drive
 Disallow: /api/drive/*
 Disallow: /api/
 
-Sitemap: https://fullematematigi.com.tr/sitemap.xml
+Sitemap: https://matematikinsahi.com/sitemap.xml

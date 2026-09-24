@@ -1033,7 +1033,7 @@ const TeacherDashboard = () => {
       // Store result to show success panel with credentials and WhatsApp link
       const formattedDate = new Date(scheduledDateTime).toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const formattedTime = scheduledTimeInput;
-      const waText = `Merhaba ${res.data.request.studentName}, ücretsiz tanışma dersi talebiniz onaylandı. Dersiniz ${formattedDate} saat ${formattedTime} olarak belirlenmiştir. Derse katılmak için öğrenci girişi yapabilirsiniz.\n\nGiriş bilgileriniz:\nKod: ${res.data.studentCode}\nŞifre: student\n\nGiriş adresi: https://fullematematik.com/giris`;
+      const waText = `Merhaba ${res.data.request.studentName}, ücretsiz tanışma dersi talebiniz onaylandı. Dersiniz ${formattedDate} saat ${formattedTime} olarak belirlenmiştir. Derse katılmak için öğrenci girişi yapabilirsiniz.\n\nGiriş bilgileriniz:\nKod: ${res.data.studentCode}\nŞifre: student\n\nGiriş adresi: https://matematikinsahi.com/giris`;
       
       setApprovedRequestResult({
         studentName: res.data.request.studentName,
@@ -1382,9 +1382,9 @@ const TeacherDashboard = () => {
       <aside className="w-72 border-r border-primary/10 bg-slate-50/50 p-6 flex flex-col justify-between hidden md:flex h-screen sticky top-0">
         <div className="flex flex-col gap-6 overflow-y-auto">
           <div className="flex items-center gap-3 px-2">
-            <img src="/logo.png" alt="Fullematematiği Logo" className="h-12 w-12 object-contain" />
+            <img src="/logo.png" alt="Matematiğin Şahı Logo" className="h-12 w-12 object-contain" />
             <div>
-              <h1 className="text-lg font-black leading-none">Fullematematiği</h1>
+              <h1 className="text-lg font-black leading-none">Matematiğin Şahı</h1>
               <p className="text-[10px] text-primary font-bold uppercase tracking-widest mt-1">Öğretmen Paneli</p>
             </div>
           </div>
@@ -1514,7 +1514,7 @@ const TeacherDashboard = () => {
                activeTab === 'teachers' ? `Öğretmen Yönetimi` :
                `Hoş Geldiniz, ${user?.name.split(' ')[0]}`}
             </h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Fullematematiği Yönetim Sistemi</p>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Matematiğin Şahı Yönetim Sistemi</p>
           </div>
           <div className="flex items-center gap-4">
             {activeTab === 'teachers' ? (
@@ -2588,7 +2588,7 @@ const TeacherDashboard = () => {
                         🎯
                       </div>
                       <div>
-                        <h4 className="font-black text-slate-900 text-sm">Fullematematik Öğrenci Kayıt Formu Bilgileri</h4>
+                        <h4 className="font-black text-slate-900 text-sm">Matematiğin Şahı Öğrenci Kayıt Formu Bilgileri</h4>
                         <p className="text-[10px] text-slate-400 font-bold">Kayıt esnasında doldurulan tüm bilgiler (Hedef Başarı 🎯🚀)</p>
                       </div>
                     </div>

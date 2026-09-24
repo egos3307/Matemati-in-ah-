@@ -106,8 +106,8 @@ const Contact = () => {
                 <h4 className="font-black text-slate-900 text-sm uppercase tracking-wider">E-Posta Gönderin</h4>
                 <p className="text-xs text-slate-400 font-bold">Sorularınız için yazabilirsiniz</p>
                 <div className="pt-2">
-                  <a href="mailto:info@fullematematigi.com.tr" className="text-slate-700 font-bold text-sm hover:text-primary transition-colors break-all">
-                    info@fullematematigi.com.tr
+                  <a href="mailto:info@matematikinsahi.com" className="text-slate-700 font-bold text-sm hover:text-primary transition-colors break-all">
+                    info@matematikinsahi.com
                   </a>
                 </div>
               </div>
@@ -137,12 +137,12 @@ const Contact = () => {
                 <p className="text-xs text-slate-400 font-bold">DM yoluyla hızlıca ulaşın</p>
                 <div className="pt-2">
                   <a 
-                    href="https://instagram.com/fullematematigi" 
+                    href="https://instagram.com/matematikinsahi" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-xs font-black text-white hover:opacity-90 shadow-md transition-all duration-300"
                   >
-                    @fullematematigi
+                    @matematikinsahi
                   </a>
                 </div>
               </div>

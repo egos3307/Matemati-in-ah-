@@ -239,8 +239,8 @@ const Navbar = () => {
         {/* Top Main Header */}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-6 md:py-4 lg:px-10">
           <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <img src="/logo.png" alt="Fullematematiği Logo" className="h-8 w-8 md:h-10 md:w-10 object-contain" />
-            <h2 className="hidden md:block text-xl font-bold tracking-tight text-slate-900">Fullematematiği</h2>
+            <img src="/logo.png" alt="Matematiğin Şahı Logo" className="h-8 w-8 md:h-10 md:w-10 object-contain" />
+            <h2 className="hidden md:block text-xl font-bold tracking-tight text-slate-900">Matematiğin Şahı</h2>
           </Link>
           <nav className="flex flex-1 justify-center gap-2 sm:gap-6 md:gap-10 text-[11px] sm:text-xs md:text-sm px-2">
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/">Ana Sayfa</Link>
@@ -334,7 +334,7 @@ const Navbar = () => {
                 {/* Social Media Links */}
                 <div className="flex items-center gap-1 ml-0.5 flex-shrink-0">
                   <a
-                    href="https://www.youtube.com/@FULLEMATEMAT%C4%B0G%C4%B0"
+                    href="https://www.youtube.com/@matematikinsahi"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
@@ -345,7 +345,7 @@ const Navbar = () => {
                     </svg>
                   </a>
                   <a
-                    href="https://www.instagram.com/fullematematigi"
+                    href="https://instagram.com/matematikinsahi"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
@@ -564,7 +564,7 @@ const Navbar = () => {
 
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold flex items-center gap-2">
                     <span className="material-symbols-outlined text-base text-amber-600">lock</span>
-                    <span>Bu ders kayıtları sadece Fullematematiği platformunda izlenmek üzere lisanslanmıştır. İndirilemez.</span>
+                    <span>Bu ders kayıtları sadece Matematiğin Şahı platformunda izlenmek üzere lisanslanmıştır. İndirilemez.</span>
                   </div>
                 </div>
               )}

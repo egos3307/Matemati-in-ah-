@@ -1121,7 +1121,7 @@ const StudentDashboard = () => {
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="h-9 w-9 object-contain" />
             <div>
-              <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Fullematematiği</h1>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Matematiğin Şahı</h1>
               <span className="hidden sm:inline-block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Öğrenci Paneli</span>
             </div>
           </div>
@@ -1427,7 +1427,7 @@ const StudentDashboard = () => {
                     <span className="text-xl">📒</span>
                   </div>
                   <div>
-                    <h4 className="font-black text-slate-900 text-sm">Fulle Matematiği Hata Defteri</h4>
+                    <h4 className="font-black text-slate-900 text-sm">Matematiğin Şahı Hata Defteri</h4>
                     <p className="text-[10px] text-slate-400 font-bold">Hatalı soruların fotoğrafını ekle, takip et</p>
                   </div>
                 </div>
@@ -2631,7 +2631,7 @@ const StudentDashboard = () => {
         </button>
         <button onClick={() => setActiveTab('ai')} className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 px-1 py-1 rounded-xl transition-all ${activeTab === 'ai' ? 'text-primary' : 'text-slate-400'}`}>
           <span className={`material-symbols-outlined text-2xl transition-transform ${activeTab === 'ai' ? 'scale-110' : ''}`}>smart_toy</span>
-          <span className="text-[9px] sm:text-[10px] font-bold truncate">Fulle AI</span>
+          <span className="text-[9px] sm:text-[10px] font-bold truncate">Şah AI</span>
         </button>
       </nav>
       {/* Safari Install Popup */}
@@ -2677,7 +2677,7 @@ const StudentDashboard = () => {
                 meetingPassword={password}
                 role="STUDENT"
                 userName={user?.name || 'Öğrenci'}
-                userEmail={user?.email || 'info@fullematematigi.com.tr'}
+                userEmail={user?.email || 'info@matematikinsahi.com'}
                 onClose={() => setActiveMeeting(null)}
               />
             );

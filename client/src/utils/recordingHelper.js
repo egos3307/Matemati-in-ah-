@@ -1,6 +1,6 @@
 /**
  * Ders Kayıtları Ayrıştırıcı ve Yardımcı Fonksiyonlar
- * Fullematematiği - Çoklu Kayıt Desteği (1. ve 2. Kayıt vb.)
+ * Matematiğin Şahı - Çoklu Kayıt Desteği (1. ve 2. Kayıt vb.)
  */
 
 export function isValidDriveFileId(id) {

@@ -1,4 +1,4 @@
-<!-- Fulle Matematik - Ücretsiz Tanışma Dersi Ekli -->
+<!-- Matematiğin Şahı - Ücretsiz Tanışma Dersi Ekli -->
 <!DOCTYPE html>
 
 <html lang="tr"><head>
@@ -41,7 +41,7 @@
 <div class="flex h-10 w-10 items-center justify-center rounded bg-primary text-white">
 <span class="material-symbols-outlined">functions</span>
 </div>
-<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Fulle Matematik</h2>
+<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Matematiğin Şahı</h2>
 </div>
 <nav class="hidden flex-1 justify-center gap-10 md:flex">
 <a class="text-sm font-semibold transition-colors hover:text-primary" href="#ana-sayfa">Ana Sayfa</a>
@@ -127,7 +127,7 @@
 <!-- Features Section -->
 <section class="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="ozellikler">
 <div class="mb-16 flex flex-col items-center text-center">
-<h2 class="mb-4 text-3xl font-black tracking-tight text-slate-900 dark:text-white md:text-4xl">Neden Fulle Matematik?</h2>
+<h2 class="mb-4 text-3xl font-black tracking-tight text-slate-900 dark:text-white md:text-4xl">Neden Matematiğin Şahı?</h2>
 <p class="max-w-2xl text-lg text-slate-600 dark:text-slate-400">
                         Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
                     </p>
@@ -230,7 +230,7 @@
 <div class="flex flex-col gap-6">
 <div class="flex items-center gap-4">
 <span class="material-symbols-outlined">mail</span>
-<span>bilgi@fullematematik.com</span>
+<span>bilgi@matematikinsahi.com</span>
 </div>
 <div class="flex items-center gap-4">
 <span class="material-symbols-outlined">call</span>
@@ -277,7 +277,7 @@
 <div class="flex h-10 w-10 items-center justify-center rounded bg-primary text-white">
 <span class="material-symbols-outlined">functions</span>
 </div>
-<h2 class="text-xl font-bold tracking-tight">Fulle Matematik</h2>
+<h2 class="text-xl font-bold tracking-tight">Matematiğin Şahı</h2>
 </div>
 <p class="max-w-md leading-relaxed">
                             Türkiye'nin en interaktif matematik platformu olarak, öğrencilerin hedeflerine ulaşmasında en büyük destekçisiyiz. Kaliteli içerik ve uzman kadromuzla yanınızdayız.
@@ -314,7 +314,7 @@
 </div>
 </div>
 <div class="flex flex-col items-center justify-between gap-6 pt-12 md:flex-row">
-<p class="text-sm">© 2024 Fulle Matematik. Tüm hakları saklıdır.</p>
+<p class="text-sm">© 2024 Matematiğin Şahı. Tüm hakları saklıdır.</p>
 <div class="flex gap-8 text-sm">
 <a class="hover:text-white transition-colors" href="#">Gizlilik Politikası</a>
 <a class="hover:text-white transition-colors" href="#">Kullanım Şartları</a>
@@ -371,7 +371,7 @@
 <span class="material-symbols-outlined text-2xl">functions</span>
 </div>
 <div>
-<h1 class="text-lg font-bold leading-none">Fulle Matematik</h1>
+<h1 class="text-lg font-bold leading-none">Matematiğin Şahı</h1>
 <p class="text-xs text-primary font-medium">Öğretmen Paneli</p>
 </div>
 </div>

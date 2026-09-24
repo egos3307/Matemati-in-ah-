@@ -32,26 +32,26 @@ const MalatyaFenOzelDers = () => {
     '@graph': [
       {
         '@type': 'WebPage',
-        '@id': 'https://fullematematigi.com.tr/malatya-fen-ozel-ders/#webpage',
-        url: 'https://fullematematigi.com.tr/malatya-fen-ozel-ders',
+        '@id': 'https://matematikinsahi.com/malatya-fen-ozel-ders/#webpage',
+        url: 'https://matematikinsahi.com/malatya-fen-ozel-ders',
         name: 'Malatya Fen Özel Ders | Ortaokul & LGS Yüz Yüze Fen Bilimleri Eğitimi',
         description: 'Malatya yüz yüze fen özel ders ve LGS fen bilimleri rehberi. 5, 6, 7 ve 8. sınıf ortaokul öğrencileri için birebir yüz yüze fen bilimleri ders çalışma yöntemleri.',
         inLanguage: 'tr-TR'
       },
       {
         '@type': 'EducationalOrganization',
-        '@id': 'https://fullematematigi.com.tr/#organization',
-        name: 'Fullematematiği',
-        url: 'https://fullematematigi.com.tr/',
-        logo: 'https://fullematematigi.com.tr/logo.png',
+        '@id': 'https://matematikinsahi.com/#organization',
+        name: 'Matematiğin Şahı',
+        url: 'https://matematikinsahi.com/',
+        logo: 'https://matematikinsahi.com/logo.png',
         description: 'Türkiye\'de LGS, TYT, AYT ve ortaokul öğrencileri için fen bilimleri ve akademik rehberlik platformu.'
       },
       {
         '@type': 'Service',
-        '@id': 'https://fullematematigi.com.tr/malatya-fen-ozel-ders/#service',
+        '@id': 'https://matematikinsahi.com/malatya-fen-ozel-ders/#service',
         name: 'Malatya Yüz Yüze Ortaokul Fen Bilimleri Özel Ders Hizmeti',
         serviceType: 'Fen Bilimleri Özel Ders',
-        provider: { '@id': 'https://fullematematigi.com.tr/#organization' },
+        provider: { '@id': 'https://matematikinsahi.com/#organization' },
         areaServed: {
           '@type': 'AdministrativeArea',
           name: 'Malatya'
@@ -60,7 +60,7 @@ const MalatyaFenOzelDers = () => {
       },
       {
         '@type': 'FAQPage',
-        '@id': 'https://fullematematigi.com.tr/malatya-fen-ozel-ders/#faq',
+        '@id': 'https://matematikinsahi.com/malatya-fen-ozel-ders/#faq',
         mainEntity: faqList.map((item) => ({
           '@type': 'Question',
           name: item.question,

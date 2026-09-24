@@ -70,11 +70,11 @@ const ZoomMeeting = ({ meetingNumber, meetingPassword, role, userName, userEmail
           success: () => {
             ZoomMtg.join({
               meetingNumber: meetingNumber,
-              userName: userName || 'Fullematematiği Öğrencisi',
+              userName: userName || 'Matematiğin Şahı Öğrencisi',
               signature: signature,
               sdkKey: sdkKey,
               passWord: meetingPassword || '',
-              userEmail: userEmail || 'info@fullematematigi.com.tr',
+              userEmail: userEmail || 'info@matematikinsahi.com',
               success: (success) => {
                 console.log('Joined zoom meeting successfully:', success);
                 setLoading(false);

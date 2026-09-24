@@ -516,7 +516,7 @@ const JitsiFallbackMeeting = ({ roomName, userName, role, onClose }) => {
       try {
         const domain = 'jitsi.lqdn.fr';
         const options = {
-          roomName: `FulleMatematik_${roomName}`,
+          roomName: `MatematiginSahi_${roomName}`,
           width: '100%',
           height: '100%',
           parentNode: containerRef.current,
@@ -3026,7 +3026,7 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
   }, [docPipWindow]);
 
   const setupDocPipWindow = (pipWin) => {
-    pipWin.document.title = 'Fulle Canlı Ders • Öğretmen Masası';
+    pipWin.document.title = 'Matematiğin Şahı Canlı Ders • Öğretmen Masası';
     pipWin.document.body.style.margin = '0';
     pipWin.document.body.style.padding = '0';
     pipWin.document.body.style.backgroundColor = '#080b11';
@@ -3717,11 +3717,11 @@ const MeetingSession = ({ role, userName, lessonId, onClose, onLiveKitError }) =
       >
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 flex items-center justify-center bg-slate-950 rounded-xl p-1 shadow-inner border border-slate-850">
-            <img src="/logo.png" alt="Fullematematiği Logo" className="h-full w-full object-contain" />
+            <img src="/logo.png" alt="Matematiğin Şahı Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Fulle Matematiği Canlı Ders Platformu</h4>
+              <h4 className="font-extrabold text-xs md:text-sm text-slate-100 tracking-wide">Matematiğin Şahı Canlı Ders Platformu</h4>
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping"></span>
               <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-black tracking-wider ml-1">
                 Sunucu: LiveKit ({connectionState}) | Kamera: {cameraTracks.length}

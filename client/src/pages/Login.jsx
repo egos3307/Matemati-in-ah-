@@ -38,9 +38,9 @@ const Login = () => {
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-background-light">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <img src="/logo.png" alt="Fullematematiği Logo" className="h-20 w-20 object-contain" />
+          <img src="/logo.png" alt="Matematiğin Şahı Logo" className="h-20 w-20 object-contain" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-black tracking-tight text-slate-900">Fullematematiği</h2>
+        <h2 className="mt-6 text-center text-3xl font-black tracking-tight text-slate-900">Matematiğin Şahı</h2>
         <p className="mt-2 text-center text-sm text-slate-500 font-medium">Başarıya giden yolda ilk adım</p>
       </div>
 
@@ -89,7 +89,7 @@ const Login = () => {
                 <input
                   type="email"
                   required
-                  placeholder="ornek@fullematematigi.com.tr"
+                  placeholder="ornek@matematikinsahi.com"
                   className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

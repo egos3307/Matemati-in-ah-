@@ -142,7 +142,7 @@ const TrialLessonBooking = () => {
       const payload = {
         type: 'TRIAL_LESSON',
         studentName: formData.studentName.trim(),
-        email: formData.email.trim() || `${Date.now()}@fulle.com.tr`,
+        email: formData.email.trim() || `${Date.now()}@matematikinsahi.com`,
         phone: formData.phone.trim(),
         grade: formData.grade,
         preferredSchedule: formData.preferredSchedule,
@@ -183,8 +183,8 @@ const TrialLessonBooking = () => {
   return (
     <main className="min-h-screen bg-slate-50/60 pb-20 pt-8">
       <SEO
-        title="Ücretsiz Canlı Tanışma Dersi Planla | Fullematematiği"
-        description="Fullematematiği uzman kadrosuyla 15 dakikalık ücretsiz canlı tanışma dersine katılın. Seviyenizi belirleyelim ve hedefinize özel matematik çalışma haritanızı çıkaralım."
+        title="Ücretsiz Canlı Tanışma Dersi Planla | Matematiğin Şahı"
+        description="Matematiğin Şahı uzman kadrosuyla 15 dakikalık ücretsiz canlı tanışma dersine katılın. Seviyenizi belirleyelim ve hedefinize özel matematik çalışma haritanızı çıkaralım."
         path="/ucretsiz-tanisma-dersi"
         keywords="ücretsiz matematik dersi, ücretsiz tanışma dersi, canlı matematik deneme dersi, online matematik özel ders randevu"
       />
@@ -401,7 +401,7 @@ const TrialLessonBooking = () => {
             <div className="bg-slate-900 rounded-3xl p-6 text-white space-y-4">
               <h4 className="text-sm font-black flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-base">verified</span>
-                <span>Neden Fullematematiği Tanışma Dersi?</span>
+                <span>Neden Matematiğin Şahı Tanışma Dersi?</span>
               </h4>
 
               <ul className="space-y-3 text-xs text-slate-300">

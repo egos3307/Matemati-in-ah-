@@ -52,7 +52,7 @@ const Blog = () => {
   return (
     <main className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="Matematik & Sınav Rehberleri | Fullematematiği"
+        title="Matematik & Sınav Rehberleri | Matematiğin Şahı"
         description="5. sınıftan 12. sınıfa güncel MEB müfredatı, LGS, TYT ve AYT matematik konu anlatımları, geometri taktikleri ve derece rehberleri."
         path="/blog"
         keywords="matematik konuları, 5. sınıf matematik müfredatı, lgs matematik konuları, tyt matematik konuları, 9. sınıf matematik, geometri taktikleri, matematik rehberleri"
@@ -67,7 +67,7 @@ const Blog = () => {
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-bold text-primary mb-4 uppercase tracking-wider">
             <span className="material-symbols-outlined text-sm">edit_document</span>
-            <span>Fullematematiği Blog & Rehberlik</span>
+            <span>Matematiğin Şahı Blog & Rehberlik</span>
           </span>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-5xl">
             Matematik & Sınav Başarı <span className="text-primary">Rehberleri</span>

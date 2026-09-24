@@ -210,7 +210,7 @@ const BlogConversionDashboard = ({ onNavigateTab }) => {
                     <td className="p-3 text-right">
                       {lead.phone && (
                         <a
-                          href={`https://wa.me/90${(lead.phone || '').toString().replace(/\D/g, '').replace(/^0/, '')}?text=Merhaba%20${encodeURIComponent(lead.studentName || '')},%20Fullematematiği%20başvurunuz%20için%20iletişime%20geçiyorum.`}
+                          href={`https://wa.me/90${(lead.phone || '').toString().replace(/\D/g, '').replace(/^0/, '')}?text=Merhaba%20${encodeURIComponent(lead.studentName || '')},%20Matematiğin Şahı%20başvurunuz%20için%20iletişime%20geçiyorum.`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg transition-all"

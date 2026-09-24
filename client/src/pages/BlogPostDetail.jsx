@@ -124,7 +124,7 @@ const BlogPostDetail = () => {
   return (
     <main className="relative min-h-screen bg-slate-50 pb-20 pt-8">
       <SEO
-        title={post.metaTitle || `${post.title} | Fullematematiği`}
+        title={post.metaTitle || `${post.title} | Matematiğin Şahı`}
         description={post.description || post.excerpt || post.title}
         path={`/blog/${slug}`}
         image={post.coverImage || undefined}
@@ -140,10 +140,10 @@ const BlogPostDetail = () => {
               '@type': 'BlogPosting',
               headline: post.title,
               description: post.description || post.excerpt,
-              url: `https://fullematematigi.com.tr/blog/${slug}`,
+              url: `https://matematikinsahi.com/blog/${slug}`,
               datePublished: post.createdAt,
               dateModified: post.updatedAt || post.createdAt,
-              author: { '@type': 'Organization', name: post.author?.name || 'Fullematematiği' }
+              author: { '@type': 'Organization', name: post.author?.name || 'Matematiğin Şahı' }
             },
             faqSchema
           ]

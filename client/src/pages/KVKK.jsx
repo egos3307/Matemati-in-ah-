@@ -5,8 +5,8 @@ const KVKK = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <Helmet>
-        <title>KVKK Aydınlatma Metni – Fullematematiği</title>
-        <meta name="description" content="Fullematematiği KVKK Kişisel Verilerin Korunması Kanunu aydınlatma metni ve hukuki belgeler." />
+        <title>KVKK Aydınlatma Metni – Matematiğin Şahı</title>
+        <meta name="description" content="Matematiğin Şahı KVKK Kişisel Verilerin Korunması Kanunu aydınlatma metni ve hukuki belgeler." />
       </Helmet>
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 lg:px-10">
         <h1 className="mb-2 text-2xl font-bold text-slate-900 md:text-3xl">KVKK Aydınlatma Metni</h1>
