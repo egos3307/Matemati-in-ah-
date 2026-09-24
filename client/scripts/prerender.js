@@ -6,7 +6,7 @@ import { FALLBACK_BLOGS } from '../src/data/staticBlogs.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = 'https://fullematematigi.com.tr';
+const BASE_URL = process.env.FRONTEND_URL || 'https://fullematematigi.com.tr';
 const DIST_DIR = path.resolve(__dirname, '../dist');
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 

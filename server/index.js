@@ -25,9 +25,7 @@ const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const os = require('os');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
-ffmpeg.setFfmpegPath(ffmpegPath);
+
 
 
 async function createDailyRoom() {
@@ -1503,35 +1501,6 @@ async function getGoogleDriveAccessToken() {
     console.error(`[Drive] Service Account kimlik doğrulama hatası: ${err.message}`);
     return null;
   }
-}
-
-async function convertToMp4(inputBuffer) {
-  const tmpDir = os.tmpdir();
-  const inputPath = path.join(tmpDir, `input_${Date.now()}.webm`);
-  const outputPath = path.join(tmpDir, `output_${Date.now()}.mp4`);
-
-  fs.writeFileSync(inputPath, inputBuffer);
-
-  await new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions([
-        '-c:v libx264',
-        '-preset ultrafast',
-        '-crf 23',
-        '-c:a aac',
-        '-b:a 128k',
-        '-movflags +faststart',
-      ])
-      .output(outputPath)
-      .on('end', resolve)
-      .on('error', reject)
-      .run();
-  });
-
-  const outputBuffer = fs.readFileSync(outputPath);
-  fs.unlinkSync(inputPath);
-  fs.unlinkSync(outputPath);
-  return outputBuffer;
 }
 
 function getCleanGoogleDriveFolderId(rawId = process.env.GOOGLE_DRIVE_FOLDER_ID) {
