@@ -35,7 +35,7 @@ const FALLBACK_CAMPS = [
     subtitle: 'TYT & AYT Konu Anlatımı ve Yeni Nesil Soru Çözüm Grubu',
     description: 'Birebir seviye analizi, haftalık canlı dersler, kişiye özel koçluk takibi.',
     price: '3.500 TL',
-    image: '/IMG_2176.png'
+    image: '/logo.png'
   }
 ];
 
