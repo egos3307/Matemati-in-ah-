@@ -21,8 +21,8 @@ model User {
   password  String
   name      String
   role      Role     @default(STUDENT)
-  studentCode String? @unique // FMXXX formatında
-  parentCode  String? @unique // FMVXXX formatında
+  studentCode String? @unique // MSXXX formatında
+  parentCode  String? @unique // MSCXXX formatında
   grade     String?  // Sınıf (5, 6, ..., 12)
   parentName String? // Veli Ad Soyad
   parentTel  String? // Veli Tel No

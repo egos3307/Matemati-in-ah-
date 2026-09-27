@@ -77,7 +77,7 @@ const Login = () => {
                 <input
                   type="text"
                   required
-                  placeholder="FMXXX veya FMVXXX"
+                  placeholder="MSXXX veya MSCXXX"
                   className="w-full rounded-2xl border-primary/10 bg-slate-50 px-5 py-4 text-slate-900 font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value.toUpperCase())}

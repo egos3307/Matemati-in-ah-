@@ -623,7 +623,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     let user;
 
     if (isStudentLogin) {
-      if (normalizedCode.startsWith('FMV')) {
+      if (normalizedCode.startsWith('MSC') || normalizedCode.startsWith('FMV')) {
         // Veli girişi
         user = await prisma.user.findUnique({ where: { parentCode: normalizedCode } });
         if (!user) {
@@ -771,8 +771,8 @@ app.post('/api/register-student', publicFormLimiter, async (req, res) => {
     let isUnique = false;
     while (!isUnique) {
       const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
-      studentCode = `FM${randomNum}`;
-      parentCode = `FMV${randomNum}`;
+      studentCode = `MS${randomNum}`;
+      parentCode = `MSC${randomNum}`;
       const existing = await prisma.user.findFirst({
         where: {
           OR: [
@@ -845,14 +845,14 @@ app.post('/api/teacher/add-student', auth, checkRole('TEACHER'), async (req, res
   try {
     const hashedPassword = await bcrypt.hash(password || 'student', 10);
     
-    // Generate unique FMXXX and FMVXXX codes
+    // Generate unique MSXXX and MSCXXX codes
     let studentCode;
     let parentCode;
     let isUnique = false;
     while (!isUnique) {
       const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
-      studentCode = `FM${randomNum}`;
-      parentCode = `FMV${randomNum}`;
+      studentCode = `MS${randomNum}`;
+      parentCode = `MSC${randomNum}`;
       const existing = await prisma.user.findFirst({
         where: {
           OR: [
@@ -3226,11 +3226,20 @@ app.post('/api/teacher/trial-requests/:id/approve', auth, checkRole('TEACHER'), 
     if (!student) {
       const hashedPassword = await bcrypt.hash('student', 10);
       let studentCode;
+      let parentCode;
       let isUnique = false;
       while (!isUnique) {
         const randomNum = Math.floor(100 + Math.random() * 900); // 100-999
-        studentCode = `FM${randomNum}`;
-        const existing = await prisma.user.findUnique({ where: { studentCode } });
+        studentCode = `MS${randomNum}`;
+        parentCode = `MSC${randomNum}`;
+        const existing = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { studentCode },
+              { parentCode }
+            ]
+          }
+        });
         if (!existing) isUnique = true;
       }
 
@@ -3242,6 +3251,7 @@ app.post('/api/teacher/trial-requests/:id/approve', auth, checkRole('TEACHER'), 
           grade: request.grade,
           studentTel: request.phone,
           studentCode,
+          parentCode,
           role: 'STUDENT'
         }
       });
@@ -5426,13 +5436,46 @@ const initParentCodes = async () => {
     for (const student of studentsWithoutParentCode) {
       const numMatch = student.studentCode.match(/\d+/);
       const randomNum = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
-      const parentCode = `FMV${randomNum}`;
+      const parentCode = `MSC${randomNum}`;
       
       await prisma.user.update({
         where: { id: student.id },
         data: { parentCode }
       });
       console.log(`Updated student ${student.name} with parentCode ${parentCode}`);
+    }
+
+    // Auto-migrate legacy FM/FMV codes to MS/MSC
+    const legacyStudents = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        OR: [
+          { studentCode: { startsWith: 'FM' } },
+          { parentCode: { startsWith: 'FMV' } }
+        ]
+      }
+    });
+
+    for (const student of legacyStudents) {
+      const numMatch = student.studentCode ? student.studentCode.match(/\d+/) : null;
+      const num = numMatch ? numMatch[0] : Math.floor(100 + Math.random() * 900);
+      const updateData = {};
+      if (student.studentCode && student.studentCode.startsWith('FM')) {
+        updateData.studentCode = `MS${num}`;
+      }
+      if (student.parentCode && student.parentCode.startsWith('FMV')) {
+        updateData.parentCode = `MSC${num}`;
+      }
+      if (student.email && student.email.startsWith('fm')) {
+        updateData.email = student.email.replace(/^fm/i, 'ms');
+      }
+      if (Object.keys(updateData).length > 0) {
+        await prisma.user.update({
+          where: { id: student.id },
+          data: updateData
+        });
+        console.log(`Migrated legacy codes for ${student.name}:`, updateData);
+      }
     }
 
     // Fix broken /uploads/lesson_*.webm paths that were incorrectly set by a previous migration.
