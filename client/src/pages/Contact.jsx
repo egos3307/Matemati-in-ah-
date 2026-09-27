@@ -137,12 +137,12 @@ const Contact = () => {
                 <p className="text-xs text-slate-400 font-bold">DM yoluyla hızlıca ulaşın</p>
                 <div className="pt-2">
                   <a 
-                    href="https://instagram.com/matematikinsahi" 
+                    href="https://www.instagram.com/matematiginsahi" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-xs font-black text-white hover:opacity-90 shadow-md transition-all duration-300"
                   >
-                    @matematikinsahi
+                    @matematiginsahi
                   </a>
                 </div>
               </div>

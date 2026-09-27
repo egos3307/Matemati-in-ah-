@@ -122,8 +122,8 @@ const SEO = ({
             image: ogImage,
             description: 'Türkiye\'de LGS, TYT, AYT ve KPSS öğrencileri için online matematik konu anlatımı, özel ders ve rehberlik platformu.',
             sameAs: [
-              'https://instagram.com/matematikinsahi',
-              'https://www.youtube.com/@matematikinsahi'
+              'https://www.instagram.com/matematiginsahi',
+              'https://www.youtube.com/@matematiginsahii'
             ]
           },
           breadcrumbSchema

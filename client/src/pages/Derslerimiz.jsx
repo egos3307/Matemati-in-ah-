@@ -181,13 +181,13 @@ const Derslerimiz = () => {
               0535 059 89 50
             </a>
             <a 
-              href="https://instagram.com/matematikinsahi" 
+              href="https://www.instagram.com/matematiginsahi" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 px-6 text-sm font-bold text-slate-900 hover:bg-slate-900 hover:text-white transition-all"
             >
               <span className="material-symbols-outlined text-lg">camera_alt</span>
-              @matematikinsahi DM
+              @matematiginsahi DM
             </a>
           </div>
         </div>

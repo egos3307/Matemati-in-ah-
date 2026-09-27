@@ -334,7 +334,7 @@ const Navbar = () => {
                 {/* Social Media Links */}
                 <div className="flex items-center gap-1 ml-0.5 flex-shrink-0">
                   <a
-                    href="https://www.youtube.com/@matematikinsahi"
+                    href="https://www.youtube.com/@matematiginsahii"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
@@ -345,7 +345,7 @@ const Navbar = () => {
                     </svg>
                   </a>
                   <a
-                    href="https://instagram.com/matematikinsahi"
+                    href="https://www.instagram.com/matematiginsahi"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 hover:bg-white/30 text-white transition-all hover:scale-110"
