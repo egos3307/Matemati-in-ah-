@@ -123,29 +123,34 @@ const Home = () => {
   // Testimonials / Success Stories Data
   const testimonials = [
     {
-      name: "Y** Y**",
-      content: "Hocam cidden bana çok büyük katkınız oldu 5 netten 21 nete kadar çıkardınız beni cidden emeğiniz üzerimde çok fazla her şey için teşekkür ediyorum ki hocam ders almaya devam edicem o da deneme analizi için",
-      grade: "KPSS Özel Ders"
+      name: "Sevgi K.",
+      content: "Hocam iyi akşamlar, oğlum LGS yeni nesil soruları görünce eli ayağına dolaşıyordu, tamamen pes etmişti. Sizin sabırlı yaklaşımınız ve soruya nereden başlanacağını öğretmeniz sayesinde son denemede 19 doğru yaptı! Bize her hafta verdiğiniz düzenli gelişim raporları da içimizi çok rahatlattı. Emeğinize sağlık.",
+      grade: "LGS 8. Sınıf Velimiz"
     },
     {
-      name: "F** F**",
-      content: "sağolun hocam valla emeğiniz cok üzerimde emeğinize sağlık çok teşekkür ediyorum siz olmasanız yapamazdım derslerimi yükseltip başarılarımın devam etmesi için elimden geleni yapacağım",
-      grade: "9. Sınıf"
+      name: "Murat T.",
+      content: "Burak Hocam merhaba, kızımızın AYT matematikte yaşadığı stres ve özgüven kaybı sizinle derslere başladıktan sonra yerini kararlılığa bıraktı. 12-14 netlerden 32 net bandına kadar yükseldi. Sadece ders anlatmıyor, sınav koçluğunu da çok profesyonel yapıyorsunuz. İyi ki varsınız.",
+      grade: "12. Sınıf (YKS) Velimiz"
     },
     {
-      name: "B**",
-      content: "Günaydın hocam. Sene boyunca derslerimizde gösterdiğiniz rehberlik ve bitmeyen enerjiniz sayesinde bu başarıya ulaştım. Üzerimdeki emeğiniz için sonsuz teşekkürler.",
-      grade: "Fen Lisesi Öğrencimiz"
+      name: "Zeynep A.",
+      content: "LGS'den sonra lise 1 matematiği kızımı çok korkutmuştu, ilk yazılıdan 42 alınca çok üzüldük. Sizinle tanıştıktan sonra ikinci sınav notumuz 94 geldi! Şimdiye kadar 'matematikten keyif alıyorum' dediğini hiç duymamıştık. Çocuğuma bu sevgiyi aşıladığınız için çok teşekkürler hocam.",
+      grade: "9. Sınıf Velimiz"
     },
     {
-      name: "S**",
-      content: "Oncelikle çok teşekkür ediyorum çünkü bu güne göndereceğini söylememişti. Dersin çok iyi geçtiğini ,senin ders anlatmanı iyi anladığını ve hatta analitik geometriyle ilgili çok zevkliymiş falan dedi. Dersten çok memnun çıkınca ben de çok takip etmiyorum. Ama seni ödev konusunda yorarsa mutlaka haber ver ki biz de hemen Şimdiye kadar anlıyorum deyip severek dinlediği ilk matematikçi sensin. Tekrardan çok teşekkür ediyorum.",
-      grade: "11 Sınıf Velimiz"
+      name: "Hakan D.",
+      content: "Açıkçası online ders konusunda ilk başta önyargılıydım ama canlı derslerdeki interaktif tahta ve ders takibi yüz yüze özel dersten çok daha verimli oldu. Oğlum özellikle analitik geometride artık hiç zorlanmıyor. İlginiz ve enerjiniz için ailecek minnettarız.",
+      grade: "11. Sınıf Velimiz"
     },
     {
-      name: "M** S**",
-      content: "Hocam matematik sınavından 100 almışım.",
-      grade: "11 Sınıf Öğrencimiz"
+      name: "Fatma B.",
+      content: "Burak Hocam günaydın. Ders sonrası gönderdiğiniz ödev kontrolleri ve öğrenci portalındaki sisteminiz harika işliyor. Artık ders çalış diye arkasından koşmuyoruz, kendi sorumluluğunu kendisi alıyor. Netlerimizdeki düzenli artış için çok teşekkür ederiz.",
+      grade: "8. Sınıf Velimiz"
+    },
+    {
+      name: "Ahmet E.",
+      content: "Fen lisesi müfredatında oğluma rehberlik edecek seviyede öğretmen bulmakta zorlanıyorduk. Burak Hoca'nın derin konu hakimiyeti ve yeni nesil zor sorulara pratik yaklaşımları sayesinde matematik okul birinciliği seviyesine geldi. Teşekkürler Hocam.",
+      grade: "Fen Lisesi Velimiz"
     }
   ];
 
@@ -190,39 +195,45 @@ const Home = () => {
         'aggregateRating': {
           '@type': 'AggregateRating',
           'ratingValue': '5',
-          'reviewCount': '5',
+          'reviewCount': '6',
           'bestRating': '5'
         },
         'review': [
           {
             '@type': 'Review',
-            'author': { '@type': 'Person', 'name': 'E** S** (KPSS Öğrencisi)' },
+            'author': { '@type': 'Person', 'name': 'Sevgi K. (LGS 8. Sınıf Velisi)' },
             'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
-            'reviewBody': 'Hocam cidden bana çok büyük katkınız oldu 5 netten 21 nete kadar çıkardınız beni cidden emeğiniz üzerimde çok fazla her şey için teşekkür ediyorum ki hocam ders almaya devam edicem o da deneme analizi için'
+            'reviewBody': 'Hocam iyi akşamlar, oğlum LGS yeni nesil soruları görünce eli ayağına dolaşıyordu, tamamen pes etmişti. Sizin sabırlı yaklaşımınız ve soruya nereden başlanacağını öğretmeniz sayesinde son denemede 19 doğru yaptı! Bize her hafta verdiğiniz düzenli gelişim raporları da içimizi çok rahatlattı. Emeğinize sağlık.'
           },
           {
             '@type': 'Review',
-            'author': { '@type': 'Person', 'name': 'F** F** (9. Sınıf Öğrencisi)' },
+            'author': { '@type': 'Person', 'name': 'Murat T. (12. Sınıf YKS Velisi)' },
             'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
-            'reviewBody': 'sağolun hocam valla emeğiniz cok üzerimde emeğinize sağlık çok teşekkür ediyorum siz olmasanız yapamazdım derslerimi yükseltip başarılarımın devam etmesi için elimden geleni yapacağım'
+            'reviewBody': 'Burak Hocam merhaba, kızımızın AYT matematikte yaşadığı stres ve özgüven kaybı sizinle derslere başladıktan sonra yerini kararlılığa bıraktı. 12-14 netlerden 32 net bandına kadar yükseldi. Sadece ders anlatmıyor, sınav koçluğunu da çok profesyonel yapıyorsunuz. İyi ki varsınız.'
           },
           {
             '@type': 'Review',
-            'author': { '@type': 'Person', 'name': 'B** (Fen Lisesi Öğrencisi)' },
+            'author': { '@type': 'Person', 'name': 'Zeynep A. (9. Sınıf Velisi)' },
             'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
-            'reviewBody': 'Günaydın hocam. Sene boyunca derslerimizde gösterdiğiniz rehberlik ve bitmeyen enerjiniz sayesinde bu başarıya ulaştım. Üzerimdeki emeğiniz için sonsuz teşekkürler.'
+            'reviewBody': 'LGS\'den sonra lise 1 matematiği kızımı çok korkutmuştu, ilk yazılıdan 42 alınca çok üzüldük. Sizinle tanıştıktan sonra ikinci sınav notumuz 94 geldi! Şimdiye kadar \'matematikten keyif alıyorum\' dediğini hiç duymamıştık. Çocuğuma bu sevgiyi aşıladığınız için çok teşekkürler hocam.'
           },
           {
             '@type': 'Review',
-            'author': { '@type': 'Person', 'name': 'S** (11. Sınıf Velisi)' },
+            'author': { '@type': 'Person', 'name': 'Hakan D. (11. Sınıf Velisi)' },
             'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
-            'reviewBody': 'Oncelikle çok teşekkür ediyorum çünkü bu güne göndereceğini söylememişti. Dersin çok iyi geçtiğini ,senin ders anlatmanı iyi anladığını ve hatta analitik geometriyle ilgili çok zevkliymiş falan dedi. Dersten çok memnun çıkınca ben de çok takip etmiyorum. Ama seni ödev konusunda yorarsa mutlaka haber ver ki biz de hemen Şimdiye kadar anlıyorum deyip severek dinlediği ilk matematikçi sensin. Tekrardan çok teşekkür ediyorum.'
+            'reviewBody': 'Açıkçası online ders konusunda ilk başta önyargılıydım ama canlı derslerdeki interaktif tahta ve ders takibi yüz yüze özel dersten çok daha verimli oldu. Oğlum özellikle analitik geometride artık hiç zorlanmıyor. İlginiz ve enerjiniz için ailecek minnettarız.'
           },
           {
             '@type': 'Review',
-            'author': { '@type': 'Person', 'name': 'M** S** (11. Sınıf Öğrencisi)' },
+            'author': { '@type': 'Person', 'name': 'Fatma B. (8. Sınıf Velisi)' },
             'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
-            'reviewBody': 'Hocam matematik sınavından 100 almışım.'
+            'reviewBody': 'Burak Hocam günaydın. Ders sonrası gönderdiğiniz ödev kontrolleri ve öğrenci portalındaki sisteminiz harika işliyor. Artık ders çalış diye arkasından koşmuyoruz, kendi sorumluluğunu kendisi alıyor. Netlerimizdeki düzenli artış için çok teşekkür ederiz.'
+          },
+          {
+            '@type': 'Review',
+            'author': { '@type': 'Person', 'name': 'Ahmet E. (Fen Lisesi Velisi)' },
+            'reviewRating': { '@type': 'Rating', 'ratingValue': '5' },
+            'reviewBody': 'Fen lisesi müfredatında oğluma rehberlik edecek seviyede öğretmen bulmakta zorlanıyorduk. Burak Hoca\'nın derin konu hakimiyeti ve yeni nesil zor sorulara pratik yaklaşımları sayesinde matematik okul birinciliği seviyesine geldi. Teşekkürler Hocam.'
           }
         ]
       },
