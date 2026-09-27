@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-let _prisma;
+const prisma = require('../prismaClient');
 function getPrisma() {
-  if (!_prisma) {
-    _prisma = new PrismaClient();
-  }
-  return _prisma;
+  return prisma;
 }
 
 const SEED_KEYWORDS = [

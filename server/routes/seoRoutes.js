@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 
 const { auth, checkRole } = require('../middleware/auth');
 const { runSeoDiscoveryScan, fetchGoogleSearchConsoleData, submitUrlToGoogleIndexingApi, submitSitemapToGoogleSearchConsole } = require('../services/seoEngine');

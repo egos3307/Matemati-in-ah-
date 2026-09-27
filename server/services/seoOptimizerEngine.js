@@ -1,10 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-let prismaInstance = null;
+const prisma = require('../prismaClient');
 function getPrisma() {
-  if (!prismaInstance) {
-    prismaInstance = new PrismaClient();
-  }
-  return prismaInstance;
+  return prisma;
 }
 
 const { fetchGoogleSearchConsoleData, calculateTextSimilarity } = require('./seoEngine');

@@ -1,12 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prismaClient');
 const { callAiWithFallback, cleanAndParseJson } = require('../lib/ai');
 
-let prismaInstance = null;
 function getPrisma() {
-  if (!prismaInstance) {
-    prismaInstance = new PrismaClient();
-  }
-  return prismaInstance;
+  return prisma;
 }
 
 /**

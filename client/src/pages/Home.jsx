@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import SEO from '../components/SEO';
-import { trackEvent } from '../utils/analytics';
 
 const YT_CHANNEL_URL = 'https://www.youtube.com/@matematikinsahi';
 const IG_URL = 'https://instagram.com/matematikinsahi';
@@ -171,54 +169,6 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [activeTestimonial]);
 
-  // Free Trial Form State
-  const [trialType, setTrialType] = useState('SELF'); // SELF, CHILD
-  const [trialStudentName, setTrialStudentName] = useState('');
-  const [trialEmail, setTrialEmail] = useState('');
-  const [trialPhone, setTrialPhone] = useState('');
-  const [trialGrade, setTrialGrade] = useState('');
-  const [trialSuccess, setTrialSuccess] = useState('');
-  const [trialError, setTrialError] = useState('');
-  const [trialLoading, setTrialLoading] = useState(false);
-
-
-
-  const scrollToForm = () => {
-    const element = document.getElementById('tanisma-dersi');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleTrialSubmit = async (e) => {
-    e.preventDefault();
-    setTrialLoading(true);
-    setTrialSuccess('');
-    setTrialError('');
-    try {
-      await axios.post('/api/trial-requests', {
-        type: trialType,
-        studentName: trialStudentName,
-        email: trialEmail,
-        phone: trialPhone,
-        grade: trialGrade,
-      });
-      trackEvent('form_submit_success', {
-        form_name: 'trial_lesson_form',
-        button_location: 'home_trial_section',
-        button_text: 'Ücretsiz Tanışma Dersi Talebi Oluştur'
-      });
-      setTrialSuccess('Tanışma dersi talebiniz başarıyla alınmıştır. Öğretmenimiz en kısa sürede sizinle iletişime geçecektir.');
-      setTrialStudentName('');
-      setTrialEmail('');
-      setTrialPhone('');
-      setTrialGrade('');
-    } catch (err) {
-      setTrialError(err.response?.data?.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
-    } finally {
-      setTrialLoading(false);
-    }
-  };
 
 
 
@@ -281,36 +231,6 @@ const Home = () => {
           '@type': 'EducationalOrganization',
           'name': 'Matematiğin Şahı'
         }
-      },
-      {
-        '@type': 'FAQPage',
-        '@id': 'https://matematikinsahi.com/#faq',
-        'mainEntity': [
-          {
-            '@type': 'Question',
-            'name': 'Online matematik canlı ders nasıl işlenmektedir?',
-            'acceptedAnswer': {
-              '@type': 'Answer',
-              'text': 'Matematiğin Şahı canlı dersleri Zoom üzerinden interaktif biçimde işlenir. Öğrenciler anlık soru sorabilir, çözümleri canlı takip eder ve tüm ders kayıtlarına Google Drive üzerinden 7/24 erişebilir.'
-            }
-          },
-          {
-            '@type': 'Question',
-            'name': 'Matematik canlı ders için ücretsiz deneme dersi var mıdır?',
-            'acceptedAnswer': {
-              '@type': 'Answer',
-              'text': 'Evet! Matematiğin Şahı platformunda ilk matematik canlı dersiniz tamamen ücretsizdir. Hiçbir taahhüt gerekmeden tanışma dersi talep edebilirsiniz.'
-            }
-          },
-          {
-            '@type': 'Question',
-            'name': 'YKS, LGS ve KPSS için matematik canlı ders paketlerinde neler bulunur?',
-            'acceptedAnswer': {
-              '@type': 'Answer',
-              'text': 'Detaylı konu anlatımları, derece yaptıran pratik teknikler, 35+ çözümlü PDF kaynakları, haftalık ödev takibi ve canlı soru çözümleri dahildir.'
-            }
-          }
-        ]
       }
     ]
   };
@@ -319,7 +239,7 @@ const Home = () => {
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-white">
       <SEO
         title="KPSS, LGS, TYT, AYT Matematik Online Ders & Özel Ders"
-        description="KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Matematiğin Şahı ile sınavlara derece hedefiyle hazırlanın. İlk canlı tanışma dersiniz ücretsiz!"
+        description="KPSS online ders, LGS online ders, TYT ve AYT matematik online özel ders platformu Matematiğin Şahı ile sınavlara derece hedefiyle hazırlanın."
         path="/"
         keywords="kpss online ders, lgs online ders, tyt online ders, ayt online ders, kpss matematik online ders, lgs matematik online ders, tyt matematik online ders, ayt matematik online ders, matematik online özel ders, Matematiğin Şahı"
         schemaData={homeSchema}
@@ -331,7 +251,7 @@ const Home = () => {
             <div className="flex flex-col gap-8">
               <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary">
                 <span className="material-symbols-outlined text-sm">star</span>
-                <span>İlk Dersin Bizden: Ücretsiz Canlı Tanışma Dersi</span>
+                <span>LGS, YKS & KPSS Canlı Matematik Dersleri</span>
               </div>
               <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-slate-900 lg:text-7xl">
                 Matematik <span className="text-primary">Online Özel Ders</span> & Canlı Ders Platformu
@@ -340,21 +260,12 @@ const Home = () => {
                 Türkiye'nin 1 numaralı matematik online özel ders ve canlı ders platformu Matematiğin Şahı ile YKS, LGS ve KPSS'de netlerini zirveye taşı. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <button onClick={scrollToForm} className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
-                  Ücretsiz İlk Dersine Katıl
-                </button>
+                <Link to="/kontenjan-dersleri" className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
+                  Derslerimizi Keşfet
+                </Link>
                 <a href="https://www.instagram.com/reel/DbichaZswkL/?igsh=N2NyY2NzOXh2NWR1" target="_blank" rel="noopener noreferrer" className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-300 bg-white px-8 text-lg font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all">
                   Eğitim Sistemimizi Keşfet
                 </a>
-              </div>
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <span className="material-symbols-outlined text-primary mt-0.5">info</span>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">Ücretsiz Tanışma Dersi Nedir?</p>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Sistemi yakından tanımak ve hocalarımızla tanışmak için ilk dersinizi tamamen ücretsiz olarak planlayabilirsiniz. Hiçbir taahhüt gerekmez.
-                  </p>
-                </div>
               </div>
             </div>
             <div className="relative hidden md:block max-w-md mx-auto w-full">
@@ -467,52 +378,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Products Section */}
-        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="urunlerimiz">
-          <div className="mb-16 flex flex-col items-center text-center">
-            <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Sınavlara Hazırlıkta En Çok Tercih Edilen Notlar</h2>
-            <p className="max-w-2xl text-lg text-slate-600">
-              Konu özetleri, çözümlü örnekler, çıkmış sorular ve pratik yöntemlerle matematiği daha hızlı öğren.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4 lg:gap-8">
-            {[
-              { id: 1, name: 'DGS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 2, name: 'YKS / AYT MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 3, name: 'KPSS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '350 TL', image: '/IMG_2943.jpeg' },
-              { id: 4, name: 'LGS MATEMATİK Tüm Konular Çözümlü Ders Notları (Matematiğin Şahı Özel PDF)', price: '150 TL', image: '/IMG_2943.jpeg' }
-            ].map((product) => (
-              <div key={product.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white transition-all hover:shadow-xl">
-                <div className="aspect-[3/4] overflow-hidden">
-                  <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                </div>
-                <div className="flex flex-col gap-2 p-3 sm:p-6">
-                  <h3 className="text-sm font-bold text-slate-900 sm:text-base">{product.name}</h3>
-                  <p className="text-primary font-black">{product.price}</p>
-                  <a
-                    href="https://www.shopier.com/matematikinsahi"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 flex h-10 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white transition-colors hover:bg-slate-800"
-                  >
-                    Satın Al
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 text-center">
-            <a 
-              href="https://www.shopier.com/matematikinsahi" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border-2 border-slate-900 px-8 py-3 text-sm font-bold text-slate-900 hover:bg-slate-900 hover:text-white transition-all"
-            >
-              Tüm Ürünleri Gör
-              <span className="material-symbols-outlined">arrow_forward</span>
-            </a>
-          </div>
-        </section>
 
         {/* Social Media Feed */}
         <SocialFeed />
@@ -662,295 +527,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Free Trial Lesson Section */}
-        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10" id="tanisma-dersi">
-          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-8 md:p-12 shadow-xl">
-            <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl"></div>
-            <div className="absolute -left-20 -bottom-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl"></div>
-            
-            <div className="relative mx-auto max-w-3xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
-                Sınırlı Kontenjan
-              </span>
-              <h2 className="mt-4 text-3xl font-black text-slate-900 md:text-4xl">Ücretsiz Tanışma Dersi Başvurusu</h2>
-              <p className="mt-4 text-slate-600">
-                Matematik seviyenizi belirlemek ve size en uygun çalışma planını hazırlamak için ücretsiz birebir tanışma dersi oluşturun.
-              </p>
-            </div>
-
-            <form onSubmit={handleTrialSubmit} className="relative mx-auto mt-12 max-w-2xl rounded-2xl bg-white p-8 shadow-lg border border-slate-100 flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold text-slate-700">Ders Kimin İçin?</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setTrialType('SELF')}
-                    className={`flex items-center justify-center gap-2 rounded-xl py-3 border-2 font-bold transition-all ${
-                      trialType === 'SELF'
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-base">person</span>
-                    Kendim İçin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTrialType('CHILD')}
-                    className={`flex items-center justify-center gap-2 rounded-xl py-3 border-2 font-bold transition-all ${
-                      trialType === 'CHILD'
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-base">child_care</span>
-                    Çocuğum İçin
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">Öğrenci Adı Soyadı</label>
-                  <input
-                    type="text"
-                    required
-                    value={trialStudentName}
-                    onChange={(e) => setTrialStudentName(e.target.value)}
-                    placeholder="Örn: Ali Yılmaz"
-                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">Sınıf / Seviye</label>
-                  <select
-                    required
-                    value={trialGrade}
-                    onChange={(e) => setTrialGrade(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  >
-                    <option value="">Seçiniz</option>
-                    <option value="5">5. Sınıf</option>
-                    <option value="6">6. Sınıf</option>
-                    <option value="7">7. Sınıf</option>
-                    <option value="8">8. Sınıf (LGS)</option>
-                    <option value="9">9. Sınıf</option>
-                    <option value="10">10. Sınıf</option>
-                    <option value="11">11. Sınıf</option>
-                    <option value="12">12. Sınıf (YKS)</option>
-                    <option value="Mezun">Mezun (YKS)</option>
-                    <option value="KPSS">KPSS Adayı</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">E-posta Adresi</label>
-                  <input
-                    type="email"
-                    required
-                    value={trialEmail}
-                    onChange={(e) => setTrialEmail(e.target.value)}
-                    placeholder="ali@ornek.com"
-                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700">Telefon Numarası</label>
-                  <input
-                    type="tel"
-                    required
-                    value={trialPhone}
-                    onChange={(e) => setTrialPhone(e.target.value)}
-                    placeholder="05XX XXX XX XX"
-                    className="rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-primary outline-none px-4 py-2"
-                  />
-                </div>
-              </div>
-
-              {trialError && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-                  {trialError}
-                </div>
-              )}
-
-              {trialSuccess && (
-                <div className="text-sm text-green-600 bg-green-50 p-4 rounded-lg border border-green-200 font-medium">
-                  {trialSuccess}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={trialLoading}
-                className="w-full rounded-xl bg-primary py-4 text-lg font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary/95 hover:shadow-xl disabled:opacity-50 cursor-pointer"
-              >
-                {trialLoading ? 'Başvuru Gönderiliyor...' : 'Ücretsiz Tanışma Dersi Talebi Oluştur'}
-              </button>
-            </form>
-          </div>
-        </section>
-
-        {/* FAQ Section for SEO & Search Intent */}
-        <section className="bg-slate-50 py-20 px-6 lg:px-10 border-t border-slate-100" id="sss">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary mb-3">
-                Sıkça Sorulan Sorular
-              </span>
-              <h2 className="text-3xl font-black text-slate-900 md:text-4xl">
-                Online Matematik Canlı Ders Hakkında Merak Edilenler
-              </h2>
-              <p className="mt-3 text-slate-600">
-                Canlı matematik derslerimiz, kamplarımız ve kayıt sürecimiz ile ilgili en çok sorulan soruların yanıtları.
-              </p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">live_tv</span>
-                  Online matematik canlı ders nasıl işlenir?
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Derslerimiz Zoom platformu üzerinden interaktif canlı yayınlar olarak gerçekleşir. Canlı ders esnasında mikrofonunuzu açıp hoca ile birebir konuşabilir, anında soru sorabilirsiniz. Kaçırdığınız canlı dersleri Google Drive üzerinden 7/24 tekrar izleyebilirsiniz.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">card_giftcard</span>
-                  Canlı matematik dersi ücretsiz denenebilir mi?
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Evet! Matematiğin Şahı'nde <strong>ilk matematik canlı dersiniz tamamen ücretsizdir</strong>. Formu doldurarak herhangi bir taahhüt veya ücret ödemeden canlı tanışma dersimize katılabilir, eğitim kalitemizi kendiniz deneyimleyebilirsiniz.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">school</span>
-                  Hangi sınavlar için matematik canlı ders veriliyor?
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  <strong>YKS (TYT-AYT) Matematik & Geometri</strong>, <strong>LGS Yeni Nesil Matematik</strong>, <strong>KPSS Lisans & Ön Lisans</strong> ve okul derslerine takviye amacıyla tüm sınıf seviyelerine uygun özel ders ve canlı kamp gruplarımız mevcuttur.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">picture_as_pdf</span>
-                  Ders notları ve ödev takibi yapılıyor mu?
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Her canlı ders sonrasında çözümlü PDF ders notları, yeni nesil soru fasikülleri ve haftalık ödevlendirmeler paylaşılır. Öğrencinin gelişimi öğretmen ve veli panellerimiz üzerinden düzenli takip edilir.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Matematik Rehberleri Section */}
-        <section className="bg-slate-50 py-16 px-6 lg:px-10 border-t border-slate-200/60" id="matematik-rehberleri">
-          <div className="mx-auto max-w-7xl">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary mb-3">
-                  <span className="material-symbols-outlined text-sm">library_books</span>
-                  <span>Öne Çıkan İçerikler</span>
-                </span>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                  Matematik & Sınav <span className="text-primary">Rehberleri</span>
-                </h2>
-                <p className="text-slate-600 text-sm mt-2 max-w-xl">
-                  YKS, LGS ve okul sınavlarında netlerinizi yükseltecek güncel müfredat rehberleri, konu listeleri ve çalışma taktikleri.
-                </p>
-              </div>
-              <Link
-                to="/blog"
-                className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:gap-2.5 transition-all"
-              >
-                <span>Tüm Rehberleri İncele</span>
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </Link>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <Link
-                to="/blog/tyt-matematik-konulari"
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
-              >
-                <div className="h-10 w-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-xl">format_list_bulleted</span>
-                </div>
-                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
-                  TYT Matematik Konuları 2026
-                </h3>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                  2026 YKS TYT matematik müfredatındaki tüm üniteler, alt başlıklar ve çalışma stratejileri.
-                </p>
-                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
-                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-              </Link>
-
-              <Link
-                to="/blog/lgs-matematik-konulari"
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
-              >
-                <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-xl">menu_book</span>
-                </div>
-                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
-                  LGS Matematik Konuları 2026
-                </h3>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                  8. Sınıf MEB LGS matematik üniteleri ve yeni nesil soru taktikleri.
-                </p>
-                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
-                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-              </Link>
-
-              <Link
-                to="/blog/9-sinif-matematik-konulari"
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
-              >
-                <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-xl">school</span>
-                </div>
-                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
-                  9. Sınıf Matematik Konuları
-                </h3>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                  2026-2027 MEB müfredatı, ünite dağılımları ve lise 1 matematik ders rehberi.
-                </p>
-                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
-                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-              </Link>
-
-              <Link
-                to="/blog/geometride-sekilleri-gormek-ve-geometri-taktikleri"
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-primary/50 hover:shadow-md transition-all duration-200"
-              >
-                <div className="h-10 w-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-xl">square_foot</span>
-                </div>
-                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors mb-2 text-base">
-                  Geometride Şekilleri Görmek
-                </h3>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                  Geometri sorularında ek çizim yapma mantığı, özel üçgenler ve harflendirme yöntemleri.
-                </p>
-                <span className="mt-auto text-xs font-bold text-primary flex items-center gap-1">
-                  Rehberi Oku <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                </span>
-              </Link>
-            </div>
-          </div>
-        </section>
 
       </main>
 
@@ -979,12 +555,12 @@ const Home = () => {
                 <li><Link className="hover:text-primary transition-colors" to="/derslerimiz">Derslerimiz</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/kontenjan-dersleri">Kontenjan Dersleri</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/pdf-notlari">PDF Ders Notları</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/blog">Matematik Rehberi</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/blog">Blog</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="mb-6 font-bold text-slate-900">Matematik Rehberleri</h3>
+              <h3 className="mb-6 font-bold text-slate-900">Blog Yazıları</h3>
               <ul className="flex flex-col gap-3 text-sm">
                 <li><Link className="hover:text-primary transition-colors" to="/blog/tyt-matematik-konulari">TYT Matematik Konuları</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/blog/lgs-matematik-konulari">LGS Matematik Konuları</Link></li>

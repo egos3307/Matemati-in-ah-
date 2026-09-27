@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./prismaClient');
 const { auth, checkRole } = require('./middleware/auth');
 const {
   extractDriveFileId,
@@ -68,7 +68,6 @@ const fs = require('fs');
 // Database is loaded directly via Prisma using DATABASE_URL environment variable
 
 const app = express();
-const prisma = new PrismaClient();
 
 function isDatabaseConfigured() {
   const url = process.env.DATABASE_URL;
