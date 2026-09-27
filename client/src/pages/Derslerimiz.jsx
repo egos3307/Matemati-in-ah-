@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import SEO from '../components/SEO';
 
@@ -36,7 +37,7 @@ const Derslerimiz = () => {
     return (
       <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center py-24 text-slate-400 font-bold uppercase tracking-wider gap-4">
         <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
-        <span>Kamplar Yükleniyor...</span>
+        <span>Dersler Yükleniyor...</span>
       </div>
     );
   }
@@ -44,8 +45,8 @@ const Derslerimiz = () => {
   return (
     <div className="relative min-h-screen bg-slate-50/50 pb-20 pt-8">
       <SEO
-        title="Online Matematik Canlı Ders Kampları & Özel Ders"
-        description="YKS, LGS ve KPSS için online matematik canlı ders paketleri ve geometri kampları. Sınıf seviyenize en uygun canlı dersi seçin, ilk ders ücretsiz!"
+        title="Online Matematik Canlı Ders Programları & Özel Ders | Matematiğin Şahı"
+        description="YKS, LGS ve KPSS için online matematik canlı ders paketleri ve geometri grupları. Seviyenize en uygun canlı dersi seçin!"
         path="/derslerimiz"
         keywords="matematik canlı ders, online matematik canlı ders, geometri canlı ders, YKS matematik canlı ders, LGS matematik canlı ders, KPSS matematik canlı ders, matematik canlı kurs"
       />
@@ -54,13 +55,13 @@ const Derslerimiz = () => {
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary mb-4">
             <span className="material-symbols-outlined text-sm">school</span>
-            <span>Eğitim Kamplarımız</span>
+            <span>Canlı Ders Programlarımız</span>
           </span>
           <h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
             Sınavlara Bizimle <span className="text-primary">Hazırlanın</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-            Afişlerdeki detaylı bilgilere göre hazırlanmış, hedeflerinize ulaşmanızı kolaylaştıracak güncel matematik kamplarımızı keşfedin.
+            Hedeflerinize ulaşmanızı kolaylaştıracak güncel matematik canlı ders programlarımızı ve kontenjan gruplarımızı keşfedin.
           </p>
         </div>
       </div>
@@ -69,9 +70,20 @@ const Derslerimiz = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 lg:px-8">
         {camps.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm max-w-xl mx-auto p-8">
-            <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">event_busy</span>
-            <h3 className="text-lg font-bold text-slate-700">Aktif Kamp Bulunmuyor</h3>
-            <p className="text-sm text-slate-400 mt-2">Yeni dönem canlı kamp ve ders programlarımız çok yakında burada duyurulacaktır.</p>
+            <span className="material-symbols-outlined text-6xl text-primary/40 mb-4">school</span>
+            <h3 className="text-xl font-bold text-slate-800">Canlı Kontenjan Derslerimiz</h3>
+            <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+              YKS 2027, LGS 2027, KPSS 2027 ve Maarif Modeli canlı ders gruplarımızı Kontenjan Dersleri sayfamızdan inceleyebilir ve hemen yerinizi ayırtabilirsiniz.
+            </p>
+            <div className="mt-6">
+              <Link
+                to="/kontenjan-dersleri"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all hover:scale-105"
+              >
+                <span>Kontenjan Derslerini İncele</span>
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -120,7 +132,7 @@ const Derslerimiz = () => {
 
                 {/* Description */}
                 <div className="my-6">
-                  <h4 className="text-sm font-bold text-slate-900 mb-2">Kamp Detayları</h4>
+                  <h4 className="text-sm font-bold text-slate-900 mb-2">Ders Detayları</h4>
                   <p className="text-sm leading-relaxed text-slate-600">{camp.description}</p>
                 </div>
 
@@ -169,7 +181,7 @@ const Derslerimiz = () => {
           <div className="flex flex-col gap-2">
             <h3 className="text-xl font-bold text-slate-900">Kayıtlar ve Detaylı Bilgi</h3>
             <p className="text-slate-600 text-sm max-w-xl">
-              Kamplarımıza kayıt olmak, aklınızdaki soruları sormak veya seviyenize en uygun paketi seçmek için bizimle doğrudan iletişime geçebilirsiniz.
+              Canlı derslerimize kayıt olmak, aklınızdaki soruları sormak veya seviyenize en uygun paketi seçmek için bizimle doğrudan iletişime geçebilirsiniz.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">

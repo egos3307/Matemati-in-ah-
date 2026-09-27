@@ -11,7 +11,7 @@ const FALLBACK_CAMPS = [
     id: 'lgs-camp',
     category: 'LGS 2027',
     badge: 'LGS 8. Sınıf & Ortaokul',
-    title: 'Ortaokul Yeni Nesil Soru Çözüm Kampı',
+    title: 'Ortaokul Yeni Nesil Soru Çözüm Grubu',
     subtitle: 'LGS ve Okul Sınavları İçin Sağlam Altyapı',
     description: '18 Canlı ders, 7/24 kayıt erişimi, çözümlü ders notları ve birebir takip.',
     price: '2.500 TL',
@@ -21,7 +21,7 @@ const FALLBACK_CAMPS = [
     id: 'kpss-camp',
     category: 'KPSS 2027',
     badge: 'Lisans & Ön Lisans',
-    title: 'KPSS Lisans & Ön Lisans Matematik Kampı',
+    title: 'KPSS Lisans & Ön Lisans Canlı Ders Paketi',
     subtitle: 'Matematikte Eksiklerini Kapat, Netlerini Zirveye Taşı!',
     description: '54 Canlı ders, 35+ çözümlü PDF soru havuzu, tüm çıkmış soruların detaylı çözümleri.',
     price: '3.500 TL',
@@ -146,7 +146,7 @@ const TrialLessonBooking = () => {
         phone: formData.phone.trim(),
         grade: formData.grade,
         preferredSchedule: formData.preferredSchedule,
-        notes: `[Kamp: ${matchedCamp.title}] ${formData.notes}`.trim()
+        notes: `[Program: ${matchedCamp.title}] ${formData.notes}`.trim()
       };
 
       const res = await axios.post('/api/trial-requests', payload);
@@ -363,7 +363,7 @@ const TrialLessonBooking = () => {
             <div className="bg-white rounded-3xl border border-primary/20 p-6 shadow-md overflow-hidden relative">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-2xs font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
-                  Sana Özel Tavsiye Eğitim Kampı
+                  Sana Özel Tavsiye Canlı Ders Grubu
                 </span>
                 <span className="material-symbols-outlined text-primary text-xl">auto_awesome</span>
               </div>
@@ -392,7 +392,7 @@ const TrialLessonBooking = () => {
               </p>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-2xs font-bold text-slate-400">Canlı Ders Kamp Formatı</span>
+                <span className="text-2xs font-bold text-slate-400">Canlı Ders Formatı</span>
                 <span className="text-xs font-black text-primary">Zoom + 7/24 Kayıt</span>
               </div>
             </div>

@@ -22,7 +22,7 @@ const getCtaContent = (post) => {
     return {
       category: 'LGS',
       targetQuotaCategory: 'LGS 2027',
-      badge: 'LGS 2027 Matematik Kampı',
+      badge: 'LGS 2027 Matematik Programı',
       title: 'LGS Matematikte zorlandığın konuları birlikte kapatalım.',
       subtitle: 'İlk canlı tanışma dersine katıl, eksiklerini belirleyelim ve LGS hedef derece planını oluşturalım.',
       buttonText: 'Ücretsiz Tanışma Dersine Katıl',

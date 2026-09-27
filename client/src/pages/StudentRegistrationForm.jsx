@@ -396,7 +396,7 @@ const StudentRegistrationForm = ({ isModal = false, onClose = null, onSuccess = 
                   <option value="LGS">LGS Hazırlık Matematik</option>
                   <option value="TYT">TYT Matematik</option>
                   <option value="AYT">AYT Matematik</option>
-                  <option value="TYT/AYT">TYT + AYT Matematik Kampı</option>
+                  <option value="TYT/AYT">TYT + AYT Matematik Grubu</option>
                   <option value="KPSS">KPSS Matematik</option>
                   <option value="Özel Konu">Özel Konu Çalışması</option>
                   <option value="Ortaokul Okul Takviye">Ortaokul Okul Takviye</option>

@@ -212,7 +212,7 @@ const QuotaCourseSelection = () => {
     <div className="min-h-screen bg-slate-50/60 py-10 px-4 sm:px-6 lg:px-8">
       <SEO
         title={`${selectedCategory === 'MAARIF' ? 'MAARİF MODELİ' : selectedCategory} Matematik Canlı Ders Kontenjan Kaydı`}
-        description={`${selectedCategory} online matematik canlı ders ve geometri kampları için yayınlanmış ders gruplarını seçin ve hemen yerinizi ayırtın.`}
+        description={`${selectedCategory} online matematik canlı ders ve geometri eğitimleri için yayınlanmış ders gruplarını seçin ve hemen yerinizi ayırtın.`}
         path={`/kontenjan-dersleri?kategori=${encodeURIComponent(selectedCategory)}`}
         keywords="matematik canlı ders, online matematik canlı ders, canlı matematik dersi kontenjanı, YKS matematik canlı ders, LGS matematik canlı ders"
       />

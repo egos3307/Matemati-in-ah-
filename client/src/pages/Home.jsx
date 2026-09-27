@@ -27,10 +27,13 @@ const SocialFeed = () => {
   return (
     <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10" id="sosyal-medya">
       <div className="mb-10 flex flex-col items-center text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary mb-4">
-          Sosyal Medya
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary mb-3">
+          📱 Sosyal Medyada Biz
         </span>
-        <h2 className="text-2xl font-black text-slate-900 md:text-3xl mb-4">Bizi Takip Edin</h2>
+        <h2 className="text-2xl font-black text-slate-900 md:text-3xl mb-2">Matematik Taktikleri & Pratik Çözümler</h2>
+        <p className="text-sm text-slate-600 max-w-lg mb-6">
+          Sınavlarda net artıran hap bilgiler, formül analizleri ve özel soru çözümleri için bizi takip edin.
+        </p>
         <div className="flex items-center gap-3">
           <a href={YT_CHANNEL_URL} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 text-sm font-bold transition-all shadow-sm">
@@ -247,61 +250,228 @@ const Home = () => {
       />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-24" id="ana-sayfa">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="flex flex-col gap-8">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-bold text-primary">
-                <span className="material-symbols-outlined text-sm">star</span>
-                <span>LGS, YKS & KPSS Canlı Matematik Dersleri</span>
+        <section className="relative mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-20" id="ana-sayfa">
+          <div className="grid items-center gap-12 lg:grid-cols-12">
+            
+            {/* Left Content Column (7 cols) */}
+            <div className="flex flex-col gap-6 lg:col-span-7">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-xs sm:text-sm font-bold text-primary shadow-xs">
+                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                <span>YKS • LGS • KPSS & Maarif Modeli Canlı Eğitimleri</span>
               </div>
-              <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-slate-900 lg:text-7xl">
-                Matematik <span className="text-primary">Online Özel Ders</span> & Canlı Ders Platformu
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.12] tracking-tight text-slate-900">
+                Matematikte Zirveye Ulaş:{' '}
+                <span className="bg-gradient-to-r from-primary via-amber-500 to-primary bg-clip-text text-transparent">
+                  Canlı & İnteraktif
+                </span>{' '}
+                Özel Dersler
               </h1>
-              <p className="text-lg leading-relaxed text-slate-600">
-                Türkiye'nin 1 numaralı matematik online özel ders ve canlı ders platformu Matematiğin Şahı ile YKS, LGS ve KPSS'de netlerini zirveye taşı. Birebir özel anlatım, uzman hoca desteği ve 7/24 ders kayıt izleme avantajı.
+
+              <p className="text-base sm:text-lg leading-relaxed text-slate-600 max-w-2xl">
+                Matematik ön yargılarını geride bırakın! Kişiye özel seviye analizi, butik canlı sınıflar, birebir takip ve sınırsız ders kaydı arşiviyle sınav hedeflerinize emin adımlarla ilerleyin. Temelden dereceye, her seviyeye özel başarı odaklı eğitim.
               </p>
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <Link to="/kontenjan-dersleri" className="flex h-14 items-center justify-center rounded-full bg-primary px-8 text-lg font-bold text-white shadow-xl shadow-primary/30 transition-transform hover:scale-105 cursor-pointer">
-                  Derslerimizi Keşfet
+
+              <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center pt-2">
+                <Link
+                  to="/kontenjan-dersleri"
+                  className="flex h-14 items-center justify-center gap-2 rounded-full bg-primary px-8 text-base sm:text-lg font-bold text-white shadow-xl shadow-primary/25 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <span>Kontenjan Derslerini İncele</span>
+                  <span className="material-symbols-outlined text-xl">arrow_forward</span>
                 </Link>
-                <a href="https://www.instagram.com/reel/Ddt22FLI1YF/" target="_blank" rel="noopener noreferrer" className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-300 bg-white px-8 text-lg font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all">
-                  Eğitim Sistemimizi Keşfet
+                <a
+                  href="https://www.instagram.com/reel/Ddt22FLI1YF/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-14 items-center justify-center gap-2 rounded-full border-2 border-slate-200 bg-white px-7 text-base font-bold text-slate-700 hover:border-primary/40 hover:text-primary transition-all shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-primary text-xl">play_circle</span>
+                  <span>Ders Anlatımını İzle</span>
                 </a>
               </div>
-            </div>
-            <div className="relative hidden md:block max-w-md mx-auto w-full">
-              <div className="absolute -inset-4 rounded-xl bg-primary/10 blur-3xl"></div>
-              <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-primary shadow-2xl flex items-center justify-center">
-                <img alt="Matematik öğretmeni kollarını bağlamış gülümsüyor" className="h-full w-full object-cover" src="/untitled-design.png"/>
+
+              {/* Trust Micro-Badges */}
+              <div className="flex items-center gap-6 pt-3 text-xs font-semibold text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                  <span>Butik Canlı Sınıflar</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                  <span>7/24 Kayıt Erişimi</span>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                  <span>Çözümlü PDF Kaynakları</span>
+                </div>
               </div>
             </div>
+
+            {/* Right Graphic Column: Interactive Live Classroom UI Mockup (5 cols) */}
+            <div className="relative mx-auto w-full max-w-md lg:max-w-none lg:col-span-5">
+              {/* Ambient Glows */}
+              <div className="absolute -top-10 -left-10 h-56 w-56 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-8 -right-8 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
+              
+              {/* Main Interactive Classroom Card */}
+              <div className="relative rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-5 sm:p-6 text-white shadow-2xl shadow-slate-900/30 backdrop-blur-xl">
+                
+                {/* Top Window Bar */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-rose-500/80"></div>
+                    <div className="h-3 w-3 rounded-full bg-amber-500/80"></div>
+                    <div className="h-3 w-3 rounded-full bg-emerald-500/80"></div>
+                    <span className="ml-2 text-xs font-mono text-slate-400">canli-derslik.live</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300">
+                      CANLI YAYIN
+                    </span>
+                  </div>
+                </div>
+
+                {/* Interactive Board Area */}
+                <div className="mt-4 rounded-2xl border border-slate-800/90 bg-slate-950/80 p-4 sm:p-5 relative overflow-hidden">
+                  {/* Subtle coordinate grid lines pattern */}
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+                  
+                  {/* Studio Header */}
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20 border border-primary/40 text-primary font-black text-sm">
+                        MŞ
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-200">Matematiğin Şahı Canlı Stüdyo</p>
+                        <p className="text-[10px] text-slate-400">İnteraktif Soru Çözümü & Analiz</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                      HD 1080p
+                    </span>
+                  </div>
+
+                  {/* Math Visual & Formula Presentation */}
+                  <div className="my-4 rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 relative z-10">
+                    <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2">
+                      <span className="text-primary font-bold">Örnek Soru & Pratik Kural</span>
+                      <span className="font-mono text-[11px] text-emerald-400">Net Kazandıran Taktik</span>
+                    </div>
+
+                    {/* Math Equation & Diagram Mockup */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-amber-300">
+                          f(x) = ax² + bx + c
+                        </span>
+                        <span className="text-xs text-slate-400">→</span>
+                        <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono text-xs text-orange-200 font-bold">
+                          T(r, k) = (-b / 2a, f(r))
+                        </span>
+                      </div>
+
+                      {/* Parabola Graphic Curve */}
+                      <div className="h-16 w-full rounded-lg bg-slate-950/60 border border-slate-800/80 p-2 flex items-center justify-center relative overflow-hidden">
+                        <svg className="w-full h-full text-primary" viewBox="0 0 300 60" fill="none">
+                          <line x1="10" y1="50" x2="290" y2="50" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
+                          <line x1="150" y1="5" x2="150" y2="55" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />
+                          <path d="M 40 48 Q 150 -5 260 48" stroke="#FF7A00" strokeWidth="2.5" fill="none" />
+                          <circle cx="150" cy="20" r="4" fill="#38BDF8" />
+                          <text x="160" y="22" fill="#38BDF8" fontSize="10" fontWeight="bold">Tepe Noktası T(r,k)</text>
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Student Interaction Line */}
+                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-[11px] text-emerald-300">
+                      <span className="material-symbols-outlined text-xs">forum</span>
+                      <span>Öğrenci: <i>"Hocam bu taktikle soru saniyeler içinde çözülüyor!"</i></span>
+                    </div>
+                  </div>
+
+                  {/* Audio / Control wave indicator */}
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm text-emerald-400">mic</span>
+                      <div className="flex items-center gap-1">
+                        <span className="h-3 w-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="h-4 w-1 rounded-full bg-emerald-400 animate-pulse delay-75"></span>
+                        <span className="h-2 w-1 rounded-full bg-emerald-400 animate-pulse delay-150"></span>
+                        <span className="h-5 w-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="h-3 w-1 rounded-full bg-emerald-400 animate-pulse delay-100"></span>
+                      </div>
+                      <span className="text-[11px] text-slate-300 ml-1">Ses ve Görüntü Açık</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <span className="material-symbols-outlined text-xs text-primary">groups</span>
+                      <span>Butik Sınıf: 7 Öğrenci</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Badges */}
+                {/* Top-Right Badge: Net Artışı */}
+                <div className="absolute -top-4 -right-2 sm:-right-4 flex items-center gap-2.5 rounded-2xl bg-white p-2.5 sm:p-3 text-slate-900 shadow-xl border border-slate-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 font-black">
+                    <span className="material-symbols-outlined text-lg">trending_up</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-900">+16 Net Artışı</p>
+                    <p className="text-[10px] font-semibold text-slate-500">5 Netten 21 Nete Zirve</p>
+                  </div>
+                </div>
+
+                {/* Bottom-Left Badge: Memnuniyet */}
+                <div className="absolute -bottom-4 -left-2 sm:-left-4 flex items-center gap-2.5 rounded-2xl bg-white p-2.5 sm:p-3 text-slate-900 shadow-xl border border-slate-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 font-black">
+                    <span className="material-symbols-outlined text-lg">verified</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-black text-slate-900">%98.4 Memnuniyet</span>
+                      <div className="flex text-amber-500">
+                        <span className="material-symbols-outlined fill-1 text-[11px]">star</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] font-semibold text-slate-500">Öğrenci & Veli Onaylı</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </section>
 
 
         {/* Stats Section */}
-        <section className="bg-primary px-6 py-12 text-white">
+        <section className="bg-gradient-to-r from-primary via-orange-600 to-primary px-6 py-14 text-white shadow-inner">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-4">
             <div className="text-center">
-              <p className="text-4xl font-black">10.000+</p>
-              <p className="text-sm font-medium opacity-80">Öğrenci</p>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight">10.000+</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-90 mt-1">Ders Alan Öğrenci</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">5000+</p>
-              <p className="text-sm font-medium opacity-80">Saat Canlı Ders</p>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight">5.000+</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-90 mt-1">Saat Canlı Ders & Soru Çözümü</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">%95</p>
-              <p className="text-sm font-medium opacity-80">Öğrenci Memnuniyeti</p>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight">%98</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-90 mt-1">Öğrenci & Veli Memnuniyeti</p>
             </div>
             <div className="text-center">
-              <p className="text-4xl font-black">7</p>
-              <p className="text-sm font-medium opacity-80">Farklı Sınava Hazırlık</p>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight">+16 Net</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-90 mt-1">Ortalama Başarı Artışı</p>
             </div>
           </div>
-          <p className="text-center text-xs font-medium opacity-50 mt-8 tracking-widest uppercase">
-            TYT • AYT • KPSS • DGS • ALES • LGS
-          </p>
+          <div className="mt-10 pt-6 border-t border-white/20 text-center">
+            <p className="text-xs sm:text-sm font-bold tracking-widest uppercase opacity-90">
+              TYT • AYT • LGS 2027 • KPSS • DGS • YENİ MAARİF MÜFREDATI
+            </p>
+          </div>
         </section>
 
         {/* Features Section with Clean Video Background & Smooth White Edge Fades */}
@@ -335,44 +505,44 @@ const Home = () => {
                 ✨ Matematiğin Şahı Farkı
               </span>
               <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-900 md:text-5xl drop-shadow-sm">
-                Neden Matematiğin Şahı?
+                Ezber Bozan Matematik Eğitimi
               </h2>
               <p className="max-w-2xl text-base md:text-lg text-slate-700 font-semibold leading-relaxed drop-shadow-sm">
-                Geleneksel eğitim metodlarını bir kenara bırakın. Teknoloji ve uzmanlığın birleştiği noktada en verimli öğrenme deneyimini yaşayın.
+                Formülleri ezberleten klasik yöntemler yerine; matematiğin mantığını kavratan, problem çözme refleksi kazandıran ve sınavlarda derece hedefleyen modern eğitim modeli.
               </p>
             </div>
 
             <div className="grid gap-8 md:grid-cols-3">
               {/* Card 1 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/95 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">video_camera_front</span>
                 </div>
-                <h3 className="text-xl font-black text-slate-900">Canlı Dersler</h3>
+                <h3 className="text-xl font-black text-slate-900">İnteraktif Canlı Dersler</h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Haftalık belirlenen saatlerde interaktif sınıflarda hocalarımıza anında soru sorma ve konu tekrarı yapma imkanı.
+                  Pasif video izlemek yerine; hocanızla anında konuşabildiğiniz, soru sorabildiğiniz ve tahtada interaktif çözüm yaptığınız butik canlı sınıflar.
                 </p>
               </div>
 
               {/* Card 2 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/95 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">person_search</span>
                 </div>
-                <h3 className="text-xl font-black text-slate-900">Birebir Takip</h3>
+                <h3 className="text-xl font-black text-slate-900">Birebir Takip & Koçluk</h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Her öğrenciye atanan eğitim koçu ile gelişiminiz adım adım izlenir, zayıf noktalarınıza özel çalışma programı hazırlanır.
+                  Her öğrencinin eksikleri farklıdır. Seviye tespit sınavı, kişiye özel haftalık çalışma planı ve düzenli deneme analizleriyle gelişiminiz adım adım izlenir.
                 </p>
               </div>
 
               {/* Card 3 */}
-              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/90 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
+              <div className="group relative flex flex-col gap-5 rounded-3xl border border-slate-200/90 bg-white/95 p-8 backdrop-blur-md shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:border-primary/50 hover:bg-white hover:shadow-2xl hover:shadow-primary/10">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
                 </div>
-                <h3 className="text-xl font-black text-slate-900">Soru Çözüm Videoları</h3>
+                <h3 className="text-xl font-black text-slate-900">7/24 Kayıt & Soru Çözüm Arşivi</h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  Binlerce sorunun detaylı, püf noktalarıyla anlatıldığı video kütüphanemize 7/24 sınırsız erişim sağlayın.
+                  İşlenen tüm canlı derslerin kayıtlarına ve ders esnasında tutulan el yazısı çözümlü PDF kaynaklarına dilediğiniz an sınırsız erişin.
                 </p>
               </div>
             </div>
@@ -384,17 +554,17 @@ const Home = () => {
         <SocialFeed />
 
         {/* Testimonials Section */}
-        <section className="bg-gradient-to-b from-slate-50 to-white py-16 border-t border-slate-100" id="referanslar">
+        <section className="bg-gradient-to-b from-slate-50 to-white py-20 border-t border-slate-100" id="referanslar">
           <div className="mx-auto max-w-7xl px-6 lg:px-10">
-            <div className="text-center mb-10">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
-                Görüşleriniz
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-4 py-1 text-xs font-black uppercase tracking-wider text-primary">
+                💬 Başarı Hikayeleri
               </span>
-              <h2 className="mt-3 text-2xl font-black text-slate-900 md:text-3xl">
-                Aldığımız Geri Dönüşler
+              <h2 className="mt-3 text-3xl font-black text-slate-900 md:text-4xl">
+                Öğrenci & Veli Deneyimleri
               </h2>
-              <p className="mt-3 text-sm text-slate-600 max-w-xl mx-auto">
-                Birlikte çalıştığımız öğrencilerin ve destek olduğumuz velilerimizin başarı hikayeleri ve samimi yorumları.
+              <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
+                Birlikte hazırlandığımız öğrencilerimizin net artışları, sınav dereceleri ve velilerimizin memnuniyet mesajları.
               </p>
             </div>
 
@@ -556,8 +726,7 @@ const Home = () => {
               <h3 className="mb-6 font-bold text-slate-900">Hızlı Linkler</h3>
               <ul className="flex flex-col gap-3 text-sm">
                 <li><Link className="hover:text-primary transition-colors" to="/">Ana Sayfa</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/derslerimiz">Derslerimiz</Link></li>
-                <li><Link className="hover:text-primary transition-colors" to="/kontenjan-dersleri">Kontenjan Dersleri</Link></li>
+                <li><Link className="hover:text-primary transition-colors" to="/kontenjan-dersleri">Canlı Derslerimiz</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/pdf-notlari">PDF Ders Notları</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/blog">Blog</Link></li>
                 <li><Link className="hover:text-primary transition-colors" to="/iletisim">İletişim</Link></li>

@@ -73,7 +73,7 @@ const Navbar = () => {
       },
       {
         id: 2,
-        title: `${pkgName} - 2. Ders: Yeni Nesil Soru Çözüm Kampı`,
+        title: `${pkgName} - 2. Ders: Yeni Nesil Soru Çözümü`,
         duration: '50 Dk',
         url: mainUrl,
         badge: '2. Ders'
@@ -244,7 +244,7 @@ const Navbar = () => {
           </Link>
           <nav className="flex flex-1 justify-center gap-2 sm:gap-6 md:gap-10 text-[11px] sm:text-xs md:text-sm px-2">
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/">Ana Sayfa</Link>
-            <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/derslerimiz">Derslerimiz</Link>
+            <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/kontenjan-dersleri">Derslerimiz</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/blog">Blog</Link>
             <Link className="font-semibold text-slate-600 transition-colors hover:text-primary whitespace-nowrap" to="/iletisim">İletişim</Link>
           </nav>

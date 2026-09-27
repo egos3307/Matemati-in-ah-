@@ -66,7 +66,7 @@ const Contact = () => {
             <span className="text-primary">Yardımcı Olmaktan Mutluluk Duyarız</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-            Ders programları, kamplarımız veya üyelikler hakkında bilgi almak için formu doldurabilir ya da doğrudan telefonla ulaşabilirsiniz.
+            Ders programlarımız veya üyelikler hakkında bilgi almak için formu doldurabilir ya da doğrudan telefonla ulaşabilirsiniz.
           </p>
         </div>
       </div>
